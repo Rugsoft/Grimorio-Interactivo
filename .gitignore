@@ -23,3 +23,6 @@ Thumbs.db
 .DS_Store
 *.swp
 *~
+
+# ----- Sondas efímeras de los arneses de verificación -----------------
+scratch/__*.php
