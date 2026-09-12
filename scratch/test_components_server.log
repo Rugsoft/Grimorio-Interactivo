@@ -1,0 +1,6 @@
+[Sat Sep 12 14:55:59 2026] PHP 8.2.12 Development Server (http://127.0.0.1:8107) started
+[Sat Sep 12 14:55:59 2026] 127.0.0.1:63304 Accepted
+[Sat Sep 12 14:55:59 2026] 127.0.0.1:63304 Closing
+[Sat Sep 12 14:55:59 2026] 127.0.0.1:63305 Accepted
+[Sat Sep 12 14:55:59 2026] 127.0.0.1:63305 [200]: GET /assets/css/components.css
+[Sat Sep 12 14:55:59 2026] 127.0.0.1:63305 Closing

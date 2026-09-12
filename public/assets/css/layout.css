@@ -1,0 +1,321 @@
+/* =====================================================================
+   layout.css — Layout principal, cabecera persistente y rejilla
+   =====================================================================
+   Tarea 2.3 (TASKS-01): arquitectura visual de la página.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro; grid y flexbox nativos.
+     - Artículo V: clases en inglés kebab-case; comentarios en castellano.
+
+   Disciplina de tokens: TODOS los valores visuales viajan por
+   var(--token) desde tokens.css; aquí no se escriben colores crudos.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Cimiento: documento y cuerpo del grimorio
+   --------------------------------------------------------------------- */
+
+/* El scroll de la página va en el html: offset de la cabecera fija. */
+html {
+  scroll-padding-top: 80px; /* Reserva espacio de la cabecera al saltar a anclas (#hechizo-slug, RF-04.1). */
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+
+  /* Paleta y tipografía desde los tokens del grimorio. */
+  background-color: var(--color-bg-grimoire);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: var(--line-height-parchment);
+}
+
+/* El main crece para empujar el footer al fondo en páginas cortas. */
+#app {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: var(--space-ink-5) var(--space-ink-4);
+
+  /* Contenedor central de lectura: ancho solemne del pergamino. */
+  box-sizing: border-box;
+}
+
+/* «El Tomo Central» (Tarea 2.1, RF-05.1): contenedor canónico de las
+   vistas. Acotado a 1280 px por el token maestro --container-tomo-max,
+   centrado con márgenes automáticos solemnes y padding lateral de
+   seguridad. En monitores panorámicos (1920 px, 4K) el tomo conserva
+   su ancho visual exacto y el remanente se reparte en márgenes. */
+.grimoire-tomo-container {
+  width: 100%;
+  max-width: var(--container-tomo-max);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-ink-4);
+  padding-right: var(--space-ink-4);
+  box-sizing: border-box;
+}
+
+/* Estado de carga que conmutará main.js vía aria-busy (Tarea 6.1). */
+#app[aria-busy="true"] {
+  opacity: 0.6;
+  transition: opacity var(--transition-arcane);
+}
+
+/* ---------------------------------------------------------------------
+   2. Cabecera persistente (RF-02.1): fija al tope durante el scroll
+   --------------------------------------------------------------------- */
+
+.site-header {
+  position: fixed;          /* Persistencia: no se desplaza con el contenido. */
+  top: 0;                   /* Anclaje al tope superior del viewport. */
+  inset-inline: 0;          /* Ocupa todo el ancho en cualquier pantalla. */
+  z-index: 50;              /* Sobre el contenido; MUY por debajo de la pila de modales (plan 4.2: 100/200). */
+
+  background-color: var(--color-surface);
+  border-bottom: var(--border-ink-strong);
+  box-shadow: var(--shadow-arcane-soft);
+}
+
+.site-nav {
+  max-width: 1200px;
+  margin-inline: auto;
+  padding: var(--space-ink-2) var(--space-ink-4);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-ink-3);
+  min-height: var(--touch-target-min);
+}
+
+.site-nav__brand {
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  text-decoration: none;
+  letter-spacing: var(--letter-spacing-seal);
+  transition: color var(--transition-arcane), text-shadow var(--transition-arcane);
+}
+
+.site-nav__brand:hover,
+.site-nav__brand:focus-visible {
+  color: var(--magic-primary);
+  text-shadow: var(--shadow-gold-glow);
+}
+
+/* Lista de enlaces: escritorio muestra fila; móvil colapsa (ver media query). */
+.site-nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-ink-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.site-nav__links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);   /* Zona táctil mínima (RNF-04). */
+  padding: 0 var(--space-ink-3);
+
+  color: var(--color-text-light-muted);
+  text-decoration: none;
+  border-radius: var(--radius-scroll);
+  transition: color var(--transition-arcane), background-color var(--transition-arcane);
+}
+
+.site-nav__links a:hover,
+.site-nav__links a:focus-visible {
+  color: var(--color-gold-arcane);
+  background-color: var(--color-surface-raised);
+}
+
+/* Botón del menú arcano: oculto en escritorio, protagonista en móvil. */
+.site-nav__toggle {
+  display: none;               /* Escritorio no lo necesita. */
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: 0;
+
+  background: none;
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  color: var(--color-gold-arcane);
+  font-size: var(--font-size-ink-large);
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color var(--transition-arcane);
+}
+
+.site-nav__toggle:hover,
+.site-nav__toggle:focus-visible {
+  background-color: var(--color-surface-raised);
+}
+
+/* ---------------------------------------------------------------------
+   3. Rejilla adaptable del catálogo (RF-03 / RNF-04: 320px -> ultrawide)
+   --------------------------------------------------------------------- */
+
+.spell-grid {
+  display: grid;
+  /* Columnas fluidas: el motor decide cuántas caben; nunca menos de 260px. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-ink-4);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+/* Rejilla canónica del catálogo (Tarea 2.2, RF-05.1 a RF-05.3):
+   3 columnas de escritorio, 2 de tableta (768–1024) y 1 de móvil
+   (<768). minmax(0, 1fr) evita que tarjetas de contenido largo
+   desborden su pista. La transmutación ocurre SOLO en los quiebres. */
+.spell-card-grid {
+  display: grid;
+  gap: var(--space-ink-4);
+  grid-template-columns: repeat(3, minmax(0, 1fr)); /* Escritorio: 3 columnas. */
+}
+
+/* Tabletas (768 px a 1024 px): 2 columnas de lectura cómoda. */
+@media (max-width: 1024px) and (min-width: 768px) {
+  .spell-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-ink-3);
+  }
+}
+
+/* Móviles (< 768 px): 1 columna de lectura continua. */
+@media (max-width: 767.9px) {
+  .spell-card-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-ink-3);
+  }
+}
+
+/* Contención horizontal del santuario (Tarea 2.3, Caso Límite 1):
+   ningún contenido puede empujar el documento más allá del viewport,
+   ni siquiera un glifo extraviado o una URL indócil. */
+body {
+  overflow-x: clip;
+}
+
+/* Contención de zoom en el eje de la tarjeta: solo la geometría del
+   contenedor vive aquí (la liberación del recorte de texto está en
+   components.css, que se carga después y puede vencer a la base). */
+@media (min-width: 1em), (min-resolution: 2dppx) {
+  .spell-card {
+    height: auto;
+    min-height: auto;
+  }
+}
+
+/* Bloque de carga incremental: ancho completo bajo la rejilla (RF-03.7). */
+.load-more-slot {
+  display: flex;
+  justify-content: center;
+  margin-block-start: var(--space-ink-5);
+}
+
+/* ---------------------------------------------------------------------
+   4. Pie del santuario
+   --------------------------------------------------------------------- */
+
+.site-footer {
+  flex-shrink: 0;
+  padding: var(--space-ink-4) var(--space-ink-5);
+  text-align: center;
+  background-color: var(--color-surface);
+  border-top: var(--border-ink);
+  color: var(--color-text-light-muted);
+  font-size: var(--font-size-ink-small);
+}
+
+.site-footer__lore {
+  margin: 0 0 var(--space-ink-1);
+  font-style: italic;
+  color: var(--color-text-light);
+}
+
+.site-footer__meta {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------
+   5. Colapso arcano: pantallas estrechas (< 768px, RF-02.4)
+      El menú desplegable se gobierna por [data-open="true|false"] que
+      conmutará main.js junto con aria-expanded (accesible por teclado).
+   --------------------------------------------------------------------- */
+
+@media (max-width: 767.9px) {
+
+  /* La cabecera sigue fija; la navegación se compacta. */
+  .site-nav {
+    padding-inline: var(--space-ink-3);
+  }
+
+  /* Enlaces colapsados: ocultos hasta abrir el menú (nodos viven en DOM). */
+  .site-nav__links {
+    display: none;
+
+    /* Al abrirse: panel vertical sobre la cabecera, ancho completo. */
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-ink-2) var(--space-ink-3) var(--space-ink-3);
+    background-color: var(--color-surface);
+    border-bottom: var(--border-ink-strong);
+    box-shadow: var(--shadow-arcane);
+  }
+
+  /* Estado ABIERTO del menú arcano (gobierno de main.js). */
+  .site-nav__links[data-open="true"] {
+    display: flex;
+  }
+
+  .site-nav__links a {
+    justify-content: center;         /* Enlaces centrados, ancho completo. */
+    border-bottom: var(--border-ink);
+  }
+
+  .site-nav__links a:last-child {
+    border-bottom: none;
+  }
+
+  /* El botón del menú arcano entra en escena, táctil y visible. */
+  .site-nav__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* La rejilla se compacta sin romperse en 320px. */
+  .spell-grid {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: var(--space-ink-3);
+  }
+
+  #app {
+    padding: var(--space-ink-4) var(--space-ink-3);
+  }
+}
+
+/* Ultrapanorámicas: el pergamino central no se estira al infinito. */
+@media (min-width: 1600px) {
+  #app,
+  .site-nav {
+    max-width: 1360px;
+  }
+
+  .spell-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}

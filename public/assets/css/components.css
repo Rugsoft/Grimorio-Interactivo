@@ -1,0 +1,377 @@
+/* =====================================================================
+   components.css — Componentes visuales del Grimorio Interactivo
+   =====================================================================
+   Tarea 2.4 (TASKS-01): tarjetas del catálogo, insignias, sellos,
+   diálogos superpuestos y estados de rescate.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro, keyframes nativos, <dialog> estándar.
+     - Artículo IV: solemnidad visual — sellos, pergaminos y tintas.
+     - Artículo V: clases en inglés kebab-case; comentarios en castellano.
+
+   Disciplina de tokens: solo var(--token); ningún color crudo aquí.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Tarjeta de hechizo (RF-03.1): superficie de pergamino sobre cuero
+   --------------------------------------------------------------------- */
+
+.spell-card {
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  box-shadow: var(--shadow-arcane-soft);
+  padding: var(--space-ink-4);
+
+  /* Contiene el overlay táctil absoluto (Tarea 3.1, RF-05.4). */
+  position: relative;
+
+  /* Accesible por teclado: main.js (Tarea 4.2) añadirá tabindex="0". */
+  cursor: pointer;
+  transition: transform var(--transition-arcane), box-shadow var(--transition-arcane), border-color var(--transition-arcane);
+}
+
+/* Overlay táctil maestro (Tarea 3.1, RF-05.4 / RF-06.1): invisible,
+   cubre el 100 % de la tarjeta para que todo el cuerpo sea clickeable
+   con área táctil total. Al estar fuera del flujo no deforma insignias
+   ni texto; los botones internos lo superan con z-index: 2. */
+.spell-card__click-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  cursor: pointer;
+}
+
+/* Botones interactivos internos: siempre por encima del overlay y con
+   la zona táctil mínima de 44x44 px (RNF-04). */
+.spell-card__action-button {
+  position: relative;
+  z-index: 2;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spell-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-arcane), var(--shadow-gold-glow);
+  border-color: var(--color-gold-arcane);
+}
+
+/* Foco visible solemne: anillo de oro arcano (RNF-03). */
+.spell-card:focus-visible {
+  outline: 3px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.spell-card__name {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-spell);
+  color: var(--color-ink);
+}
+
+/* Recorte del resumen: EXACTAMENTE 3 líneas con elipsis (criterio T2.4,
+   plan Caso límite 2). El texto íntegro vive en la ficha de detalle. */
+.spell-card__summary {
+  margin: 0 0 var(--space-ink-3);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;      /* Recorte a 3 líneas. */
+  line-clamp: 3;              /* Forma estándar para motores modernos. */
+  overflow: hidden;           /* Sin desbordamiento visual. */
+  color: var(--color-ink-soft);
+}
+
+/* Expansión bajo zoom de accesibilidad (Tarea 2.3, RF-05.5, plan 5.4):
+   al aumentar al 200 % el viewport CSS se reduce (320 px físicos son
+   160 lógicos); liberamos el recorte para que el resumen fluya en
+   vertical sin truncarse jamás. Esta regla va DETRÁS de la base para
+   ganar la cascada. */
+@media (min-width: 1em), (min-resolution: 2dppx) {
+  .spell-card__summary {
+    -webkit-line-clamp: unset; /* Sin recorte forzado: texto íntegro. */
+    line-clamp: unset;         /* Forma estándar. */
+  }
+}
+
+/* Pie de tarjeta: insignias de escuela, maná y clan. */
+.spell-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+}
+
+/* ---------------------------------------------------------------------
+   2. Insignias (badges): escuela, maná y clan (RF-03.1)
+   --------------------------------------------------------------------- */
+
+.spell-card__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);  /* Táctil incluso como filtro (RNF-04). */
+  padding: var(--space-ink-1) var(--space-ink-3);
+
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  border-radius: var(--radius-scroll);
+  border: var(--border-ink);
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink-soft);
+}
+
+/* Badge de maná: tinte arcano de maná. La cifra viste variantes
+   numéricas clásicas (oldstyle + tabular) para alinear columnas de
+   coste sin perder el aire de manuscrito (Tarea 1.3, RF-01.3). */
+.spell-card__badge--mana {
+  background-color: var(--mana-blue);
+  border-color: var(--mana-blue-deep);
+  color: var(--color-text-light);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+}
+
+/* ---------------------------------------------------------------------
+   3. Sellos de estado (RF-01.3 génesis / RF-03.2 inestabilidad, Art. III)
+   --------------------------------------------------------------------- */
+
+/* Sello de Pergamino Primordial: canon fundacional no editable. */
+.spell-card__badge--genesis {
+  background-color: var(--color-gold-arcane);
+  border-color: var(--color-gold-arcane-dim);
+  color: var(--color-ink);
+}
+
+/* Sello de Inestabilidad Arcana: advertencia para 'experimental'. */
+.spell-card__badge--unstable {
+  background-color: var(--color-unstable-seal);
+  border-color: var(--color-ember-red-deep);
+  color: var(--color-text-light);
+  animation: seal-flicker 2.4s ease-in-out infinite;
+}
+
+/* Titileo contenido: la inestabilidad respira, no parpadea agresivamente. */
+@keyframes seal-flicker {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.72; }
+}
+
+/* ---------------------------------------------------------------------
+   4. Diálogos superpuestos (<dialog>): pila del plan 4.2
+   --------------------------------------------------------------------- */
+
+.modal {
+  /* Nivel por defecto; cada diálogo de la pila fija el suyo con tokens. */
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-light);
+  box-shadow: var(--shadow-arcane);
+  padding: 0;
+  max-width: min(92vw, 640px);
+  max-height: 85vh;
+}
+
+.modal::backdrop {
+  /* Velo arcano: oscurece el fondo tras el diálogo (criterio T2.4). */
+  background: rgba(10, 7, 15, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+/* Nivel 1 de la pila: ficha técnica superpuesta. */
+#spellDetailModal {
+  z-index: var(--z-modal-detail);
+}
+
+/* Nivel 2: «Cruzar el Umbral», SIEMPRE por encima de la ficha (RF-05.2). */
+#accessModal {
+  z-index: var(--z-modal-access);
+}
+
+/* Entrada solemne: el panel emerge del éter. */
+.modal[open] {
+  animation: modal-emerge var(--transition-arcane-slow) ease-out;
+}
+
+@keyframes modal-emerge {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal__panel {
+  position: relative;
+  padding: var(--space-ink-5);
+}
+
+.modal__title {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-spell);
+  color: var(--color-gold-arcane);
+}
+
+.modal__hint {
+  margin: 0 0 var(--space-ink-4);
+  color: var(--color-text-light-muted);
+}
+
+.modal__close {
+  position: absolute;
+  top: var(--space-ink-2);
+  right: var(--space-ink-2);
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+
+  background: none;
+  border: none;
+  color: var(--color-text-light-muted);
+  font-size: var(--font-size-ink-large);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-arcane);
+}
+
+.modal__close:hover,
+.modal__close:focus-visible {
+  color: var(--color-gold-arcane);
+}
+
+/* Texto íntegro del hechizo en la ficha: sin recortes (plan Caso límite 2). */
+#spellDetailBody {
+  max-height: 60vh;
+  overflow-y: auto;
+  color: var(--color-parchment);
+}
+
+/* ---------------------------------------------------------------------
+   5. Formularios del diálogo «Cruzar el Umbral» (RF-05.1)
+   --------------------------------------------------------------------- */
+
+.access-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-3);
+  margin-block: var(--space-ink-4);
+}
+
+.access-form__title {
+  margin: 0;
+  font-size: var(--font-size-ink-large);
+  color: var(--color-parchment);
+}
+
+.access-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-1);
+}
+
+.access-form__label {
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-text-light-muted);
+}
+
+.access-form__field input {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-3);
+  box-sizing: border-box;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  transition: border-color var(--transition-arcane);
+}
+
+.access-form__field input:focus-visible {
+  outline: none;
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.access-form__submit {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+
+  background-color: var(--color-gold-arcane);
+  border: none;
+  border-radius: var(--radius-scroll);
+  color: var(--color-ink);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane), box-shadow var(--transition-arcane);
+}
+
+.access-form__submit:hover,
+.access-form__submit:focus-visible {
+  background-color: var(--magic-primary);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+/* ---------------------------------------------------------------------
+   6. Estados de rescate: vacío, extravío y corte de maná (RF-06)
+   --------------------------------------------------------------------- */
+
+.empty-state,
+.error-state {
+  text-align: center;
+  padding: var(--space-ink-6) var(--space-ink-4);
+  color: var(--color-text-light-muted);
+}
+
+.empty-state__title,
+.error-state__title {
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-parchment);
+  margin: 0 0 var(--space-ink-2);
+}
+
+/* Botón de rescate: restablecer filtros / volver a la biblioteca. */
+.rescue-button {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+  margin-top: var(--space-ink-3);
+
+  background: none;
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane);
+}
+
+.rescue-button:hover,
+.rescue-button:focus-visible {
+  background-color: var(--color-surface-raised);
+}
+
+/* Pulso arcano de carga (estado inicial y carga incremental). */
+@keyframes arcane-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+.app-loading__hint,
+.is-loading {
+  animation: arcane-pulse 1.6s ease-in-out infinite;
+  color: var(--color-text-light-muted);
+}

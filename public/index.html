@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<!--
+  index.html — Shell semántico del Grimorio Interactivo.
+
+  Tarea 2.1 (TASKS-01): esqueleto HTML5 puro que el orquestador main.js
+  (Tarea 6.1) poblará dinámicamente.
+
+  Constitución:
+    - Artículo I (Dogma Vanilla): sin frameworks ni CDNs; solo estándares W3C.
+    - Artículo IV: textos visibles solemnes y en castellano (Velo Arcano).
+    - Artículo V: identificadores (id, class, data-*) en inglés; comentarios en castellano.
+
+  Nota de diseño: <main id="app"> es el punto de montaje de las vistas SPA;
+  los <dialog> residen aquí desde el arranque para que la pila de modales
+  del plan 4.2 pueda abrirlos sin inyectar markup en caliente.
+-->
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Biblioteca digital y wiki colaborativa de sistemas de magia, hechizos, criaturas y artefactos legendarios.">
+  <title>Grimorio Interactivo — Santuario del saber arcano</title>
+
+  <!-- Sistema de diseño del plan 1: tokens -> layout -> componentes. -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/layout.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+
+  <!-- Orquestador de la aplicación (ES Module nativo, sin empaquetadores). -->
+  <script type="module" src="assets/js/main.js"></script>
+</head>
+
+<body>
+  <!-- Cabecera persistente con la barra de navegación global (RF-02.1). -->
+  <header class="site-header" role="banner">
+    <nav class="site-nav" id="siteNav" aria-label="Navegación principal del santuario">
+      <!-- La marca enlaza al inicio: portal de la SPA (RF-02.1). -->
+      <a href="#/" class="site-nav__brand" aria-label="Grimorio Interactivo: volver al inicio">Grimorio Interactivo</a>
+
+      <!-- Contenedor de enlaces: main.js los renderizará (Inicio, Biblioteca,
+           Salón de Linajes, Creador, «Cruzar el Umbral») en la Tarea 4.1. -->
+      <ul class="site-nav__links" id="navLinks" aria-label="Secciones del santuario">
+      </ul>
+
+      <!-- Botón del menú arcano para pantallas estrechas (RF-02.4, < 768 px).
+           main.js lo cableará con aria-expanded y manejo por teclado. -->
+      <button type="button" class="site-nav__toggle" id="navToggle"
+              aria-expanded="false" aria-controls="navLinks"
+              aria-label="Abrir el menú de navegación arcano">
+        ☰
+      </button>
+    </nav>
+  </header>
+
+  <!-- Punto de montaje de las vistas (landing, biblioteca, linajes, errores).
+           aria-live anuncia cortesía los cambios de vista a lectores de pantalla;
+           aria-busy lo conmutará main.js durante las cargas. -->
+  <main id="app" aria-live="polite" aria-busy="false" role="main">
+    <!-- Estado pre-hidratación: visible solo hasta que main.js monte la vista. -->
+    <section class="app-loading" aria-label="Invocando el santuario">
+      <h1 class="app-loading__title">Grimorio Interactivo</h1>
+      <p class="app-loading__hint">Abriendo el santuario…</p>
+    </section>
+  </main>
+
+  <!-- Pie del santuario: lore breve y aviso de comunidad (Artículo IV). -->
+  <footer class="site-footer" role="contentinfo" aria-label="Pie del santuario">
+    <p class="site-footer__lore">«Todo conjuro guardado aquí sobrevivió al olvido.»</p>
+    <p class="site-footer__meta">Grimorio Interactivo — biblioteca arcano-colaborativa.</p>
+  </footer>
+
+  <!-- ============================================================
+       Diálogo Nivel 1 (plan 4.2, z-index 100): ficha técnica superpuesta.
+       main.js (Tarea 4.3) implementará el focus trap y el cierre con
+       Escape / botón Atrás, devolviendo el foco a la tarjeta de origen.
+       ============================================================ -->
+  <dialog id="spellDetailModal" class="modal" aria-labelledby="spellDetailTitle">
+    <article class="modal__panel" role="document" aria-label="Ficha técnica del hechizo">
+      <button type="button" class="modal__close" id="spellDetailClose"
+              aria-label="Cerrar la ficha del hechizo">×</button>
+      <section class="modal__body" id="spellDetailBody">
+        <!-- Contenido dinámico: SpellDetailDto renderizado por la Tarea 4.3. -->
+      </section>
+    </article>
+  </dialog>
+
+  <!-- ============================================================
+       Diálogo Nivel 2 (plan 4.2, z-index 200): «Cruzar el Umbral».
+       Se superpone SIN destruir la ficha subyacente (RF-05.2).
+       Contiene los dos formularios del RF-05.1: Renovar Vínculo (login)
+       y Consagrarse (registro).
+       ============================================================ -->
+  <dialog id="accessModal" class="modal modal--access" aria-labelledby="accessModalTitle">
+    <article class="modal__panel" role="document" aria-label="Diálogo de acceso y consagración">
+      <button type="button" class="modal__close" id="accessModalClose"
+              aria-label="Cerrar el diálogo de acceso">×</button>
+
+      <h2 class="modal__title" id="accessModalTitle">Cruzar el Umbral</h2>
+      <p class="modal__hint" id="accessModalHint">Renueva tu vínculo o conságrate para continuar.</p>
+
+      <!-- Renovar Vínculo: inicio de sesión (RF-05.1). -->
+      <form id="loginForm" class="access-form" aria-labelledby="loginFormTitle" novalidate>
+        <h3 class="access-form__title" id="loginFormTitle">Renovar Vínculo</h3>
+        <label class="access-form__field">
+          <span class="access-form__label">Nombre arcano</span>
+          <input type="text" name="loginName" autocomplete="username" required
+                 aria-label="Nombre arcano para renovar el vínculo">
+        </label>
+        <label class="access-form__field">
+          <span class="access-form__label">Palabra de paso</span>
+          <input type="password" name="loginPassword" autocomplete="current-password" required
+                 aria-label="Palabra de paso para renovar el vínculo">
+        </label>
+        <button type="submit" class="access-form__submit">Renovar Vínculo</button>
+      </form>
+
+      <!-- Consagrarse: registro de nuevo miembro (RF-05.1). -->
+      <form id="registerForm" class="access-form" aria-labelledby="registerFormTitle" novalidate>
+        <h3 class="access-form__title" id="registerFormTitle">Consagrarse</h3>
+        <label class="access-form__field">
+          <span class="access-form__label">Nombre arcano</span>
+          <input type="text" name="registerName" autocomplete="username" required
+                 aria-label="Nombre arcano para la consagración">
+        </label>
+        <label class="access-form__field">
+          <span class="access-form__label">Palabra de paso</span>
+          <input type="password" name="registerPassword" autocomplete="new-password" required
+                 aria-label="Palabra de paso para la consagración">
+        </label>
+        <button type="submit" class="access-form__submit">Consagrarse</button>
+      </form>
+    </article>
+  </dialog>
+</body>
+
+</html>
