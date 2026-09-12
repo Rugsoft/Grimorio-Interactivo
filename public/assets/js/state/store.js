@@ -64,6 +64,14 @@ function createInitialState() {
       action: null,
       targetSlug: null,
     },
+
+    /** Estado de sesión del cliente (Tarea 4.2, SPEC-03).
+     *  currentUser porta el sobre data.user de authClient (Tarea 4.1);
+     *  null = visitante anónimo. El anónimo porta el rol reader (RF-05.1). */
+    currentUser: null,
+    isAuthenticated: false,
+    userRole: 'reader',
+    userClan: null,
   };
 }
 
@@ -150,11 +158,52 @@ export function createStore() {
     });
   }
 
+  /**
+   * CRITERIO T4.2: registra la sesión abierta en el estado global.
+   * Fusión superficial + notificación a suscriptores: iniciar sesión
+   * actualiza de forma reactiva la interfaz sin recargar la página.
+   *
+   * El sobre data.user viene del authClient (Tarea 4.1): { id, alias,
+   * role, clanId, clanName }. El fragmento userClan se normaliza a
+   * { id, name } o null cuando el usuario no porta linaje.
+   *
+   * @param {object|null} user Entidad del vinculado (sobre del backend).
+   */
+  function setSession(user) {
+    const sessionUser = user !== null && typeof user === 'object' ? user : null;
+    const clanId = typeof sessionUser?.clanId === 'string' ? sessionUser.clanId : '';
+    const clanName = typeof sessionUser?.clanName === 'string' ? sessionUser.clanName : '';
+
+    setState({
+      currentUser: sessionUser,
+      isAuthenticated: sessionUser !== null,
+      userRole: typeof sessionUser?.role === 'string' && sessionUser.role !== '' ? sessionUser.role : 'reader',
+      // Sin clan real no se fabrica un clan fantasma: null es la ausencia.
+      userClan: clanId !== '' ? { id: clanId, name: clanName } : null,
+    });
+  }
+
+  /**
+   * CRITERIO T4.2: cierra la sesión en el estado global. El anónimo
+   * degrada al rol reader de lectura pública (RF-05.1), espejando el
+   * comportamiento del AuthMiddleware del backend (SPEC-03, Tarea 3.1).
+   */
+  function clearSession() {
+    setState({
+      currentUser: null,
+      isAuthenticated: false,
+      userRole: 'reader',
+      userClan: null,
+    });
+  }
+
   return {
     getState,
     setState,
     subscribe,
     appendCatalogSpells,
     clearPendingIntent,
+    setSession,
+    clearSession,
   };
 }

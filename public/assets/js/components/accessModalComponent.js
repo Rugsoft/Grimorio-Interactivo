@@ -97,6 +97,8 @@ export function createAccessModalComponent(dialog, options) {
   const onAuthenticate = options.onAuthenticate ?? null;
   const onRegister = options.onRegister ?? null;
   const onClose = options.onClose ?? null;
+  /** Mensajes del backend (RF-03.1, extensión Tarea 4.3). */
+  const onError = options.onError ?? null;
 
   /** Botón × del shell (RF-05.3): cierre de cancelación del diálogo. */
   let closeButton = null;
@@ -117,13 +119,29 @@ export function createAccessModalComponent(dialog, options) {
       shellForm.addEventListener('submit', (event) => {
         event.preventDefault?.();
         const credentials = extractCredentials(event, mode);
+
+        // Guardia SPEC-03 (Tarea 4.3): mientras dure el bloqueo por
+        // sobrecarga de maná (429, RF-03.2) ningún envío procede.
+        if (isSubmissionLocked()) return;
+
         // Notifica al orquestador con la intención retenida (RF-05.3) y
         // cierra para reanudarla: flujo completo de «Cruzar el Umbral».
         if (mode === 'login' && typeof onAuthenticate === 'function') {
           onAuthenticate(credentials, pendingIntent);
         }
         if (mode === 'register' && typeof onRegister === 'function') {
-          onRegister(credentials, pendingIntent);
+          // Selección OBLIGATORIA de clan (RF-01.1): si el selector está
+          // poblado y no se electo linaje, el registro no procede y el
+          // diálogo permanece abierto para que el iniciado elija.
+          const clanSelect = findDescendantById(dialog, 'clanSelect');
+          if (clanSelect !== null) {
+            const selectedClanId = clanSelect.value ?? '';
+            if (selectedClanId === '') return;
+            // El clanId electo viaja con el payload (RF-01.1).
+            onRegister({ ...credentials, clanId: selectedClanId }, pendingIntent);
+          } else {
+            onRegister(credentials, pendingIntent);
+          }
         }
         close();
       });
@@ -186,6 +204,165 @@ export function createAccessModalComponent(dialog, options) {
     dialog.close('access-dismissed');
   }
 
+  // ===================================================================
+  // Extensión SPEC-03 (Tarea 4.3): pestañas, selector de clan obligatorio,
+  // mensajes anti-enumeración y bloqueo temporal por 429. Todo se apila
+  // sobre el cableado original sin reconstruir el shell.
+  // ===================================================================
+
+  /** Pestañas canónicas del diálogo (plan 2.2, RF-01.1/RF-02.1). */
+  const TAB_NAMES = ['login', 'register'];
+
+  /** Pestaña activa (defecto: Renovar Vínculo). */
+  let activeTab = 'login';
+
+  /** Instante (Date.now()) hasta el que el envío queda congelado por 429. */
+  let submissionLockedUntil = 0;
+
+  /**
+   * Localiza un descendiente por id dentro del diálogo (idempotente).
+   */
+  function findOrWireFormElement(formId) {
+    let element = typeof dialog.querySelector === 'function'
+      ? dialog.querySelector(`#${formId}`)
+      : null;
+    if (element) return element;
+    element = findDescendantById(dialog, formId);
+    if (element) return element;
+    // El shell aún no lo trae: el componente lo forja como nodo propio
+    // (El DOM real del index.html sí lo trae desde la Tarea 2.1).
+    const forged = (options.documentRef ?? globalThis.document)?.createElement?.('form');
+    if (forged) {
+      forged.setAttribute('id', formId);
+      dialog.appendChild(forged);
+    }
+    return forged;
+  }
+
+  /**
+   * CRITERIO T4.3: alterna fluidamente entre «Renovar Vínculo» (login)
+   * y «Consagrarse» (register). Pestaña fuera del canon se ignora.
+   *
+   * @param {'login'|'register'} tabName Pestaña destino.
+   */
+  function showTab(tabName) {
+    if (!TAB_NAMES.includes(tabName)) return; // Defensa: sin estados fantasma.
+    activeTab = tabName;
+
+    // Señal accesible: aria-hidden en el formulario inactivo para que los
+    // lectores de pantalla anuncien solo la pestaña viva.
+    for (const tabNameLoop of TAB_NAMES) {
+      const formElement = findOrWireFormElement(SHELL_FORM_IDS[tabNameLoop]);
+      if (!formElement) continue;
+      if (tabNameLoop === activeTab) {
+        formElement.removeAttribute('aria-hidden');
+      } else {
+        formElement.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    // Gestión de foco (RNF-03): el primer campo de la pestaña activa lo
+    // recibe al alternar, sin abandonar el confinamiento del diálogo.
+    if (dialog.open) {
+      const firstInput = findFirstInput(findOrWireFormElement(SHELL_FORM_IDS[activeTab]));
+      if (firstInput) firstInput.focus();
+    }
+  }
+
+  /** Pestaña activa ('login' | 'register'). */
+  function getActiveTab() {
+    return activeTab;
+  }
+
+  /**
+   * CRITERIO T4.3: puebla el selector OBLIGATORIO de linaje (RF-01.1)
+   * con los clanes activos del catálogo. Crea el selector si el shell
+   * aún no lo trae y añade la opción placeholder vacía (obliga a elegir).
+   *
+   * @param {Array<{id: string, name: string}>} clans Linajes activos.
+   */
+  function populateClans(clans) {
+    const clanList = Array.isArray(clans) ? clans : [];
+    let clanSelect = findDescendantById(dialog, 'clanSelect');
+    if (clanSelect) {
+      // Repoblado idempotente: se descartan las opciones anteriores.
+      for (const previousOption of [...(clanSelect.children ?? [])]) {
+        previousOption.remove?.();
+      }
+    } else {
+      clanSelect = documentRef.createElement?.('select');
+      if (!clanSelect) return;
+      clanSelect.setAttribute('id', 'clanSelect');
+      clanSelect.setAttribute('name', 'clanSelect');
+      clanSelect.setAttribute('required', '');
+      clanSelect.setAttribute('aria-label', 'Linaje al que consagrarse (obligatorio)');
+      const registerFormElement = findOrWireFormElement(SHELL_FORM_IDS.register);
+      registerFormElement?.appendChild(clanSelect);
+    }
+
+    // Placeholder vacío: hasta que el iniciado elija, el valor no es válido.
+    const placeholderOption = documentRef.createElement?.('option');
+    if (placeholderOption) {
+      placeholderOption.setAttribute('value', '');
+      placeholderOption.textContent = '— Elige tu linaje —';
+      clanSelect.appendChild(placeholderOption);
+    }
+
+    // Una opción por linaje activo (Art. IV: nombres solemnes en castellano).
+    for (const clan of clanList) {
+      const clanOption = documentRef.createElement?.('option');
+      if (!clanOption) continue;
+      clanOption.setAttribute('value', String(clan.id));
+      clanOption.textContent = String(clan.name);
+      clanSelect.appendChild(clanOption);
+    }
+  }
+
+  /**
+   * CRITERIO T4.3: bloquea temporalmente el envío (RF-03.2). Se invoca
+   * cuando la API responde 429 RATE_LIMITED con remainingSeconds: el
+   * botón queda congelado mientras dura el castigo de la procedencia.
+   *
+   * @param {number} seconds Segundos de bloqueo (0 o negativo desbloquea).
+   */
+  function lockSubmission(seconds) {
+    const lockSeconds = Number(seconds);
+    if (!Number.isFinite(lockSeconds) || lockSeconds <= 0) {
+      submissionLockedUntil = 0; // Fin del castigo: desbloqueo inmediato.
+      return;
+    }
+    submissionLockedUntil = Date.now() + lockSeconds * 1000;
+  }
+
+  /** Verdadero mientras dure el bloqueo por sobrecarga de maná. */
+  function isSubmissionLocked() {
+    return Date.now() < submissionLockedUntil;
+  }
+
+  /**
+   * CRITERIO T4.3: muestra el mensaje del backend (RF-03.1). Las leyendas
+   * anti-enumeración ya vienen decididas por el servidor (fuente única de
+   * verdad): aquí solo se exhiben, jamás se reescriben en el cliente.
+   *
+   * @param {Object|null} errorEnvelope Sobre estándar { success, error }.
+   */
+  function reportError(errorEnvelope) {
+    const errorCode = errorEnvelope?.error?.code ?? null;
+    const message = typeof errorEnvelope?.error?.message === 'string' && errorEnvelope.error.message !== ''
+      ? errorEnvelope.error.message
+      : 'La corriente de maná no pudo procesar la petición.';
+
+    // Bloqueo temporal cuando el backend declara sobrecarga (RF-03.2).
+    const remainingSeconds = Number(errorEnvelope?.error?.remainingSeconds);
+    if (errorCode === 'RATE_LIMITED' && Number.isFinite(remainingSeconds) && remainingSeconds > 0) {
+      lockSubmission(remainingSeconds);
+    }
+
+    if (typeof onError === 'function') {
+      onError(message, errorCode ?? undefined);
+    }
+  }
+
   function destroy() {
     if (isDestroyed) return;
     isDestroyed = true;
@@ -201,5 +378,11 @@ export function createAccessModalComponent(dialog, options) {
     isOpen: () => dialog.open,
     getPendingIntent: () => pendingIntent,
     destroy,
+    showTab,
+    getActiveTab,
+    populateClans,
+    reportError,
+    lockSubmission,
+    isSubmissionLocked,
   };
 }
