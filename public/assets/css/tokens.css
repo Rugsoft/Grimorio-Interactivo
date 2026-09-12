@@ -15,17 +15,23 @@
    ===================================================================== */
 
 /* =====================================================================
-   Tipografías locales WOFF2 (Tarea 1.1, TASKS-02)
+   Tipografías locales WOFF2 (Tarea 1.1, TASKS-02 — reforja QA)
    ---------------------------------------------------------------------
-   Las tres familias viven empaquetadas en public/assets/fonts/ y se
-   sirven desde el propio servidor: jamás se solicita tipografía a
-   servidores externos (Google Fonts y compañía quedan desterrados por
-   el Artículo I). `font-display: swap` muestra el texto con la pila de
-   respaldo mientras el archivo local llega, evitando el parpadeo
-   invisible (FOIT).
+   Las familias viven empaquetadas en public/assets/fonts/ y se sirven
+   desde el propio servidor: jamás se solicita tipografía a servidores
+   externos (Google Fonts y compañía quedan desterrados por el Artículo
+   I). `font-display: swap` muestra el texto con la pila de respaldo
+   mientras el archivo local llega, evitando el parpadeo invisible.
+
+   Reforja de legibilidad: las siluetas geométricas forjadas por script
+   (ilegibles en cuerpo) fueron sustituidas por tipografías reales de
+   licencia OFL, subconjuntadas y servidas localmente:
+     - Cinzel 400        -> títulos grabados en capitales romanas.
+     - EB Garamond 400   -> cuerpo de lectura humanístico.
+     - EB Garamond 700   -> énfasis y cifras de maná.
    ===================================================================== */
 
-/* Título arcano medieval: encabezados, nombres de conjuro y sellos solemnes. */
+/* Título arcano: capitales grabadas solemnes (Cinzel, SIL OFL 1.1). */
 @font-face {
   font-family: 'MedievalArcaneTitle';
   src: url('../fonts/medieval-arcane-title.woff2') format('woff2');
@@ -34,7 +40,8 @@
   font-display: swap;
 }
 
-/* Cuerpo de lectura: pergaminos, descripciones y lore extenso. */
+/* Cuerpo de lectura: pergaminos, descripciones y lore extenso
+   (EB Garamond, SIL OFL 1.1). */
 @font-face {
   font-family: 'LoreReadable';
   src: url('../fonts/lore-readable-regular.woff2') format('woff2');
@@ -225,7 +232,8 @@
 
   /* -----------------------------------------------------------------
      3. Tipografía mística (fuentes locales WOFF2 + pilas de respaldo)
-        Las familias locales 'MedievalArcaneTitle' y 'LoreReadable' van
+        Las familias locales 'MedievalArcaneTitle' (Cinzel) y
+        'LoreReadable' (EB Garamond) van
         SIEMPRE primero; las serifas del sistema solo sostienen el
         texto mientras llega el archivo o si el navegador no lee WOFF2.
         Versalitas espaciadas para sellos (respaldo del sistema).

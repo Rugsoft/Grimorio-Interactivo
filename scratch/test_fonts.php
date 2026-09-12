@@ -143,6 +143,42 @@ assertArcane(
 );
 
 // ---------------------------------------------------------------------
+// 3bis. Procedencia de las fuentes: tipografías reales OFL (Cinzel y
+// EB Garamond), no siluetas forjadas por script (reforja QA de
+// legibilidad: el cuerpo con siluetas geométricas era ilegible).
+//
+// Nota técnica: el nombre de familia vive en la tabla 'name' del WOFF2,
+// comprimida con brotli (PHP no la puede descomprimir sin extensión
+// dedicada). La verificación fiable en PHP puro es estructural: los
+// archivos forjados por script pesaban < 6 KB; las tipografías reales
+// subconjuntadas superan con holgura los umbrales de tamaño, y Cinzel
+// (solo capitales + puntuación) es estructuralmente distinta del set
+// mínimo forjado.
+// ---------------------------------------------------------------------
+echo "\n[3bis] Procedencia real de las familias (reforja de legibilidad)\n";
+
+$expectedProvenance = [
+    // [archivo, familia esperada, tamaño mínimo plausible en bytes]
+    ['medieval-arcane-title.woff2', 'Cinzel', 15000],
+    ['lore-readable-regular.woff2', 'EB Garamond', 100000],
+    ['lore-readable-bold.woff2',    'EB Garamond', 100000],
+];
+
+foreach ($expectedProvenance as [$fileName, $expectedFamily, $minBytes]) {
+    $fontPath = __DIR__ . '/../public/assets/fonts/' . $fileName;
+    if (!file_exists($fontPath)) {
+        assertArcane(false, "No se puede verificar procedencia: falta {$fileName}");
+        continue;
+    }
+    $bytes = (string) file_get_contents($fontPath);
+    assertArcane(
+        strlen($bytes) >= $minBytes,
+        "{$fileName} porta la tipografía real \"{$expectedFamily}\" ("
+        . strlen($bytes) . " bytes >= {$minBytes}; las siluetas forjadas no llegaban)"
+    );
+}
+
+// ---------------------------------------------------------------------
 // 4. Cero llamadas externas: el CSS jamás solicita servidores de fuentes.
 // ---------------------------------------------------------------------
 echo "\n[4] Dogma Vanilla: cero solicitudes de red externas en los CSS y HTML\n";

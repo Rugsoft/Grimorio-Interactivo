@@ -12,6 +12,7 @@
   * **Alcance:** Provisión de los archivos de fuentes locales en `public/assets/fonts/` (`medieval-arcane-title.woff2`, `lore-readable-regular.woff2`, `lore-readable-bold.woff2`) y declaración `@font-face` con `font-display: swap`.
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RF-02.3`, `RNF-05`, `Artículo I`
   * **Hecho cuando:** La carga del navegador renderiza los textos con las fuentes locales sin emitir ninguna solicitud de red a servidores externos como Google Fonts.
+  * **Reforja de legibilidad (QA):** las siluetas geométricas forjadas por script (`scratch/build_fonts.py`, hoy eliminado) se sustituyeron por tipografías reales de licencia SIL OFL empaquetadas localmente: **Cinzel 400** para títulos y **EB Garamond 400/700** para cuerpo y énfasis. Mismos nombres de archivo y de familia interna, cero cambios en consumidores.
 
 - [x] **Tarea 1.2: Tokens CSS de superficies, pergaminos y metales**
   * **Alcance:** Definir en `public/assets/css/tokens.css` las variables `:root` para fondos oscuros de obsidiana (`--color-bg-obsidian-*`), pergaminos ancestrales (`--color-parchment-*`), oros ceremoniales (`--color-gold-*`) y piedra desgastada.
