@@ -1,0 +1,81 @@
+/*
+ * print.css — Hoja de estilos de impresión y monocromo del Grimorio.
+ *
+ * Tarea 5.1 (TASKS-02): adaptación del santuario a papel y soportes
+ * e-ink (plan 5.5, RF-06.3, Caso Límite 4).
+ *
+ * Constitución:
+ *   - Artículo I (Dogma Vanilla): @media print nativo, cero frameworks.
+ *   - Artículo V: comentarios en castellano.
+ *
+ * Filosofía de bajo consumo: el fondo negro de la pantalla (90 % de
+ * cobertura de tinta) se transmuta a papel virgen; la tinta vive solo
+ * en los glifos y bordes esenciales. Los glifos elementales conservan
+ * su identidad rúnica SIN depender del color (monocromía garantizada).
+ */
+
+@media print {
+
+  /* =================================================================
+     1. Santuario en papel: fondo blanco y tinta negra de bajo consumo.
+        El !important vence a la cascada de pantalla (tokens oscuros).
+     ================================================================= */
+  body,
+  .grimoire-tomo-container {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  /* Sin sombras de página ni degradados de fondo: papel limpio. */
+  body {
+    box-shadow: none !important;
+  }
+
+  /* =================================================================
+     2. Tarjetas de conjuro: pergamino claro, borde monocromo y sin
+        cortes a mitad de página.
+     ================================================================= */
+  .spell-card {
+    background: #faf8f5 !important;
+    border: 1px solid #777777 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+
+  /* =================================================================
+     3. Insignias elementales: legibles SIN color (RF-06.3).
+        El glifo rúnico (::before con content: var(--current-glyph))
+        hereda esta tinta negra: la identidad elemental viaja en el
+        símbolo, jamás en el tono.
+     ================================================================= */
+  .spell-card__badge-elemental {
+    border: 1px solid #222222 !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+
+  .spell-card__badge-school,
+  .spell-card__badge--experimental {
+    border: 1px solid #444444 !important;
+    color: #111111 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    animation: none !important; /* El sello experimental no parpadea en papel. */
+  }
+
+  /* =================================================================
+     4. Texto auxiliar: sin tintas de acento doradas (bajo consumo).
+     ================================================================= */
+  .spell-card__summary,
+  .spell-card__name {
+    color: #111111 !important;
+  }
+
+  /* =================================================================
+     5. Anulación total de animaciones y transiciones: papel estático.
+     ================================================================= */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

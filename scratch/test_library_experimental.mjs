@@ -42,6 +42,8 @@ function createFakeElement(tagName) {
     attributes: {},
     classes: new Set(),
     listeners: {},
+    style: { setProperty(name, value) { (this.inline ??= {})[name] = String(value); }, getProperty(name) { return (this.inline ?? {})[name] ?? null; } },
+
     _textContent: '',
     _value: '',
     _checked: false,

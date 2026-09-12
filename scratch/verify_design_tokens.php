@@ -3,13 +3,19 @@
 /**
  * verify_design_tokens.php — Auditoría automatizada de tokens y contraste.
  *
- * Tarea 1.5 (TASKS-02) — plan técnico 7.1.
+ * Tarea 1.5 (TASKS-02) — plan técnico 7.1. Ampliada tras la revisión QA
+ * de la SPEC-02 con la Certificación 3 (contraste a nivel de componente).
  *
- * Dos certificaciones sobre el árbol del proyecto:
+ * Tres certificaciones sobre el árbol del proyecto:
  *   1. Inspección de enlaces externos: ningún .html/.css contiene URLs
  *      salientes http:// o https:// (Dogma Vanilla, Artículo I).
- *   2. Verificación de contraste WCAG 2.1: cada par texto/fondo definido
- *      en tokens.css supera 4.5:1 (3:1 para texto de gran tamaño).
+ *   2. Verificación de contraste WCAG 2.1: cada par texto/fondo global
+ *      definido en tokens.css supera 4.5:1 (3:1 para texto de gran tamaño).
+ *   3. Verificación de contraste a nivel de COMPONENTE (RF-01.3 «en
+ *      cualquier punto de la interfaz»): cada par texto/fondo que un
+ *      selector de components.css fija con tokens hex o var() resolubles
+ *      se compone y mide (insignias elementales por afinidad, maná,
+ *      sellos de estado, escuela, clan, etc.).
  *
  * Uso:
  *   php scratch/verify_design_tokens.php [raiz_alternativa]
@@ -25,6 +31,7 @@ declare(strict_types=1);
 $projectRoot = $argv[1] ?? dirname(__DIR__);
 $cssDir      = $projectRoot . '/public/assets/css';
 $tokensPath  = $cssDir . '/tokens.css';
+$componentsPath = $cssDir . '/components.css';
 
 $violations = [];
 
@@ -73,6 +80,94 @@ function extractColorTokens(string $css): array
         }
     }
     return $tokens;
+}
+
+/**
+ * Extrae TODAS las declaraciones custom-property de un CSS (hex o cualquier
+ * valor), incluidas las de bloques anidados como @keyframes o variantes.
+ *
+ * @return array<string, string>
+ */
+function extractCustomProperties(string $css): array
+{
+    $props = [];
+    if (preg_match_all('/(--[a-zA-Z0-9-]+)\s*:\s*([^;{}]+);/', $css, $matches, PREG_SET_ORDER)) {
+        foreach ($matches as $m) {
+            $props[$m[1]] = trim($m[2]);
+        }
+    }
+    return $props;
+}
+
+/**
+ * Resuelve un valor CSS de color a hex (#rrggbb) usando los tokens
+ * conocidos. Acepta '#rrggbb', 'var(--token)', 'var(--token, fallback)'
+ * y colores anidados tipo 'var(--a, var(--b))'. Devuelve null si no es
+ * resoluble con los tokens disponibles (no se audita, no se infringe).
+ */
+function resolveColorToken(string $value, array $tokens): ?string
+{
+    $value = trim($value);
+
+    // Color hex directo.
+    if (preg_match('/^#[0-9a-fA-F]{6}$/', $value) === 1) {
+        return strtolower($value);
+    }
+
+    // var(--token) o var(--token, fallback) con soporte de anidamiento.
+    if (preg_match('/^var\((--[a-zA-Z0-9-]+)\s*(?:,\s*(.+))?\)$/s', $value, $m) === 1) {
+        $tokenName = $m[1];
+        if (isset($tokens[$tokenName])) {
+            return resolveColorToken($tokens[$tokenName], $tokens);
+        }
+        if (isset($m[2])) {
+            return resolveColorToken($m[2], $tokens);
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Extrae los bloques top-level (selector => cuerpo) de una hoja,
+ * tolerando listas de selectores y descartando at-rules anidados
+ * como @keyframes/@media (estos se tratan aparte si se necesita).
+ *
+ * @return array<string, string>
+ */
+function extractTopLevelRules(string $css): array
+{
+    // Retira comentarios para un parseo estable.
+    $css = preg_replace('/\/\*.*?\*\//s', '', $css) ?? $css;
+    $rules = [];
+    $len = strlen($css);
+    $i = 0;
+    while ($i < $len) {
+        $brace = strpos($css, '{', $i);
+        if ($brace === false) {
+            break;
+        }
+        $selector = trim(preg_replace('/\s+/', ' ', substr($css, $i, $brace - $i)));
+        // Cuerpo con llaves balanceadas (soporta anidados).
+        $depth = 1;
+        $j = $brace + 1;
+        while ($j < $len && $depth > 0) {
+            if ($css[$j] === '{') { $depth++; }
+            elseif ($css[$j] === '}') { $depth--; }
+            $j++;
+        }
+        $body = substr($css, $brace + 1, $j - $brace - 2);
+        if ($selector !== '' && $selector[0] !== '@') {
+            $rules[$selector] = $body;
+        } elseif ($selector === '@media' || str_starts_with($selector, '@media')) {
+            // Los bloques media se aplanan recursivamente.
+            foreach (extractTopLevelRules($body) as $sel => $b) {
+                $rules[$sel] = ($rules[$sel] ?? '') . $b;
+            }
+        }
+        $i = $j;
+    }
+    return $rules;
 }
 
 // =====================================================================
@@ -172,11 +267,130 @@ if ($tokensPath === null) {
 }
 
 // =====================================================================
+// CERTIFICACIÓN 3: contraste a nivel de COMPONENTE (RF-01.3).
+//
+// La Certificación 2 solo audita pares globales de tokens.css. Pero el
+// requisito exige >= 4.5:1 «en cualquier punto de la interfaz»: aquí se
+// componen los pares texto/fondo que los selectores de components.css
+// fijan sobre cada componente (insignias elementales con sus 8 variantes
+// de afinidad, insignia de maná, sellos de estado, etc.) y se miden.
+// =====================================================================
+echo "\n[3] Contraste WCAG de pares texto/fondo a nivel de componente (components.css)\n";
+
+if (!file_exists($componentsPath)) {
+    echo "  --   components.css no encontrado: certificación omitida\n";
+} else {
+    $componentsCss = (string) file_get_contents($componentsPath);
+
+    // Universo de tokens: los de tokens.css más los fijados en las
+    // propias variantes de components.css (--current-element, etc.).
+    $allTokens = array_merge(
+        extractCustomProperties($tokensCss),
+        extractCustomProperties($componentsCss)
+    );
+
+    $componentPairs = [
+        // [selector, umbral, descripción]
+        // Insignia elemental base (respaldo arcano) y sus 8 variantes.
+        ['.spell-card__badge-elemental', 4.5, 'insignia elemental (respaldo arcano)'],
+        ['.spell-card__badge-elemental--fire', 4.5, 'insignia Fuego'],
+        ['.spell-card__badge-elemental--water', 4.5, 'insignia Agua'],
+        ['.spell-card__badge-elemental--lightning', 4.5, 'insignia Rayo'],
+        ['.spell-card__badge-elemental--earth', 4.5, 'insignia Tierra'],
+        ['.spell-card__badge-elemental--wind', 4.5, 'insignia Viento'],
+        ['.spell-card__badge-elemental--light', 4.5, 'insignia Luz'],
+        ['.spell-card__badge-elemental--darkness', 4.5, 'insignia Oscuridad'],
+        ['.spell-card__badge-elemental--arcane', 4.5, 'insignia Arcano'],
+        // Maná, escuela, génesis e inestabilidad.
+        ['.spell-card__badge--mana', 4.5, 'insignia de maná'],
+        ['.spell-card__badge-school', 4.5, 'insignia de escuela'],
+        ['.spell-card__badge--genesis', 4.5, 'sello génesis'],
+        ['.spell-card__badge--experimental', 4.5, 'sello inestabilidad'],
+        ['.spell-card__badge--unstable', 4.5, 'sello inestabilidad (alias --unstable)'],
+        // Insignia genérica (fondo pergamino viejo + tinta suave).
+        ['.spell-card__badge', 4.5, 'insignia genérica (escuela/clan sin override)'],
+    ];
+
+    $rules = extractTopLevelRules($componentsCss);
+
+    foreach ($componentPairs as [$selector, $minRatio, $label]) {
+        // El cuerpo puede vivir en un selector agrupado: se concatena el
+        // cuerpo de todos los grupos que incluyan el selector pedido y,
+        // para variantes, se heredan las propiedades del bloque base
+        // (cascada CSS: la variante sobreescribe, la base aporta el resto).
+        $baseSelector = '.spell-card__badge-elemental';
+        $isVariant = str_starts_with($selector, $baseSelector . '--');
+        $ownBody = null;
+        $baseBody = null;
+        foreach ($rules as $ruleSelector => $ruleBody) {
+            foreach (explode(',', $ruleSelector) as $single) {
+                $single = trim($single);
+                if ($single === $selector) {
+                    $ownBody = ($ownBody ?? '') . $ruleBody;
+                }
+                if ($isVariant && $single === $baseSelector) {
+                    $baseBody = ($baseBody ?? '') . $ruleBody;
+                }
+            }
+        }
+
+        if ($ownBody === null || ($isVariant && $baseBody === null)) {
+            echo "  --   Omitido (selector ausente): {$selector}\n";
+            continue;
+        }
+
+        $body = $isVariant ? $baseBody . $ownBody : $ownBody;
+
+        $colorValue = preg_match('/(?:^|;)\s*color\s*:\s*([^;]+);/m', $body, $mC) ? trim($mC[1]) : null;
+        $bgValue    = preg_match('/(?:^|;)\s*background-color\s*:\s*([^;]+);/m', $body, $mB) ? trim($mB[1]) : null;
+
+        // Fondo del bloque base: la Custom Property --current-element.
+        // Si el selector es una variante de afinidad, su propio cuerpo fija
+        // --current-element al token canónico (--color-affinity-<elemento>).
+        // En el bloque base la propiedad llega como respaldo
+        // var(--current-element, var(--color-affinity-arcane)): se usa el
+        // fallback, el dorado arcano del grimorio.
+        if ($isVariant) {
+            $variantCustom = extractCustomProperties($ownBody);
+            $bgValue = $variantCustom['--current-element'] ?? $bgValue;
+        } elseif ($bgValue !== null && str_contains($bgValue, '--current-element')
+            && preg_match('/^var\(--current-element\s*,\s*(.*)\)$/s', $bgValue, $mFallback) === 1) {
+            $bgValue = trim($mFallback[1]);
+        } elseif ($bgValue !== null && str_contains($bgValue, '--current-element')) {
+            $bgValue = null;
+        }
+        if ($colorValue !== null && str_contains($colorValue, '--current-')) {
+            $colorValue = null;
+        }
+
+        $colorHex = $colorValue !== null ? resolveColorToken($colorValue, $allTokens) : null;
+        $bgHex    = $bgValue !== null ? resolveColorToken($bgValue, $allTokens) : null;
+
+        if ($colorHex === null || $bgHex === null) {
+            // Sin señal de color por herencia dinámica: no es infracción
+            // auditable estáticamente; se informa como omitido.
+            echo "  --   Omitido (color no resoluble estáticamente): {$label}\n";
+            continue;
+        }
+
+        $ratio = contrastRatio($colorHex, $bgHex);
+        $ratioStr = number_format($ratio, 2, '.', '');
+        if ($ratio >= $minRatio) {
+            echo "  OK   {$label}: {$ratioStr}:1 >= {$minRatio}:1\n";
+        } else {
+            $msg = "{$label}: {$ratioStr}:1 < {$minRatio}:1 (texto " . strtoupper($colorHex) . " sobre fondo " . strtoupper($bgHex) . ")";
+            $violations[] = $msg;
+            echo "  FALLA {$msg}\n";
+        }
+    }
+}
+
+// =====================================================================
 // Veredicto.
 // =====================================================================
 echo "\n=== VEREDICTO ===\n";
 if ($violations === []) {
-    echo "Árbol en regla: cero llamadas externas y contraste WCAG >= 4.5:1 en todos los pares.\n";
+    echo "Árbol en regla: cero llamadas externas y contraste WCAG >= 4.5:1 en tokens y componentes.\n";
     exit(0);
 }
 echo count($violations) . " infracción(es):\n";

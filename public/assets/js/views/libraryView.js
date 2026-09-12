@@ -120,6 +120,12 @@ export function createLibraryView(mountRoot, options) {
     const filters = state.activeFilters;
     const currentSequence = ++fetchSequence;
 
+    // RF-04.1 [Estado]: mientras el catálogo espera datos, se despliegan
+    // «Pergaminos Espectrales» con la huella exacta de las tarjetas.
+    if (renderMode === 'replace') {
+      renderSpectralPlaceholders();
+    }
+
     const result = await activeSpellClient.fetchSpells({
       query: filters.query,
       schools: buildSchoolsParam(),
@@ -162,6 +168,11 @@ export function createLibraryView(mountRoot, options) {
   /** Monta el estado de error temático con botón de reintento (RF-06.3). */
   function renderErrorState(errorEnvelope) {
     clearErrorState();
+    // RF-04.3: ante un fracaso, los espectrales se retiran para que el
+    // bloque de error ocupe el escenario (la rejilla queda limpia).
+    for (const ghost of [...(catalogGrid?.children ?? [])]) {
+      if (ghost.className === 'spectral-scroll-placeholder') ghost.remove();
+    }
     const errorBlock = track(elementFactory('div'));
     errorBlock.className = 'library-view__error';
     errorBlock.setAttribute('role', 'alert');
@@ -184,6 +195,28 @@ export function createLibraryView(mountRoot, options) {
   }
 
   /** Repuebla la rejilla con las tarjetas del catálogo recibido. */
+  /**
+   * Despliega «Pergaminos Espectrales» en la rejilla (RF-04.1, plan 5.2,
+   * Tarea 4.2): una silueta por asiento del límite de tanda, con la huella
+   * EXACTA de las tarjetas para que el reemplazo registre CLS = 0.
+   */
+  function renderSpectralPlaceholders() {
+    if (!catalogGrid) return;
+    // Vaciado compatible con el DOM simulado (sin replaceChildren).
+    if (catalogGrid.replaceChildren) {
+      catalogGrid.replaceChildren();
+    } else {
+      for (const child of [...catalogGrid.children]) child.remove();
+    }
+    const batchLimit = store.getState().pagination?.limit ?? 6;
+    for (let seat = 0; seat < batchLimit; seat += 1) {
+      const placeholder = track(elementFactory('div'));
+      placeholder.className = 'spectral-scroll-placeholder';
+      placeholder.setAttribute('aria-hidden', 'true'); // Decorativo: sin rol.
+      catalogGrid.appendChild(placeholder);
+    }
+  }
+
   function renderCatalogCards(items, renderMode = 'replace') {
     if (renderMode === 'replace') {
       catalogGrid.replaceChildren?.();
@@ -591,9 +624,9 @@ export function createLibraryView(mountRoot, options) {
     loadMoreSlot.className = 'load-more-slot';
     viewRoot.appendChild(loadMoreSlot);
 
-    const loading = appendTextElement(catalogGrid, 'p', 'library-view__loading', 'Desenrollando los pergaminos…');
+    // Primera consulta: el propio fetchAndRenderCatalog despliega los
+    // «Pergaminos Espectrales» (RF-04.1) — ya no hace falta un texto suelto.
     await fetchAndRenderCatalog();
-    loading.remove();
   }
 
   /**

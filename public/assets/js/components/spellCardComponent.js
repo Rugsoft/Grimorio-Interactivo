@@ -98,7 +98,37 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
   const badgesRow = elementFactory('div');
   badgesRow.className = 'spell-card__badges';
 
-  const schoolBadge = createTextElement('span', 'spell-card__badge', spellSummaryDto.magicSchoolLabel);
+  // Insignia elemental (Tarea 3.2, RF-03.1/03.3): la afinidad se deriva
+  // de la escuela mágica (mapa canónico; SPEC-06 la formalizará) y se
+  // propaga como Custom Properties inline ligadas a los tokens de
+  // tokens.css (color, fulgor y glifo rúnico del elemento).
+  const SCHOOL_ELEMENT_AFFINITY = {
+    evocation: 'fire',
+    conjuration: 'water',
+    divination: 'light',
+    enchantment: 'wind',
+    illusion: 'darkness',
+    necromancy: 'darkness',
+    transmutation: 'earth',
+    abjuration: 'light'
+  };
+  const affinityName = SCHOOL_ELEMENT_AFFINITY[spellSummaryDto.magicSchool] ?? 'arcane';
+
+  const elementalBadge = elementFactory('span');
+  elementalBadge.className = `spell-card__badge spell-card__badge-elemental spell-card__badge-elemental--${affinityName}`;
+  // Ligadura inline explícita a los tokens canónicos (color, fulgor y
+  // glifo de tokens.css): robusta incluso sin la clase variante.
+  elementalBadge.style.setProperty('--current-element', `var(--affinity-${affinityName})`);
+  elementalBadge.style.setProperty('--current-glow', `var(--glow-affinity-${affinityName})`);
+  elementalBadge.style.setProperty('--current-glyph', `var(--glyph-affinity-${affinityName})`);
+  const elementalGlyph = elementFactory('span');
+  elementalGlyph.className = 'spell-card__element-glyph';
+  elementalGlyph.setAttribute('aria-hidden', 'true');
+  elementalBadge.appendChild(elementalGlyph);
+  elementalBadge.appendChild(createTextElement('span', 'spell-card__element-label', spellSummaryDto.elementalAffinityLabel ?? 'Arcano Puro'));
+  badgesRow.appendChild(elementalBadge);
+
+  const schoolBadge = createTextElement('span', 'spell-card__badge spell-card__badge-school', spellSummaryDto.magicSchoolLabel);
   badgesRow.appendChild(schoolBadge);
 
   const manaBadge = createTextElement('span', 'spell-card__badge spell-card__badge--mana', `${spellSummaryDto.manaCost} maná`);

@@ -204,6 +204,17 @@
   --color-text-light: var(--color-parchment);
   --color-text-light-muted: #b7a98f;
 
+  /* Tinta de sello profunda (Tarea 5.3-QA, RF-01.3): tono de escritura
+     oscurísimo para el texto que descansa SOBRE fondos de afinidad
+     elemental, maná y sellos de estado. Contra cualquiera de dichos
+     fondos (fuego, agua, rayo, tierra, viento, luz, oscuridad, arcano,
+     azul de maná, ámbar inestable) el contraste WCAG 2.1 mínimo
+     medido es 4.64:1 (oscuridad) y el máximo 13.11:1 (luz): siempre
+     por encima del umbral exigido de 4.5:1. El marfil claro se reservó
+     para fondos oscuros y quedaba ilegible sobre fondos luminosos
+     (luz: 1.05:1, viento: 1.70:1). */
+  --color-ink-seal: #141210;
+
   /* -----------------------------------------------------------------
      2. Bordes y trazos de tinta
      ----------------------------------------------------------------- */

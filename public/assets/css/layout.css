@@ -210,7 +210,8 @@ body {
    contenedor vive aquí (la liberación del recorte de texto está en
    components.css, que se carga después y puede vencer a la base). */
 @media (min-width: 1em), (min-resolution: 2dppx) {
-  .spell-card {
+  .spell-card,
+  .spectral-scroll-placeholder {
     height: auto;
     min-height: auto;
   }

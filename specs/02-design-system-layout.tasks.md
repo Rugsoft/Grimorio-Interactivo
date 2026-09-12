@@ -61,17 +61,17 @@
   * **Cubre:** `RF-05.4`, `RF-06.1`
   * **Hecho cuando:** Todo el cuerpo de la tarjeta es clickeable con cursor de puntero y los botones interactivos internos respetan el área táctil mínima de 44x44 px.
 
-- [ ] **Tarea 3.2: Insignias de Afinidad Elemental y Escuelas Mágicas**
+- [x] **Tarea 3.2: Insignias de Afinidad Elemental y Escuelas Mágicas**
   * **Alcance:** Implementar en `components.css` las clases `.spell-card__badge-elemental` y `.spell-card__badge-school` que renderizan el color dinámico elemental, el glifo rúnico monocromático y el sello de la escuela académica.
   * **Cubre:** `RF-03.1`, `RF-03.2`, `RF-03.3`
   * **Hecho cuando:** Una tarjeta con afinidad de fuego exhibe el tono ámbar cálido con el glifo `🜂` y la escuela (ej. Evocación) se muestra con su sello y tipografía noble.
 
-- [ ] **Tarea 3.3: Sello de «Inestabilidad Arcana» para archivos experimentales**
+- [x] **Tarea 3.3: Sello de «Inestabilidad Arcana» para archivos experimentales**
   * **Alcance:** Crear en `components.css` el componente `.spell-card__badge--experimental` con distintivo ámbar/dorado parpadeante e iconografía de advertencia mística.
   * **Cubre:** `RF-03.4`, `Artículo III`
   * **Hecho cuando:** La tarjeta experimental muestra el sello de inestabilidad sobre el pergamino con un resplandor de alerta discreto.
 
-- [ ] **Tarea 3.4: Estados interactivos y control de bloqueos**
+- [x] **Tarea 3.4: Estados interactivos y control de bloqueos**
   * **Alcance:** Desarrollar en `components.css` los estilos `:hover`, `:focus-visible` y la clase `.spell-card--disabled` con textura de piedra desgastada y cursor de no permitido.
   * **Cubre:** `RF-06.1`, `RF-06.2`
   * **Hecho cuando:** Al sobrevolar la tarjeta se produce una elevación suave del pergamino con fulgor elemental, y un control deshabilitado adopta aspecto de piedra inerte sin interactividad.
@@ -80,17 +80,17 @@
 
 ## Fase 4: Dinámicas de Animación y Retroalimentación Espectral
 
-- [ ] **Tarea 4.1: Ciclo de «Respiración Arcana» ceremonial de bajo consumo**
+- [x] **Tarea 4.1: Ciclo de «Respiración Arcana» ceremonial de bajo consumo**
   * **Alcance:** Implementar en `components.css` la regla `@keyframes arcaneBreathing` con un ciclo de 3.5 segundos basado exclusivamente en `transform: scale(1.006)` y `opacity` (sin filtros de desenfoque continuo).
   * **Cubre:** `RF-01.2`, `RNF-03`
   * **Hecho cuando:** La animación de respiración corre fluidamente a 60 fps constantes en la herramienta de rendimiento de DevTools con consumo de CPU mínimo.
 
-- [ ] **Tarea 4.2: «Pergaminos Espectrales» de carga con CLS = 0**
+- [x] **Tarea 4.2: «Pergaminos Espectrales» de carga con CLS = 0**
   * **Alcance:** Crear en `components.css` la clase `.spectral-scroll-placeholder` y la animación `@keyframes spectralSweep` que reserva las dimensiones exactas de las tarjetas de catálogo.
   * **Cubre:** `RF-04.1`, `RF-04.2`, `RF-04.3`, `RNF-02`
   * **Hecho cuando:** Al reemplazar un elemento espectral por una tarjeta de conjuro con datos reales, el registro de Cumulative Layout Shift (CLS) de la consola permanece en 0.00.
 
-- [ ] **Tarea 4.3: Tipografía fluida para nombres extensos de conjuros**
+- [x] **Tarea 4.3: Tipografía fluida para nombres extensos de conjuros**
   * **Alcance:** Implementar en `components.css` la clase `.spell-card__title` utilizando `clamp()` tipográfico y limitación a 2 líneas (`-webkit-line-clamp: 2`).
   * **Cubre:** `RF-02.4`, `Caso Límite 2`
   * **Hecho cuando:** Un hechizo con nombre de más de 60 caracteres ocupa como máximo 2 líneas armónicas sin romper la altura de la rejilla.
@@ -99,17 +99,17 @@
 
 ## Fase 5: Modo Impresión, Tinta Electrónica y Escaparate de Validación
 
-- [ ] **Tarea 5.1: Hoja de estilos de impresión y monocromo (`print.css`)**
+- [x] **Tarea 5.1: Hoja de estilos de impresión y monocromo (`print.css`)**
   * **Alcance:** Crear `public/assets/css/print.css` con reglas `@media print` que transforman el fondo a blanco/pergamino claro, los textos a tinta negra/sepia de bajo consumo y anulan las animaciones.
   * **Cubre:** `RF-06.3`, `Caso Límite 4`
   * **Hecho cuando:** Al activar la vista previa de impresión en el navegador, los fondos negros desaparecen, los textos son negros sobre fondo blanco y los glifos elementales son legibles sin color.
 
-- [ ] **Tarea 5.2: Página de escaparate del Sistema de Diseño (Design Showcase)**
+- [x] **Tarea 5.2: Página de escaparate del Sistema de Diseño (Design Showcase)**
   * **Alcance:** Crear `scratch/design_system_preview.html` enlazando `tokens.css`, `layout.css`, `components.css` y `print.css`, exhibiendo las 8 tarjetas elementales, una experimental, un pergamino espectral y controles interactivos.
   * **Cubre:** `RF-01 a RF-06`, `RNF-01 a RNF-05`
   * **Hecho cuando:** Abrir `scratch/design_system_preview.html` en el navegador despliega el escaparate completo del sistema de diseño funcionando de forma autónoma.
 
-- [ ] **Tarea 5.3: Auditoría integral de calidad visual y Dogma Vanilla**
+- [x] **Tarea 5.3: Auditoría integral de calidad visual y Dogma Vanilla**
   * **Alcance:** Ejecutar la auditoría final: verificar ausencia de CDNs en la pestaña de red, ratio de contraste $\ge 4.5:1$, 60 fps en perfil de rendimiento y correcta visualización responsiva a 320 px, 768 px y 1280 px.
   * **Cubre:** `RNF-01 a RNF-05`, `Artículo I`, `Artículo IV`, `Artículo V`
   * **Hecho cuando:** Se verifica que el escaparate pasa todas las pruebas de contraste, rendimiento y responsividad sin ninguna advertencia en la consola del navegador.

@@ -24,6 +24,12 @@
   box-shadow: var(--shadow-arcane-soft);
   padding: var(--space-ink-4);
 
+  /* Reserva vertical canónica del plan 4.2: el placeholder espectral
+     de carga (Tarea 4.2) usa LA MISMA medida para que el reemplazo
+     espectral→tarjeta no desplace ni un píxel (CLS = 0). La media
+     query de zoom (layout.css) libera esta geometría. */
+  min-height: 240px;
+
   /* Contiene el overlay táctil absoluto (Tarea 3.1, RF-05.4). */
   position: relative;
 
@@ -71,11 +77,117 @@
   box-shadow: var(--shadow-gold-glow);
 }
 
-.spell-card__name {
+/* Control deshabilitado (Tarea 3.4, RF-06.2): piedra desgastada e
+   inerte. Sin vida (transform/anulación de hover), sin interactividad
+   (pointer-events none) y con iconografía de runa sellada que advierte
+   del bloqueo incluso en soportes monocromáticos. */
+.spell-card--disabled {
+  background-color: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+  pointer-events: none;         /* Cero interactividad: ni clic ni foco. */
+  transform: none;              /* La piedra no se eleva. */
+  box-shadow: var(--shadow-arcane-soft);
+}
+
+/* Runa sellada: glifo de bloqueo grabado sobre la piedra (RF-06.2). */
+.spell-card--disabled::after {
+  content: var(--seal-locked-glyph, '⊘');
+  position: absolute;
+  top: var(--space-ink-3);
+  right: var(--space-ink-3);
+  font-family: var(--font-arcane-seal);
+  opacity: 0.7;
+}
+
+/* El hover y el foco jamás despiertan a la piedra: estados apagados. */
+.spell-card--disabled:hover,
+.spell-card--disabled:focus-visible {
+  transform: none;
+  box-shadow: var(--shadow-arcane-soft);
+  border-color: var(--color-parchment-border);
+  outline: none;
+}
+
+/* =====================================================================
+   Pergaminos Espectrales (Tarea 4.2, RF-04.1/04.2/04.3, plan 5.2):
+   siluetas de carga que reservan la huella EXACTA de la tarjeta para
+   que el reemplazo espectral→tarjeta registre CLS = 0.00.
+   ===================================================================== */
+
+/* Silueta espectral: misma min-height, radio y fluidez que la tarjeta.
+   El borde discontinuo la delata como esqueleto en curso, no contenido. */
+.spectral-scroll-placeholder {
+  min-height: 240px; /* Espejo exacto de .spell-card (CLS = 0). */
+  background-color: var(--color-parchment-base);
+  border: 1px dashed var(--color-parchment-border);
+  border-radius: var(--radius-seal); /* Mismo radio que la tarjeta. */
+  position: relative; /* Contiene el barrido absoluto. */
+  overflow: hidden;   /* El barrido jamás desborda la silueta. */
+}
+
+/* Barrido ceniciento-dorado: viaja SOLO por transform + opacity
+   (compositables en GPU, RNF-03); jamás por left/margin (layout). */
+.spectral-scroll-placeholder::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 45%;
+  background: linear-gradient(
+    100deg,
+    rgba(28, 25, 22, 0) 0%,
+    rgba(212, 175, 55, 0.07) 50%,
+    rgba(28, 25, 22, 0) 100%
+  );
+  transform: translateX(-120%);
+  animation: spectralSweep 2.8s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes spectralSweep {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(320%);
+    opacity: 0;
+  }
+}
+
+/* Respeto a la preferencia de movimiento reducido (accesibilidad). */
+@media (prefers-reduced-motion: reduce) {
+  .spectral-scroll-placeholder::after {
+    animation: none;
+  }
+}
+
+/* Título fluido del conjuro (Tarea 4.3, RF-02.4, plan 5.3): escala con
+   clamp() entre 1.15rem y 1.45rem (carril intermedio 1rem + 0.8vw) y
+   JAMÁS ocupa más de 2 renglones armónicos — un nombre extenso se
+   recorta con elipsis sin romper la altura de la rejilla. El selector
+   de grupo ampara tanto la clase canónica del plan como la que emite
+   el componente (.spell-card__name). */
+.spell-card__title, .spell-card__name {
   margin: 0 0 var(--space-ink-2);
   font-family: var(--font-arcane-title);
-  font-size: var(--font-size-title-spell);
+  font-size: clamp(1.15rem, 1rem + 0.8vw, 1.45rem);
+  line-height: 1.25;                 /* Renglones armónicos. */
   color: var(--color-ink);
+
+  /* Cota dura de 2 líneas (Caso Límite 2): contexto -webkit-box. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;                     /* Forma estándar moderna. */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Recorte del resumen: EXACTAMENTE 3 líneas con elipsis (criterio T2.4,
@@ -128,13 +240,76 @@
   color: var(--color-ink-soft);
 }
 
+/* Insignia de AFINIDAD ELEMENTAL (Tarea 3.2, RF-03.1 / RF-03.3):
+   el color dinámico llega por la Custom Property --current-element que
+   el componente fija inline según la afinidad del conjuro. El fulgor
+   difuso acompaña al tinte; el glifo rúnico (ver abajo) garantiza la
+   distinción en soportes monocromáticos. */
+.spell-card__badge-elemental {
+  /* El color dinámico llega por la Custom Property --current-element que
+     el componente fija inline ligándola al token canónico de tokens.css
+     (RF-03.1): var(--affinity-fire), var(--affinity-water), etc. El
+     respaldo sin afinidad usa el dorado arcano puro. */
+  background-color: var(--current-element, var(--color-affinity-arcane));
+  border-color: var(--current-element, var(--color-affinity-arcane));
+  /* Tinta de sello profunda (no marfil): contra los fondos de afinidad
+     (especialmente los luminosos: luz, viento, arcano) el marfil
+     caía a 1.05–1.70:1. Con --color-ink-seal el mínimo WCAG sobre los
+     ocho fondos canónicos es 4.64:1 (RF-01.3). */
+  color: var(--color-ink-seal);
+  /* Fulgor difuso: --current-glow se liga a --glow-affinity-<elemento>. */
+  box-shadow: var(--current-glow, var(--glow-affinity-arcane));
+}
+
+/* Variantes explícitas por afinidad (RF-03.1): ligadura directa al token
+   canónico para el escaparate y usos sin JavaScript. */
+/* La ligadura usa la MATRIZ CANÓNICA de la tarea 1.4 (--color-affinity-*)
+   y sus resplandores/glifos asociados: una sola fuente de verdad. */
+.spell-card__badge-elemental--fire      { --current-element: var(--color-affinity-fire);      --current-glow: var(--glow-affinity-fire);      --current-glyph: var(--glyph-affinity-fire); }
+.spell-card__badge-elemental--water     { --current-element: var(--color-affinity-water);     --current-glow: var(--glow-affinity-water);     --current-glyph: var(--glyph-affinity-water); }
+.spell-card__badge-elemental--lightning { --current-element: var(--color-affinity-lightning); --current-glow: var(--glow-affinity-lightning); --current-glyph: var(--glyph-affinity-lightning); }
+.spell-card__badge-elemental--earth     { --current-element: var(--color-affinity-earth);     --current-glow: var(--glow-affinity-earth);     --current-glyph: var(--glyph-affinity-earth); }
+.spell-card__badge-elemental--wind      { --current-element: var(--color-affinity-wind);      --current-glow: var(--glow-affinity-wind);      --current-glyph: var(--glyph-affinity-wind); }
+.spell-card__badge-elemental--light     { --current-element: var(--color-affinity-light);     --current-glow: var(--glow-affinity-light);     --current-glyph: var(--glyph-affinity-light); }
+.spell-card__badge-elemental--darkness  { --current-element: var(--color-affinity-darkness);  --current-glow: var(--glow-affinity-darkness);  --current-glyph: var(--glyph-affinity-darkness); }
+.spell-card__badge-elemental--arcane    { --current-element: var(--color-affinity-arcane);    --current-glow: var(--glow-affinity-arcane);    --current-glyph: var(--glyph-affinity-arcane); }
+
+/* Glifo rúnico del elemento (RF-03.3): símbolo exclusivo inyectado por
+   contenido (var --glyph-affinity-* propagada inline por el componente).
+   Sin color literal: el propio símbolo distingue en e-ink/impresión. */
+.spell-card__element-glyph {
+  margin-inline-end: var(--space-ink-2);
+  font-family: var(--font-arcane-seal);
+}
+/* El contenido llega por la Custom Property --current-glyph, que el
+   componente fija inline con el token --glyph-affinity-<elemento>. */
+.spell-card__element-glyph::before {
+  /* --current-glyph viene del token --glyph-affinity-<elemento>
+     (🜂 🜄 🗲 🜃 🜁 🝓 ☽ 🜚) fijado inline por el componente. */
+  content: var(--current-glyph, var(--glyph-affinity-arcane));
+}
+
+/* Insignia de ESCUELA MÁGICA (Tarea 3.2, RF-03.2): sello académico con
+   tipografía noble arcana y espaciado solemne; el glifo rúnico de la
+   disciplina acompaña al nombre explícito en castellano. */
+.spell-card__badge-school {
+  font-family: var(--font-arcane-title);
+  letter-spacing: var(--letter-spacing-seal);
+  border: var(--border-ink-strong);
+}
+.spell-card__badge-school .spell-card__element-glyph::before {
+  content: var(--current-school-glyph, '');
+}
+
 /* Badge de maná: tinte arcano de maná. La cifra viste variantes
    numéricas clásicas (oldstyle + tabular) para alinear columnas de
    coste sin perder el aire de manuscrito (Tarea 1.3, RF-01.3). */
 .spell-card__badge--mana {
   background-color: var(--mana-blue);
   border-color: var(--mana-blue-deep);
-  color: var(--color-text-light);
+  /* Tinta de sello profunda: el marfil rendía 3.05:1 sobre el azul de
+     maná; la tinta oscura asciende a 4.95:1 (RF-01.3). */
+  color: var(--color-ink-seal);
   font-variant-numeric: var(--font-variant-mana-numbers);
 }
 
@@ -149,12 +324,27 @@
   color: var(--color-ink);
 }
 
-/* Sello de Inestabilidad Arcana: advertencia para 'experimental'. */
+/* Sello de Inestabilidad Arcana: advertencia para 'experimental'
+   (Tarea 3.3, RF-03.4 — nombre canónico del plan; el alias --unstable
+   se mantiene por compatibilidad con los consumidores previos). */
+.spell-card__badge--experimental,
 .spell-card__badge--unstable {
   background-color: var(--color-unstable-seal);
   border-color: var(--color-ember-red-deep);
-  color: var(--color-text-light);
+  /* Tinta de sello profunda: el marfil rendía 3.06:1 sobre el ámbar de
+     inestabilidad; la tinta oscura asciende a 4.94:1 (RF-01.3). */
+  color: var(--color-ink-seal);
   animation: seal-flicker 2.4s ease-in-out infinite;
+  /* Resplandor de alerta discreto: halo ámbar, sin deslumbrar. */
+  box-shadow: 0 0 8px var(--color-unstable-seal);
+}
+
+/* Iconografía de advertencia mística: glifo de precaución inyectado
+   antes del rótulo, sin color literal (legible en monocromo). */
+.spell-card__badge--experimental::before,
+.spell-card__badge--unstable::before {
+  content: var(--seal-warning-glyph, '⚠');
+  margin-inline-end: var(--space-ink-2);
 }
 
 /* Titileo contenido: la inestabilidad respira, no parpadea agresivamente. */
@@ -163,9 +353,47 @@
   50%      { opacity: 0.72; }
 }
 
+/* Respiración Arcana (Tarea 4.1, RF-01.2 / RNF-03, plan 5.1): ciclo
+   ceremonial de 3.5 s que vive EXCLUSIVAMENTE en el eje compositable
+   (transform + opacity), de modo que el compositor de la GPU lo anima
+   a 60 fps sin recalcular layout ni repintar. El halo dorado se mueve
+   solo entre dos valores fijos (concesión paint-only del plan, de bajo
+   coste al no afectar la geometría). */
+@keyframes arcaneBreathing {
+  0% {
+    opacity: 0.85;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.15);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.35);
+    transform: scale(1.006);
+  }
+  100% {
+    opacity: 0.85;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.15);
+    transform: scale(1);
+  }
+}
+
+.arcane-breathing-active {
+  animation: arcaneBreathing 3.5s ease-in-out infinite;
+  /* Promoción a capa propia del compositor (menos trabajo por frame). */
+  will-change: transform, opacity, box-shadow;
+}
+
+/* Respeto por la preferencia de menos movimiento (accesibilidad): */
+@media (prefers-reduced-motion: reduce) {
+  .arcane-breathing-active {
+    animation: none;
+  }
+}
+
 /* ---------------------------------------------------------------------
    4. Diálogos superpuestos (<dialog>): pila del plan 4.2
    --------------------------------------------------------------------- */
+
 
 .modal {
   /* Nivel por defecto; cada diálogo de la pila fija el suyo con tokens. */

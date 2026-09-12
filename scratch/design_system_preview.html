@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<!--
+  design_system_preview.html — Escaparate del Sistema de Diseño (Tarea 5.2, TASKS-02).
+
+  Página AUTÓNOMA: se abre directamente desde el sistema de archivos
+  (file://) sin servidor ni red. Enlaza las 4 hojas del santuario con
+  rutas relativas y consume el componente real de tarjetas del proyecto
+  mediante ES Modules nativos (Artículo I: Dogma Vanilla).
+
+  Constitución:
+    - Artículo I: cero CDNs, cero empaquetadores, cero frameworks.
+    - Artículo V: comentarios y documentación en castellano.
+
+  Exhibe: las 8 tarjetas elementales, una experimental con su sello de
+  Inestabilidad Arcana, un pergamino espectral y controles interactivos
+  (respiración arcana y piedra inerte) para jugar con el sistema vivo.
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Escaparate del Sistema de Diseño — Grimorio Interactivo</title>
+
+  <!-- Las 4 hojas del santuario, en el orden canónico del shell. -->
+  <link rel="stylesheet" href="../public/assets/css/tokens.css">
+  <link rel="stylesheet" href="../public/assets/css/layout.css">
+  <link rel="stylesheet" href="../public/assets/css/components.css">
+  <!-- Hoja de impresión aislada: solo activa al imprimir (Tarea 5.1). -->
+  <link rel="stylesheet" href="../public/assets/css/print.css" media="print">
+</head>
+<body>
+  <main class="grimoire-tomo-container">
+    <header class="showcase-header">
+      <h1>Escaparate del Sistema de Diseño</h1>
+      <p class="showcase-intro">
+        Todas las piezas del grimorio vivo, invocadas desde sus tokens
+        canónicos. El componente de tarjeta es el <strong>mismo módulo</strong>
+        que consume el portal (<code>spellCardComponent.js</code>).
+      </p>
+    </header>
+
+    <!-- ============================================================
+         1. Tarjetas elementales: las 8 afinidades del grimorio.
+         Cada tarjeta la construye el componente real; el atributo
+         data-affinity solo rotula la muestra para su auditoría.
+         ============================================================ -->
+    <section class="showcase-section" aria-labelledby="showcase-elemental-title">
+      <h2 id="showcase-elemental-title">Las Ocho Afinidades Elementales</h2>
+      <div class="spell-card-grid" id="showcase-elemental-grid"></div>
+    </section>
+
+    <!-- ============================================================
+         2. Tarjeta experimental: sello de Inestabilidad Arcana (Art. III).
+         ============================================================ -->
+    <section class="showcase-section" aria-labelledby="showcase-experimental-title">
+      <h2 id="showcase-experimental-title">Pergamino Experimental</h2>
+      <div class="spell-card-grid" id="showcase-experimental-grid" data-status="experimental"></div>
+    </section>
+
+    <!-- ============================================================
+         3. Pergamino espectral: silueta de carga con barrido dorado.
+         ============================================================ -->
+    <section class="showcase-section" aria-labelledby="showcase-spectral-title">
+      <h2 id="showcase-spectral-title">Pergamino Espectral de Carga</h2>
+      <div class="spell-card-grid">
+        <div class="spectral-scroll-placeholder" aria-hidden="true"></div>
+        <div class="spectral-scroll-placeholder" aria-hidden="true"></div>
+        <div class="spectral-scroll-placeholder" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         4. Controles interactivos: estados vivos del sistema.
+         ============================================================ -->
+    <section class="showcase-section" aria-labelledby="showcase-controls-title">
+      <h2 id="showcase-controls-title">Controles Interactivos</h2>
+      <div class="showcase-controls">
+        <button type="button" class="button button--secondary showcase-toggle" data-showcase-toggle="breathing">
+          Alternar Respiración Arcana
+        </button>
+        <button type="button" class="button button--secondary showcase-toggle" data-showcase-toggle="disabled">
+          Alternar Piedra Inerte (bloqueo)
+        </button>
+        <button type="button" class="button button--secondary showcase-toggle" data-showcase-toggle="print">
+          Vista de Impresión (media print)
+        </button>
+      </div>
+      <p class="showcase-note">
+        La respiración arropa la primera tarjeta del catálogo; la piedra
+        inerte bloquea la segunda. La vista de impresión activa
+        <code>print.css</code> como si el motor entrara en modo papel.
+      </p>
+    </section>
+  </main>
+
+  <!-- ==============================================================
+       Módulo del escaparate: consume el componente REAL del proyecto.
+       ============================================================== -->
+  <script type="module">
+    // El componente canónico de tarjetas: el mismo del portal.
+    import { createSpellCardComponent } from '../public/assets/js/components/spellCardComponent.js';
+
+    /**
+     * Generador de DTOs de muestra con la forma del contrato de la API
+     * (SPEC-01): todo campo que consume el componente va poblado.
+     */
+    function makeSpellDto(overrides = {}) {
+      return {
+        slug: 'muestra-arcano',
+        name: 'Chispa del Adepto',
+        magicSchool: 'arcane',
+        magicSchoolLabel: 'Arcana',
+        elementalAffinityLabel: 'Arcano Puro',
+        manaCost: 12,
+        status: 'validado',
+        summary: 'Un destello de comprensión pura que ilumina la mente del invocador durante un breve instante de lucidez sobrenatural.',
+        clanName: 'Clan Primordial',
+        isGenesisSample: false,
+        ...overrides,
+      };
+    }
+
+    /**
+     * Catálogo canónico de las 8 afinidades: cada entrada casa una
+     * escuela mágica con su afinidad (misma correspondencia que el
+     * mapa SCHOOL_ELEMENT_AFFINITY del componente).
+     */
+    const SHOWCASE_SPELLS = [
+      { affinity: 'fire',      dto: { slug: 'muestra-fuego',   name: 'Lanza de Brasas Vivientes',   magicSchool: 'evocation',   magicSchoolLabel: 'Evocación',   elementalAffinityLabel: 'Fuego',      manaCost: 18, summary: 'Proyecta una jabalina de fuego viviente que arde sin consumir el aire, chamuscando armaduras y resoluciones cobardes por igual.' } },
+      { affinity: 'water',     dto: { slug: 'muestra-agua',    name: 'Marea Curativa del Manantial', magicSchool: 'conjuration', magicSchoolLabel: 'Conjuración', elementalAffinityLabel: 'Agua',      manaCost: 14, summary: 'Invoca una marea serena que lava las heridas y sacia la sed del alma, dejando tras de sí un rastro de sal bendita.' } },
+      { affinity: 'lightning', dto: { slug: 'muestra-rayo',    name: 'Flecha de Tormenta Áurea',    magicSchool: 'evocation',   magicSchoolLabel: 'Evocación',   elementalAffinityLabel: 'Rayo',      manaCost: 22, summary: 'Una flecha de luz tormentosa cruza el campo de batalla más rápido que una promesa rota, dejando el olor a ozono y asombro.' } },
+      { affinity: 'earth',     dto: { slug: 'muestra-tierra',  name: 'Piel de Roble Ancestral',     magicSchool: 'transmutation', magicSchool: 'transmutation', magicSchoolLabel: 'Transmutación', elementalAffinityLabel: 'Tierra', manaCost: 16, summary: 'Endurece la piel del invocador con corteza de roble milenario; los golpes enemigos se estrellan contra la paciencia del bosque.' } },
+      { affinity: 'wind',      dto: { slug: 'muestra-viento',  name: 'Susurro de ZéfiroCómplice',  magicSchool: 'enchantment', magicSchoolLabel: 'Encantamiento', elementalAffinityLabel: 'Viento',   manaCost: 9,  summary: 'El viento susurra sugerencias al objetivo y afina la puntería del grupo; incluso las flechas torpes vuelan enderezadas.' } },
+      { affinity: 'light',     dto: { slug: 'muestra-luz',     name: 'Vigía de Amanecer Eterno',    magicSchool: 'abjuration',  magicSchoolLabel: 'Abjuración',  elementalAffinityLabel: 'Luz',       manaCost: 20, summary: 'Alza un centinela de luz pura que desvía las tinchanzas y devuelve la esperanza a quienes la creían extraviada.' } },
+      { affinity: 'darkness',  dto: { slug: 'muestra-sombra',  name: 'Lamento del Sepulcro Vacío',  magicSchool: 'necromancy',  magicSchoolLabel: 'Nigromancia', elementalAffinityLabel: 'Oscuridad', manaCost: 25, summary: 'Arranca un lamento de la tumba vacía que hiela la sangre de los intrusiones y despeina hasta las velas más firmes.' } },
+      { affinity: 'arcane',    dto: { slug: 'muestra-arcano',  name: 'Chispa del Adepto',           magicSchool: 'arcane',      magicSchoolLabel: 'Arcana',      elementalAffinityLabel: 'Arcano Puro', manaCost: 12, summary: 'Un destello de comprensión pura que ilumina la mente del invocador durante un breve instante de lucidez sobrenatural.' } },
+    ];
+
+    /** Añade una tarjeta viva al contenedor indicado. */
+    function mountSpellCard(container, dto) {
+      const card = createSpellCardComponent(dto, {
+        elementFactory: (tagName) => document.createElement(tagName),
+      });
+      container.appendChild(card);
+    }
+
+    // --- 1. Las ocho afinidades elementales -----------------------
+    const elementalGrid = document.getElementById('showcase-elemental-grid');
+    for (const spell of SHOWCASE_SPELLS) {
+      mountSpellCard(elementalGrid, makeSpellDto(spell.dto));
+      // Rótulo auditable de la muestra (el arnés lo certifica).
+      const lastCard = elementalGrid.lastElementChild;
+      lastCard.dataset.affinity = spell.affinity;
+      lastCard.setAttribute('data-affinity', spell.affinity);
+    }
+
+    // --- 2. El experimental (sello de Inestabilidad Arcana) -------
+    const experimentalGrid = document.getElementById('showcase-experimental-grid');
+    mountSpellCard(experimentalGrid, makeSpellDto({
+      slug: 'muestra-experimental',
+      name: 'Fórmula Inestable del Aprendiz',
+      magicSchool: 'evocation',
+      magicSchoolLabel: 'Evocación',
+      elementalAffinityLabel: 'Fuego',
+      status: 'experimental',
+      manaCost: 7,
+      summary: 'Un borrador prometedor de bola de fuego que aún no ha conseguido decidir en qué dirección estallar. Requiere tres firmas de los Maestros.',
+    }));
+    experimentalGrid.firstElementChild.setAttribute('data-status', 'experimental');
+
+    // --- 3. Controles interactivos --------------------------------
+    const firstCard = elementalGrid.firstElementChild;
+    const secondCard = elementalGrid.children[1];
+
+    document.querySelectorAll('[data-showcase-toggle]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const toggle = button.dataset.showcaseToggle;
+        if (toggle === 'breathing') {
+          firstCard.classList.toggle('arcane-breathing-active');
+        } else if (toggle === 'disabled') {
+          secondCard.classList.toggle('spell-card--disabled');
+        } else if (toggle === 'print') {
+          // Activa print.css como si el motor entrara en modo papel:
+          // toggle nativo del atributo media (sin JavaScript de more).
+          const printLink = document.querySelector('link[href*="print.css"]');
+          printLink.media = printLink.media === 'print' ? 'all' : 'print';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
