@@ -1,0 +1,25 @@
+# =====================================================================
+# .gitignore — Grimorio Interactivo
+# =====================================================================
+# Regla general del repositorio: el código fuente, especificaciones y
+# arneses de prueba se versionan; los artefactos efímeros de ejecución
+# (logs de servidores de prueba, bases de datos sandbox y basura del
+# sistema) permanecen fuera del historial.
+
+# ----- Registros de servidores de prueba (PHP built-in, etc.) --------
+*.log
+scratch/*.log
+
+# ----- Bases de datos sandbox y de desarrollo ------------------------
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+# La base canónica de desarrollo vive en database/ y sí se versiona.
+!database/grimorio.db
+
+# ----- Basura del sistema y editores ---------------------------------
+Thumbs.db
+.DS_Store
+*.swp
+*~
