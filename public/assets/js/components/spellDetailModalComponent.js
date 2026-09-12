@@ -25,6 +25,7 @@
  * @param {object} componentOptions Opciones e inyecciones:
  *   - onClose(): notificación de cierre al orquestador (store/history).
  *   - onReservedAction(action, slug): acción reservada dentro de la ficha.
+ *   - onSignSpell(slug): firma solemne legítima (SPEC-03, Tarea 5.2).
  *   - originElement: tarjeta que abrió la ficha (para el rescate de foco).
  *   - documentRef / windowRef: inyecciones para pruebas (document/window).
  * @returns {object} { open, close, destroy }.
@@ -33,6 +34,7 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
   const {
     onClose,
     onReservedAction,
+    onSignSpell,
     originElement = null,
     documentRef = globalThis.document,
     windowRef = globalThis.window,
@@ -47,6 +49,10 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
 
   /** Guardia de binding: los re-renders no apilan listeners del shell. */
   let shellListenersBound = false;
+
+  /** Contexto de firma de la apertura actual (SPEC-03, Tarea 5.2):
+   *  { signer: User|null, clanConflict: ClanConflictVerdict|null }. */
+  let currentSignContext = null;
 
   /**
    * Helper de texto seguro: nodo con clase y contenido literal.
@@ -136,6 +142,74 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
       onReservedAction?.('addToGrimoire', displayedSlug);
     });
     detailBody.appendChild(reserveButton);
+
+    renderSignAction(spellDetailDto);
+  }
+
+  /**
+   * SPEC-03 (Tarea 5.2): renderiza la acción de firma solemne de la ficha
+   * técnica, aplicando el veredicto de conflicto de intereses que dicta
+   * el backend (ClanConflictService, Tarea 2.4 — fuente única de verdad).
+   *
+   * Doble barrera del Artículo III: si el veredicto veta la firma, el botón
+   * nace deshabilitado con la advertencia solemne visible, y el click forzado
+   * no dispara la acción (la barrera definitiva vive en el servidor).
+   *
+   * @param {object} spellDetailDto DTO del hechizo con authorId y clanId.
+   */
+  function renderSignAction(spellDetailDto) {
+    const signContext = currentSignContext;
+
+    // Sin contexto de firma (anónimo, o el orquestador aún no portaba el
+    // veredicto): la ficha no inventa ni predice vetos — no renderiza nada.
+    if (!signContext || typeof signContext !== 'object') return;
+
+    const { signer, clanConflict } = signContext;
+    if (!signer || signer.role !== 'master') return; // Solo Maestros firman (RF-05.1).
+    // Fuente única de verdad (Art. III): sin veredicto del backend la ficha
+    // no predice ni inventa — no renderiza acción de firma alguna.
+    if (!clanConflict || typeof clanConflict !== 'object') return;
+
+    const signButton = documentRef.createElement('button');
+    signButton.type = 'button';
+    signButton.className = 'spell-detail__sign';
+    signButton.setAttribute('data-action', 'signSpell');
+    signButton.textContent = 'Emitir firma solemne';
+
+    const verdict = clanConflict;
+    const isVetoed = verdict.isAllowed === false;
+    const vetoReason = typeof verdict.reason === 'string' ? verdict.reason : '';
+
+    if (isVetoed) {
+      // CRITERIO T5.2: botón bloqueado + advertencia mística visible.
+      signButton.disabled = true;
+      signButton.setAttribute('aria-disabled', 'true');
+      // El motivo solemne del backend viaja íntegro (RF-06.1): alimenta
+      // tanto la advertencia visible como la accesibilidad del botón.
+      signButton.setAttribute('aria-label', `Firma vetada: ${vetoReason}`);
+
+      const warningLine = documentRef.createElement('p');
+      warningLine.className = 'spell-detail__sign-warning';
+      warningLine.setAttribute('role', 'alert');
+      warningLine.textContent = vetoReason;
+      detailBody.appendChild(warningLine);
+
+      // Doble barrera (RF-06.2): incluso forzando el click, la firma no
+      // viaja; el veto es irreversible en el backend.
+      signButton.addEventListener('click', (clickEvent) => {
+        clickEvent?.preventDefault?.();
+        clickEvent?.stopPropagation?.();
+      });
+      detailBody.appendChild(signButton);
+      return;
+    }
+
+    // Firma legítima: delegación al orquestador (que llamará al endpoint
+    // de firmas; el backend re-verificará el conflicto de todos modos).
+    signButton.addEventListener('click', () => {
+      onSignSpell?.(displayedSlug);
+    });
+    detailBody.appendChild(signButton);
   }
 
   /**
@@ -241,7 +315,7 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
    */
   let currentOriginElement = originElement;
 
-  function open(spellDetailDto, { originElement: openOriginElement = null } = {}) {
+  function open(spellDetailDto, { originElement: openOriginElement = null, signer = null, clanConflict = null } = {}) {
     if (dialogElement.open) {
       return; // Idempotente: ya desplegada.
     }
@@ -249,6 +323,10 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
     if (openOriginElement) {
       currentOriginElement = openOriginElement;
     }
+
+    // Contexto de firma solemne (Tarea 5.2): el veredicto de conflicto
+    // lo decide SIEMPRE el backend; la ficha solo lo traduce a interfaz.
+    currentSignContext = { signer, clanConflict };
 
     renderSpellDetail(spellDetailDto);
     bindShellListeners();
@@ -273,5 +351,5 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
   // en motores sin <dialog> (degradación elegante, checklist AGENTS.md).
   void windowRef;
 
-  return { open, close, setOriginElement: (originNode) => { currentOriginElement = originNode; }, destroy };
+  return { open, close, setOriginElement: (originNode) => { currentOriginElement = originNode; }, setSignContext: (signContext) => { currentSignContext = signContext; }, destroy };
 }
