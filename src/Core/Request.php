@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace Grimorio\Core;
 
+use Grimorio\Models\User;
+
 /**
  * Encapsula método HTTP, ruta limpia, parámetros de consulta y cabeceras.
  */
@@ -36,20 +38,33 @@ final class Request
     /** Cabeceras normalizadas a Clave-Pascal (insensibles a mayúsculas al consultar). */
     private array $headers;
 
+    /** Usuario activo inyectado por el AuthMiddleware (Tarea 3.1, SPEC-03).
+     *  Null = visitante anónimo; el RbacMiddleware lo trata como reader. */
+    private ?User $user = null;
+
+    /** Cuerpo crudo de la petición (null = leer de php://input al vuelo).
+     *  La SAPI CLI no admite escritura en php://input, de modo que los
+     *  arneses de verificación inyectan aquí el cuerpo simulado; bajo
+     *  SAPI web el flujo es el nativo del mundo HTTP real. */
+    private ?string $rawBody = null;
+
     /**
      * @param array<string, string> $queryParams Parámetros de consulta.
      * @param array<string, string> $headers     Cabeceras con nombre original.
+     * @param string|null         $rawBody      Cuerpo crudo inyectable (solo pruebas).
      */
     public function __construct(
         string $method,
         string $path,
         array $queryParams = [],
-        array $headers = []
+        array $headers = [],
+        ?string $rawBody = null
     ) {
         $this->method      = strtoupper($method);
         $this->path        = $path;
         $this->queryParams = $queryParams;
         $this->headers     = $headers;
+        $this->rawBody     = $rawBody;
     }
 
     /**
@@ -79,6 +94,22 @@ final class Request
         }
 
         return new self($method, $path, $queryParams, $headers);
+    }
+
+    /**
+     * Inyecta el usuario activo resuelto por el AuthMiddleware (SPEC-03).
+     * Único punto de mutación permitido de la petición: ocurre antes del
+     * despacho del router y nunca después.
+     */
+    public function setUser(User $user): void
+    {
+        $this->user = $user;
+    }
+
+    /** Usuario activo de la petición (null = visitante anónimo, RF-02). */
+    public function getUser(): ?User
+    {
+        return $this->user;
     }
 
     /** Retorna el verbo HTTP en mayúsculas. */
@@ -130,5 +161,71 @@ final class Request
         }
 
         return null;
+    }
+
+    /**
+     * Lee y decodifica el cuerpo JSON de la petición (endpoints mutables,
+     * plan 2.2 de SPEC-03). Devuelve null si el cuerpo está ausente,
+     * corrupto o no es un objeto/arraigado JSON válido: el controlador
+     * traducirá null en un 400 controlado sin explosión interna.
+     *
+     * @return array<string, mixed>|null Payload decodificado o null si es inválido.
+     */
+    public function getJsonBody(): ?array
+    {
+        $rawBody = $this->rawBody ?? file_get_contents('php://input');
+        if ($rawBody === false || $rawBody === '' || trim($rawBody) === '') {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($rawBody, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        // Solo objetos JSON con claves textuales son contratos válidos
+        // (defensa contra payloads escalares o listas anónimas).
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    /**
+     * Lee la cookie de sesión cruda que porta el cliente (RF-02.1).
+     * Consulta primero la cabecera Cookie (determinista en pruebas) y
+     * cae en la superglobal $_COOKIE, que es la vía del mundo HTTP real.
+     */
+    public function getCookie(string $name): ?string
+    {
+        $cookieHeader = $this->getHeader('Cookie');
+        if ($cookieHeader !== null) {
+            foreach (explode(';', $cookieHeader) as $cookiePair) {
+                $pairParts = explode('=', trim($cookiePair), 2);
+                if (count($pairParts) === 2 && $pairParts[0] === $name) {
+                    return $pairParts[1];
+                }
+            }
+        }
+
+        $superglobalValue = $_COOKIE[$name] ?? null;
+
+        return is_string($superglobalValue) && $superglobalValue !== '' ? $superglobalValue : null;
+    }
+
+    /**
+     * Procedencia del cliente (RF-03.2): IP directa o el primer salto del
+     * encadenado X-Forwarded-For cuando hay proxy de por medio. El valor
+     * jamás se confía para nada más que para el registro de intentos.
+     */
+    public function getClientIp(): string
+    {
+        $forwardedFor = $this->getHeader('X-Forwarded-For');
+        if ($forwardedFor !== null && $forwardedFor !== '') {
+            $firstHop = trim(explode(',', $forwardedFor)[0]);
+            if ($firstHop !== '') {
+                return $firstHop;
+            }
+        }
+
+        return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
     }
 }
