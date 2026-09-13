@@ -36,6 +36,7 @@ use Grimorio\Core\Request;
 use Grimorio\Core\Response;
 use Grimorio\Core\SessionManager;
 use Grimorio\Models\User;
+use Grimorio\Services\AuditService;
 use Grimorio\Services\AuthService;
 use PDO;
 use RuntimeException;
@@ -56,6 +57,9 @@ final class AuthController
     /** Defensa anti-fuerza bruta por procedencia (Tarea 2.2, RF-03.2). */
     private RateLimiter $rateLimiter;
 
+    /** Bitácora inmutable de auditoría (Tarea 2.5, RF-08.1). */
+    private AuditService $auditService;
+
     public function __construct(PDO $pdo, SessionManager $sessionManager, RateLimiter $rateLimiter)
     {
         // El AuthService porta su propio SessionManager; este controlador
@@ -63,6 +67,7 @@ final class AuthController
         $this->pdo          = $pdo;
         $this->authService  = new AuthService($pdo, $sessionManager);
         $this->rateLimiter  = $rateLimiter;
+        $this->auditService = new AuditService($pdo);
     }
 
     // -----------------------------------------------------------------
@@ -398,6 +403,71 @@ final class AuthController
     }
 
     // -----------------------------------------------------------------
+    // Endpoint de Renuncia al Vínculo (RF-09.1, cierre de SPEC-03).
+    // -----------------------------------------------------------------
+
+    /**
+     * Renuncia al Vínculo (RF-09.1): derecho al olvido del titular de la
+     * cookie portadora. La pila de producción (AuthMiddleware +
+     * SessionManager) ya habría degradado a anónimo cualquier cookie
+     * huérfana; como segunda muralla, este endpoint re-resuelve el
+     * titular por la huella SHA-256 del token y rechaza con 401 si no
+     * hay vínculo activo o la cuenta ya fue anonimizada. La renuncia
+     * próspera queda registrada en la bitácora (ACC_LINK_RENOUNCED,
+     * trazabilidad del Artículo III).
+     */
+    public function renounceAccount(Request $request): Response
+    {
+        $rawToken = $request->getCookie('grimorio_session');
+        if ($rawToken === null) {
+            return $this->forgeUnauthorized();
+        }
+
+        // Identidad del titular ANTES de la anonimización: la bitácora
+        // debe registrar quién renunció, no el seudónimo posterior.
+        $renouncer = $this->resolveSessionOwner($rawToken);
+        if ($renouncer === null) {
+            return $this->forgeUnauthorized();
+        }
+
+        if (!$this->authService->renounceAccount($rawToken)) {
+            // Vínculo caducado entre la lectura y la escritura, o cuenta
+            // ya anonimizada (doble renuncia): 409 explícito y no mutante.
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'           => 'ACCOUNT_ALREADY_RENOUNCED',
+                    'message'        => 'Esta cuenta ya habitó la renuncia: nada queda por disolver.',
+                    'recoveryAction' => 'NONE',
+                ],
+            ], 409);
+        }
+
+        // Trazabilidad solemne (Art. III, RF-08.1): la renuncia queda
+        // imborrable en la bitácora con la identidad previa a la purga.
+        $this->auditService->recordAction(
+            actorUserId: $renouncer['id'],
+            actorAlias: $renouncer['alias'],
+            actorRole: $renouncer['role'],
+            actionType: 'ACC_LINK_RENOUNCED',
+            targetEntityType: 'user',
+            targetEntityId: $renouncer['id'],
+            justification: 'Renuncia al Vínculo: el iniciado solicitó su derecho al olvido y su legado pasa al seudónimo «Erudito Ancestral».',
+        );
+
+        // Expiración de la cookie portadora: la sesión ya no existe en
+        // BD; la cookie se marca caducada para el navegador vía el
+        // SessionManager (expiración negativa). Sin ella, el vínculo
+        // muerto viaja una última vez y el middleware degrada a anónimo.
+        return Response::json([
+            'success' => true,
+            'data'    => [
+                'message' => 'Tu vínculo ha sido renunciado en paz. Tus obras validadas habitarán el grimorio como legado del linaje (Erudito Ancestral).',
+            ],
+        ], 200);
+    }
+
+    // -----------------------------------------------------------------
     // Ayudantes privados.
     // -----------------------------------------------------------------
 
@@ -429,6 +499,30 @@ final class AuthController
                 'recoveryAction' => 'BIND_FIRST',
             ],
         ], 401);
+    }
+
+    /**
+     * Resuelve el titular de un token de sesión por su huella SHA-256
+     * (uso previo a mutaciones que invalidan el propio token).
+     *
+     * @return array{id: string, alias: string, role: string}|null
+     */
+    private function resolveSessionOwner(string $rawToken): ?array
+    {
+        $tokenHash = hash('sha256', $rawToken);
+        $statement = $this->pdo->prepare(
+            'SELECT u.id, u.alias, u.role
+             FROM user_sessions s
+             JOIN users u ON u.id = s.user_id
+             WHERE s.session_token_hash = :tokenHash
+             LIMIT 1'
+        );
+        $statement->execute([':tokenHash' => $tokenHash]);
+        $ownerRow = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($ownerRow)
+            ? ['id' => (string) $ownerRow['id'], 'alias' => (string) $ownerRow['alias'], 'role' => (string) $ownerRow['role']]
+            : null;
     }
 
     /**

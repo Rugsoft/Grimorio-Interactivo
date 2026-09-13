@@ -119,6 +119,8 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 * **RF-07.3 [Estado]:**  
   MIENTRAS un conjuro experimental se encuentre en moderación y su autor sea transferido de clan o suspendido, el sistema DEBERÁ conservar la atribución de los puntos de dicho conjuro para el **clan al que pertenecía el autor en el momento de su concepción**.
 
+> **Nota de alcance (derivación formal):** La materialización completa de RF-07.1 y RF-07.2 (ventana de tregua de 24 horas y conservación de puntos por ciclo semanal) es indisociable del cómputo semanal del Dominio del Grimorio, y por tanto queda **derivada formalmente a `SPEC-07` (Linajes y Dominio)**, conforme a la cláusula 7 (Fuera de Alcance). RF-07.3 se materializa de forma incremental dentro de esta spec: `clan_history` (Tarea 1.1) preserva el historial de linajes con sus marcas de entrada/salida y `ClanConflictService` (Tarea 2.4) lo consulta; la atribución y preservación de puntos por concepción del conjuro se completará junto al motor de Dominio de SPEC-07.
+
 ### RF-08: Bitácora Inmutable de Auditoría Arcana (Transparencia Pública)
 * **RF-08.1 [Ubicuo]:**  
   El sistema DEBERÁ registrar de forma imborrable cada acción de firma de moderación, rechazo, validación directa, veto, nombramiento de Maestro o alteración de clanes, almacenando: marca temporal UTC, identificador y alias del actuante, rol técnico, acción ejecutada, conjuro/clan afectado y motivo en texto noble.
@@ -165,7 +167,7 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 
 * Las fórmulas matemáticas del coste de maná (cubiertas en `SPEC-04`).
 * El simulador de grimorio con partículas Canvas y Web Speech API (cubierto en `SPEC-05`).
-* El cálculo semanal del ranking de Dominio del Grimorio (cubierto en `SPEC-07`).
+* El cálculo semanal del ranking de Dominio del Grimorio (cubierto en `SPEC-07`), junto con la ventana de tregua de 24 horas para el cambio de linaje y la conservación/traslado de puntos históricos (RF-07.1, RF-07.2 y RF-07.3, derivados formalmente a `SPEC-07`).
 * La implementación física de tablas SQL o manejo específico de cookies (reservados al Plan Técnico).
 
 ---

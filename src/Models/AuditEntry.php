@@ -40,6 +40,7 @@ final class AuditEntry
         'PROMOTE_MASTER',
         'DEMOTE_MASTER',
         'CLAN_MODIFY',
+        'ACC_LINK_RENOUNCED',
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

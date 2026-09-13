@@ -128,3 +128,8 @@
   * **Alcance:** Certificar ausencia de paquetes Composer y librerías externas, comprobación de cookies `HttpOnly`/`SameSite=Strict`, tiempos de respuesta idénticos anti-timing attacks y preservación del legado del clan al eliminar una cuenta.
   * **Cubre:** `RF-09.1`, `RF-09.2`, `RNF-01 a RNF-05`, `Artículo I`, `Artículo III`, `Artículo V`
   * **Hecho cuando:** El script de auditoría confirma que las cookies son seguras, la base de datos no expone contraseñas en texto claro y no existe ninguna dependencia externa en el proyecto.
+
+- [x] **Tarea 5.4 (cierre): Servicio y endpoint REST de Renuncia al Vínculo (`renounceAccount`)**
+  * **Alcance:** Exponer como flujo de usuario la secuencia canónica de derecho al olvido validada en la Tarea 5.3: `AuthService::renounceAccount()` anonimiza la cuenta (seudónimo «Erudito Ancestral», correo y hash opacos, pergamino purgado), revoca todas las sesiones y preserva el legado de `clan_history`; `AuthController::renounceAccount()` expone `POST /api/v1/auth/renounce-account` (401 sin vínculo portador, 409 ante doble renuncia, 200 con leyenda solemne) y registra la renuncia en la bitácora como `ACC_LINK_RENOUNCED`. El front controller registra las rutas de autenticación (Endpoints 1-5 + renuncia).
+  * **Cubre:** `RF-09.1`, `RF-09.2`, `RF-08.1`, `Artículo III`
+  * **Hecho cuando:** La renuncia con vínculo portador responde 200, purga los datos personales preservando el legado del linaje, invalida todas las sesiones y la bitácora queda con el veredicto `ACC_LINK_RENOUNCED` — verificado por `php scratch/test_renounce_account.php` (21 asertos, exit 0).

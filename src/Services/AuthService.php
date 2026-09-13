@@ -56,6 +56,9 @@ final class AuthService
     /** Hash señuelo BCRYPT coste 12 real: garantiza el mismo coste computacional que un hash legítimo. */
     private const DUMMY_HASH = '$2y$12$Xu9Bc1oVv7Oe2Pq0rTn5Y.dK3wZ8sH6gJ4fL2mN9qR1tC5vB8xWyK';
 
+    /** Seudónimo solemne del registro anonimizado (RF-09.2, auditoría 5.3). */
+    private const RENOUNCE_ANONYMOUS_ALIAS = 'Erudito Ancestral';
+
     /** Conexión PDO al plano arcano. */
     private PDO $pdo;
 
@@ -291,6 +294,77 @@ final class AuthService
         ]);
 
         // Revocación preventiva (RF-04.2): todas las sesiones previas caen.
+        $purgeStatement = $this->pdo->prepare('DELETE FROM user_sessions WHERE user_id = :userId');
+        $purgeStatement->execute([':userId' => $userId]);
+
+        return true;
+    }
+
+    /**
+     * Renuncia al Vínculo (RF-09.1): derecho al olvido con preservación
+     * del legado (RF-09.2). La baja canónica (auditoría 5.3) NO borra la
+     * fila — el RESTRICT de clan_history lo impediría con historia viva —
+     * sino que la anonimiza:
+     *   1. El pergamino activo queda purgado.
+     *   2. El alias pasa al seudónimo solemne «Erudito Ancestral».
+     *   3. Correo y hash se sustituyen por opacos irrecuperables.
+     *   4. Todas las sesiones de la cuenta caen (disolución global implícita).
+     * El rol y el linaje del registro permanecen estables para no romper
+     * la puntuación histórica del linaje (RF-09.2, RF-07.3).
+     *
+     * @return bool true si la renuncia prosperó; false si el token no
+     *              portaba un vínculo activo o la cuenta ya era anónima.
+     */
+    public function renounceAccount(string $rawToken, ?DateTimeImmutable $now = null): bool
+    {
+        $instant = $now ?? new DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $tokenHash = hash('sha256', $rawToken);
+
+        // El token crudo jamás se persiste: el titular se resuelve por su
+        // huella SHA-256 en user_sessions (Tarea 2.1).
+        $ownerStatement = $this->pdo->prepare(
+            'SELECT user_id FROM user_sessions WHERE session_token_hash = :tokenHash LIMIT 1'
+        );
+        $ownerStatement->execute([':tokenHash' => $tokenHash]);
+        $ownerId = $ownerStatement->fetchColumn();
+
+        if ($ownerId === false) {
+            return false; // Sin vínculo portador: nada que renunciar.
+        }
+
+        $userId = (string) $ownerId;
+
+        // Defensa anti-doble-renuncia: el seudónimo solemne identifica a
+        // las cuentas ya anonimizadas; una segunda renuncia no prospera.
+        $userStatement = $this->pdo->prepare('SELECT alias FROM users WHERE id = :userId');
+        $userStatement->execute([':userId' => $userId]);
+        $currentAlias = $userStatement->fetchColumn();
+
+        if ($currentAlias === false || $currentAlias === self::RENOUNCE_ANONYMOUS_ALIAS) {
+            return false;
+        }
+
+        // Purga del pergamino activo (si lo hubiera) y sustitución de
+        // datos personales por opacos irrecuperables (RF-09.1).
+        $anonymizeStatement = $this->pdo->prepare(
+            'UPDATE users
+             SET alias = :alias,
+                 email = :email,
+                 password_hash = :passwordHash,
+                 recovery_token_hash = \'\',
+                 recovery_token_expires_at = NULL,
+                 updated_at = :updatedAt
+             WHERE id = :userId'
+        );
+        $anonymizeStatement->execute([
+            ':alias'        => self::RENOUNCE_ANONYMOUS_ALIAS,
+            ':email'        => 'ancestral+' . $userId . '@olvidado.sanctuario',
+            ':passwordHash' => str_repeat('0', 60), // No es un hash BCRYPT válido: jamás verificará.
+            ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
+            ':userId'       => $userId,
+        ]);
+
+        // Disolución global implícita: todas las sesiones de la cuenta caen.
         $purgeStatement = $this->pdo->prepare('DELETE FROM user_sessions WHERE user_id = :userId');
         $purgeStatement->execute([':userId' => $userId]);
 

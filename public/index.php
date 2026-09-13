@@ -42,9 +42,12 @@ spl_autoload_register(static function (string $className): void {
 use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
+use Grimorio\Controllers\AuthController;
+use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
 use Grimorio\Core\Router;
+use Grimorio\Core\SessionManager;
 use Grimorio\Database\Connection;
 use Grimorio\Services\SpellDiscoveryService;
 
@@ -62,11 +65,27 @@ function buildRouter(): Router
     $spellController  = new SpellController($discoveryService);
     $clanController   = new ClanController($connection);
 
+    // Pila de autenticación (SPEC-03): gestor de sesiones y rate limiter
+    // alineados sobre el PDO del front controller (Connection::getPdo()).
+    $sessionManager  = new SessionManager($connection->getPdo());
+    $rateLimiter     = new RateLimiter($connection->getPdo());
+    $authController  = new AuthController($connection->getPdo(), $sessionManager, $rateLimiter);
+
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
     $router->addRoute('GET', '/api/v1/spells/{slug}', fn (Request $request, array $routeParams): Response => $spellController->show($request, $routeParams));
     $router->addRoute('GET', '/api/v1/clans/preview', fn (Request $request): Response => $clanController->preview($request));
+
+    // --- Rutas de autenticación (SPEC-03, plan 2.2, Endpoints 1-5 + renuncia RF-09.1) ---
+    $router->addRoute('POST', '/api/v1/auth/consecrate', fn (Request $request): Response => $authController->consecrate($request));
+    $router->addRoute('POST', '/api/v1/auth/bind', fn (Request $request): Response => $authController->bind($request));
+    $router->addRoute('POST', '/api/v1/auth/dissolve', fn (Request $request): Response => $authController->dissolve($request));
+    $router->addRoute('POST', '/api/v1/auth/dissolve-all', fn (Request $request): Response => $authController->dissolveAll($request));
+    $router->addRoute('GET', '/api/v1/auth/session', fn (Request $request): Response => $authController->session($request));
+    $router->addRoute('POST', '/api/v1/auth/recovery/request', fn (Request $request): Response => $authController->recoveryRequest($request));
+    $router->addRoute('POST', '/api/v1/auth/recovery/reset', fn (Request $request): Response => $authController->recoveryReset($request));
+    $router->addRoute('POST', '/api/v1/auth/renounce-account', fn (Request $request): Response => $authController->renounceAccount($request));
 
     return $router;
 }
