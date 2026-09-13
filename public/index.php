@@ -43,6 +43,7 @@ use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
+use Grimorio\Controllers\SpellCreatorController;
 use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
@@ -50,6 +51,7 @@ use Grimorio\Core\Router;
 use Grimorio\Core\SessionManager;
 use Grimorio\Database\Connection;
 use Grimorio\Services\SpellDiscoveryService;
+use Grimorio\Services\SpellManagementService;
 
 /**
  * Construye y registra todas las rutas de la API (plan técnico, sección 3).
@@ -71,11 +73,28 @@ function buildRouter(): Router
     $rateLimiter     = new RateLimiter($connection->getPdo());
     $authController  = new AuthController($connection->getPdo(), $sessionManager, $rateLimiter);
 
+    // Taller de Hechizos (SPEC-04): el cálculo es público y sin estado
+    // (simulación en vivo del creador); las rutas de borradores y
+    // transiciones (Tareas 4.2/4.3) exigirán sesión autenticada.
+
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
     $router->addRoute('GET', '/api/v1/spells/{slug}', fn (Request $request, array $routeParams): Response => $spellController->show($request, $routeParams));
     $router->addRoute('GET', '/api/v1/clans/preview', fn (Request $request): Response => $clanController->preview($request));
+
+    // --- Rutas del Taller de Hechizos (SPEC-04, plan Endpoints 1-3) ---
+    // El cálculo es público y sin estado; el ciclo de vida de borradores
+    // exige sesión autenticada (SpellManagementService sobre el PDO real).
+    $spellCreatorController = new SpellCreatorController(null, new SpellManagementService($connection->getPdo()));
+    $router->addRoute('POST', '/api/v1/spells/calculate', fn (Request $request): Response => $spellCreatorController->calculate($request));
+    $router->addRoute('POST', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->createDraft($request));
+    $router->addRoute('GET', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->listDrafts($request));
+    $router->addRoute('PUT', '/api/v1/spells/drafts/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->updateDraft($request, $routeParams));
+    $router->addRoute('DELETE', '/api/v1/spells/drafts/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->deleteDraft($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/spells/publish/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->publishSpell($request, $routeParams));
+    $router->addRoute('PUT', '/api/v1/spells/experimental/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->updateExperimental($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/spells/variant/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->createVariant($request, $routeParams));
 
     // --- Rutas de autenticación (SPEC-03, plan 2.2, Endpoints 1-5 + renuncia RF-09.1) ---
     $router->addRoute('POST', '/api/v1/auth/consecrate', fn (Request $request): Response => $authController->consecrate($request));
