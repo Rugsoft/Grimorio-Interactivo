@@ -1,0 +1,374 @@
+/* =====================================================================
+ * grimoire-simulator.css — Estilos del Tomo del Simulador de Grimorio.
+ *
+ * Tarea 4.4 (TASKS-05): maqueta el Tomo Arcano como un libro abierto a
+ * doble página sobre pergamino místico con marcos rúnicos y cuero
+ * antiguo (RF-01.1), con pliegue mágico conmutado en móviles (Caso
+ * Límite 5) y atmósfera castellana solemne (RNF-04).
+ *
+ * Constitución:
+ *   - Artículo I (Dogma Vanilla): CSS3 puro con variables nativas;
+ *     cero frameworks, preprocesadores o CDNs. Los colores viajan
+ *     SIEMPRE por tokens del sistema (tokens.css).
+ *   - Artículo IV (Velo Arcano): pergamino, cuero viejo, oro rúnico y
+ *     azul de maná; jamás tecnicismos expuestos.
+ *   - Artículo V: clases semánticas kebab-case; comentarios castellanos.
+ *
+ * Cobertura: RF-01.1 (doble página), RF-01.4 (flechas del lomo),
+ * Caso Límite 5 (pliegue móvil), RNF-03 (foco y contraste AA,
+ * prefers-reduced-motion), RNF-04 (solemnidad).
+ * ===================================================================== */
+
+/* ---------------------------------------------------------------------
+ * 1. Tomo y doble página (escritorio): las dos láminas del libro.
+ * ------------------------------------------------------------------- */
+.grimoire-book {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 0;
+  align-items: stretch;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  background-color: var(--color-parchment-base);
+  background-image:
+    radial-gradient(ellipse at 20% 10%, var(--color-parchment-surface) 0%, transparent 60%),
+    radial-gradient(ellipse at 85% 90%, var(--color-parchment-surface) 0%, transparent 55%);
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 10px;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-arcane-body);
+  color: var(--color-parchment);
+}
+
+/* Láminas: pergamino iluminado con lomo central. */
+.grimoire-book__page {
+  position: relative;
+  min-width: 0; /* evita desbordamientos en las pistas de rejilla */
+  padding: 28px 26px;
+  background-color: var(--color-parchment-surface);
+  border: 1px solid var(--color-parchment-border);
+}
+
+/* Lomo del libro: costura rúnica entre las dos páginas. */
+.grimoire-book__page--left {
+  border-right: 2px solid var(--color-gold-arcane-dim, var(--color-parchment-border));
+  border-radius: 8px 0 0 8px;
+  box-shadow: inset -12px 0 24px rgba(0, 0, 0, 0.35);
+}
+.grimoire-book__page--right {
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  box-shadow: inset 12px 0 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Iluminación del conjuro (RF-01.5). */
+.grimoire-book__face {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.grimoire-book__face--hidden {
+  display: none;
+}
+.grimoire-book__spell-name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: 1.6rem;
+  line-height: 1.2;
+  color: var(--color-gold-arcane);
+  letter-spacing: 0.02em;
+}
+.grimoire-book__spell-circle,
+.grimoire-book__spell-element {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: 0.95rem;
+  color: var(--color-parchment);
+  opacity: 0.92;
+}
+.grimoire-book__spell-casting-time,
+.grimoire-book__spell-mana {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-text-light-muted);
+}
+.grimoire-book__spell-mana {
+  color: var(--mana-blue);
+  font-family: var(--font-arcane-seal);
+}
+.grimoire-book__spell-formula {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  font-size: 1.05rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--color-gold-arcane);
+  background-color: var(--color-parchment-base);
+  border-left: 3px solid var(--color-gold-arcane);
+  border-radius: 4px;
+}
+.grimoire-book__spell-description {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--color-parchment);
+}
+
+/* Pergamino virgen ante filtros vacíos (RF-01.4). */
+.grimoire-book__empty {
+  display: none;
+}
+.grimoire-book__empty--visible {
+  display: flex;
+  min-height: 320px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: radial-gradient(ellipse at center, var(--color-parchment-base) 0%, transparent 70%);
+}
+.grimoire-book__empty-legend {
+  max-width: 32ch;
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: 1.02rem;
+  line-height: 1.7;
+  color: var(--color-text-light-muted);
+}
+
+/* ---------------------------------------------------------------------
+ * 2. Flechas del lomo: desvanecidas rúnicamente en los extremos.
+ * ------------------------------------------------------------------- */
+.grimoire-book__arrow {
+  align-self: center;
+  width: 46px;
+  height: 92px;
+  padding: 0;
+  font-family: var(--font-arcane-title);
+  font-size: 1.5rem;
+  color: var(--color-gold-arcane);
+  background-color: transparent;
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: opacity 220ms ease, color 220ms ease;
+}
+.grimoire-book__arrow:hover:not(:disabled) {
+  color: var(--color-gold-bright);
+  border-color: var(--color-parchment-border-focus);
+}
+.grimoire-book__arrow:disabled {
+  opacity: 0.22; /* lomo físico: la flecha existe pero se desvanece */
+  cursor: default;
+}
+/* Flechas del lomo: cada extremo porta su propio signo rúnico. */
+.grimoire-book__arrow--prev::before {
+  content: '\2039'; /* «‹»: retroceder una hoja */
+}
+.grimoire-book__arrow--next::before {
+  content: '\203A'; /* «›»: avanzar una hoja */
+}
+.grimoire-book__arrow:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+ * 3. Índice rúnico: filtros por Círculo y Afinidad (RF-01.4).
+ * ------------------------------------------------------------------- */
+.grimoire-book__rune-index {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-parchment-border);
+}
+.grimoire-book__circle-index,
+.grimoire-book__element-index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.grimoire-book__circle-option,
+.grimoire-book__element-option,
+.grimoire-book__filter-clear {
+  min-height: 44px; /* área táctil accesible (RNF-03) */
+  padding: 8px 12px;
+  font-family: var(--font-arcane-body);
+  font-size: 0.88rem;
+  color: var(--color-parchment);
+  background-color: var(--color-parchment-base);
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 180ms ease, color 180ms ease;
+}
+.grimoire-book__circle-option:hover,
+.grimoire-book__element-option:hover,
+.grimoire-book__filter-clear:hover {
+  border-color: var(--color-gold-arcane);
+  color: var(--color-gold-arcane);
+}
+.grimoire-book__circle-option--active,
+.grimoire-book__element-option--active {
+  /* Tinta antigua sobre oro rúnico: 7.11:1 (WCAG AA). */
+  color: var(--color-ink);
+  background-color: var(--color-gold-arcane);
+  border-color: var(--color-gold-arcane);
+}
+.grimoire-book__circle-option:focus-visible,
+.grimoire-book__element-option:focus-visible,
+.grimoire-book__filter-clear:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+ * 4. Cámara de Conjuración: hueco del lienzo en la página derecha.
+ * ------------------------------------------------------------------- */
+.grimoire-book__camera-slot,
+.arcane-canvas {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 320px;
+  background-image: radial-gradient(ellipse at 70% 45%, var(--color-parchment-surface) 0%, var(--color-parchment-base) 72%);
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 8px;
+  overflow: hidden; /* sin desbordamientos del trazado */
+}
+
+/* ---------------------------------------------------------------------
+ * 5. Maniquí Arcano: barra de salud y distintivo de barrera (RF-02.1).
+ * ------------------------------------------------------------------- */
+.combat-dummy__figure {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+}
+.combat-dummy__health-bar {
+  position: relative;
+  height: 22px;
+  background-color: var(--color-parchment-base);
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.combat-dummy__health-fill {
+  height: 100%;
+  background-image: linear-gradient(90deg, var(--color-gold-arcane-dim, var(--color-gold-arcane)) 0%, var(--color-gold-arcane) 100%);
+  transition: width 200ms ease;
+}
+.combat-dummy__barrier-badge {
+  align-self: flex-start;
+  padding: 3px 9px;
+  font-family: var(--font-arcane-seal);
+  font-size: 0.82rem;
+  color: var(--mana-blue);
+  border: 1px solid var(--mana-blue);
+  border-radius: 999px;
+}
+.combat-dummy__status-legend {
+  font-size: 0.85rem;
+  color: var(--color-text-light-muted);
+}
+
+/* ---------------------------------------------------------------------
+ * 6. Controles ceremoniales y bitácora de pruebas (RF-05.3).
+ * ------------------------------------------------------------------- */
+.grimoire-simulator__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.grimoire-simulator__controls button {
+  min-height: 44px; /* área táctil accesible */
+  padding: 10px 16px;
+  font-family: var(--font-arcane-seal);
+  font-size: 0.92rem;
+  color: var(--color-gold-arcane);
+  background-color: var(--color-parchment-base);
+  border: 1px solid var(--color-gold-arcane);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+.grimoire-simulator__controls button:hover {
+  background-color: var(--color-parchment-surface);
+}
+.grimoire-simulator__controls button:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+.grimoire-simulator__logbook {
+  margin-top: 14px;
+  padding: 10px 14px;
+  max-height: 150px;
+  overflow-y: auto; /* la bitácora crece sin romper la lámina */
+  font-size: 0.84rem;
+  color: var(--color-text-light-muted);
+  background-color: var(--color-parchment-base);
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 8px;
+}
+.grimoire-simulator__logbook-entry {
+  padding: 3px 0;
+  border-bottom: 1px dotted var(--color-parchment-border);
+}
+
+/* ---------------------------------------------------------------------
+ * 7. Pliegue mágico en móviles (Caso Límite 5): una lámina a la vez.
+ *    El tomo abre en lectura; las flechas conmutan el pliegue cuando el
+ *    ancho no permite ambas páginas sin desbordar.
+ * ------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .grimoire-book {
+    grid-template-columns: 1fr;
+    padding: 16px 10px;
+  }
+  .grimoire-book__page {
+    border-radius: 8px;
+    padding: 20px 16px;
+  }
+  .grimoire-book__page--left,
+  .grimoire-book__page--right {
+    border-right: 1px solid var(--color-parchment-border);
+    border-left: 1px solid var(--color-parchment-border);
+    box-shadow: none;
+  }
+  /* Pliegue: solo una lámina visible; la otra descansa doblada. */
+  .grimoire-book__page--left.grimoire-book__page--hidden,
+  .grimoire-book__page--right.grimoire-book__page--hidden,
+  .grimoire-book--folded .grimoire-book__page--left {
+    display: none;
+  }
+  .grimoire-book__arrow {
+    width: 100%;
+    height: 52px;
+  }
+  .grimoire-book__camera-slot,
+  .arcane-canvas {
+    min-height: 260px;
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * 8. Movimiento reducido (RF-06.1 / RNF-03): sin transiciones.
+ * ------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .grimoire-book__arrow,
+  .grimoire-book__circle-option,
+  .grimoire-book__element-option,
+  .grimoire-book__filter-clear,
+  .combat-dummy__health-fill,
+  .grimoire-simulator__controls button {
+    transition: none;
+  }
+}

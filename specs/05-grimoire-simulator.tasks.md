@@ -76,22 +76,22 @@
 
 ## Fase 4: Navegación del Tomo, Interfaz y Cliente API (Vanilla JS)
 
-- [ ] **Tarea 4.1: Cliente HTTP para el simulador de grimorio (`grimoireClient.js`)**
+- [x] **Tarea 4.1: Cliente HTTP para el simulador de grimorio (`grimoireClient.js`)**
   * **Alcance:** Implementar `public/assets/js/api/grimoireClient.js` con métodos nativos `fetchSpells(params)` y `fetchSpellDetail(id)` utilizando cabeceras JSON y `credentials: 'same-origin'`.
   * **Cubre:** `RF-01.2`, `RF-01.5`
   * **Hecho cuando:** El cliente HTTP realiza peticiones `fetch` tipadas, desempaqueta la estructura JSON del backend y gestiona limpiamente las respuestas 200 y 401.
 
-- [ ] **Tarea 4.2: Componente de Tomo Arcano y Navegación de Páginas (`grimoireBookComponent.js`)**
+- [x] **Tarea 4.2: Componente de Tomo Arcano y Navegación de Páginas (`grimoireBookComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/grimoireBookComponent.js` maquetando la doble página (página izquierda: iluminación, metadatos, componentes y fórmula en noble castellano; página derecha: contenedor de la cámara), navegación acotada sin bucle infinito (flechas desvanecidas rúnicamente en extremos), índice rúnico por Círculos/Afinidad y visualización de pergamino virgen ante filtros vacíos.
   * **Cubre:** `RF-01.1`, `RF-01.3`, `RF-01.4`, `RF-01.5`, `RNF-03`
   * **Hecho cuando:** El usuario puede pasar páginas de forma fluida mediante flechas o atajos de teclado, las flechas se desactivan al llegar al primer o último conjuro del catálogo y se muestra la leyenda ceremonial si no hay conjuros en un filtro.
 
-- [ ] **Tarea 4.3: Bitácora de Pruebas persistente en `localStorage`**
+- [x] **Tarea 4.3: Bitácora de Pruebas persistente en `localStorage`**
   * **Alcance:** Implementar el gestor de la bitácora de pruebas en el cliente, registrando cronológicamente los últimos cinco (5) impactos (marca temporal, nombre del conjuro, desglose de daño/barrera/CC y salud restante) en `localStorage` bajo `grimorio_test_log_v1`, y permitiendo su limpieza al pulsar el botón «Restaurar Maniquí».
   * **Cubre:** `RF-02.6`, `RF-05.3`
   * **Hecho cuando:** Cada impacto inscribe un registro en el panel de bitácora, la lista retiene exactamente un máximo de 5 entradas persistentes tras refrescar el navegador y se vacía al pulsar «Restaurar Maniquí».
 
-- [ ] **Tarea 4.4: Estilos y Maquetación del Tomo del Grimorio (`grimoire-simulator.css`)**
+- [x] **Tarea 4.4: Estilos y Maquetación del Tomo del Grimorio (`grimoire-simulator.css`)**
   * **Alcance:** Crear `public/assets/css/components/grimoire-simulator.css` aplicando el sistema de diseño (textura de pergamino místico, marcos rúnicos, cuero antiguo, variables `--color-mana`, `--color-crimson`, panel táctil ceremonial), asegurando vista a doble página en escritorio y vista conmutada de pliegue mágico en dispositivos móviles.
   * **Cubre:** `RF-01.1`, `Caso Límite 5`, `RNF-04`
   * **Hecho cuando:** La interfaz se maqueta como un libro abierto a doble página en pantallas de escritorio y se adapta a una columna con pliegue alternable en móviles sin desbordamientos ni saltos visuales.
