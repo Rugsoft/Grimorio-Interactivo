@@ -49,6 +49,7 @@ use Grimorio\Core\Request;
 use Grimorio\Core\Response;
 use Grimorio\Core\Router;
 use Grimorio\Core\SessionManager;
+use Grimorio\Middleware\AuthMiddleware;
 use Grimorio\Database\Connection;
 use Grimorio\Services\SpellDiscoveryService;
 use Grimorio\Services\SpellManagementService;
@@ -72,24 +73,28 @@ function buildRouter(): Router
     $sessionManager  = new SessionManager($connection->getPdo());
     $rateLimiter     = new RateLimiter($connection->getPdo());
     $authController  = new AuthController($connection->getPdo(), $sessionManager, $rateLimiter);
+    $authMiddleware  = new AuthMiddleware($connection->getPdo(), $sessionManager);
 
     // Taller de Hechizos (SPEC-04): el cálculo es público y sin estado
     // (simulación en vivo del creador); las rutas de borradores y
-    // transiciones (Tareas 4.2/4.3) exigirán sesión autenticada.
+    // transiciones (Tareas 4.2/4.3) exigen sesión autenticada.
+    $spellCreatorController = new SpellCreatorController(null, new SpellManagementService($connection->getPdo()));
 
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
+    // IMPORTANTE: la ruta literal de borradores se registra ANTES que el
+    // patrón /spells/{slug}; registrarse después haría que elRouter la
+    // sombra con slug='drafts' (404 SCROLL_LOST_IN_AETHER observado).
+    $router->addRoute('GET', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->listDrafts($request));
     $router->addRoute('GET', '/api/v1/spells/{slug}', fn (Request $request, array $routeParams): Response => $spellController->show($request, $routeParams));
     $router->addRoute('GET', '/api/v1/clans/preview', fn (Request $request): Response => $clanController->preview($request));
 
     // --- Rutas del Taller de Hechizos (SPEC-04, plan Endpoints 1-3) ---
     // El cálculo es público y sin estado; el ciclo de vida de borradores
     // exige sesión autenticada (SpellManagementService sobre el PDO real).
-    $spellCreatorController = new SpellCreatorController(null, new SpellManagementService($connection->getPdo()));
     $router->addRoute('POST', '/api/v1/spells/calculate', fn (Request $request): Response => $spellCreatorController->calculate($request));
     $router->addRoute('POST', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->createDraft($request));
-    $router->addRoute('GET', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->listDrafts($request));
     $router->addRoute('PUT', '/api/v1/spells/drafts/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->updateDraft($request, $routeParams));
     $router->addRoute('DELETE', '/api/v1/spells/drafts/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->deleteDraft($request, $routeParams));
     $router->addRoute('POST', '/api/v1/spells/publish/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->publishSpell($request, $routeParams));
@@ -137,6 +142,11 @@ if (PHP_SAPI === 'cli-server') {
 if (PHP_SAPI !== 'cli') {
     try {
         $request = Request::fromGlobals();
+        // Resolución del vínculo activo (SPEC-03): la cookie de sesión se
+        // materializa en User antes del despacho; sin esto toda petición
+        // HTTP llegaba anónima y los endpoints protegidos daban 401.
+        $authMiddleware = new AuthMiddleware(Connection::getInstance()->getPdo(), new SessionManager(Connection::getInstance()->getPdo()));
+        $authMiddleware->injectContext($request);
         $router  = buildRouter();
         $response = $router->dispatch($request);
         $response->send();

@@ -37,6 +37,16 @@ import { createLandingView } from './views/landingView.js';
 import { createLibraryView } from './views/libraryView.js';
 import { createClansPreviewView } from './views/clansPreviewView.js';
 import { createErrorView } from './views/errorView.js';
+import { createSpellCreatorView } from './views/spellCreatorView.js';
+import {
+  listDrafts as apiListDrafts,
+  saveDraft as apiSaveDraft,
+  updateDraft as apiUpdateDraft,
+  deleteDraft as apiDeleteDraft,
+  publishSpell as apiPublishSpell,
+  updateExperimental as apiUpdateExperimental,
+  createVariant as apiCreateVariant,
+} from './api/spellCreatorClient.js';
 
 /**
  * Crea la aplicación orquestada.
@@ -149,6 +159,27 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: viewName, instance: clansView };
       await clansView.render();
+      return;
+    }
+
+    if (viewName === 'creator') {
+      // Taller de Hechizos (SPEC-04): la vista orquesta cliente, controles,
+      // desglose en vivo y cajón de borradores. La navbar retiene la
+      // intención (openCreator) para visitantes; al llegar aquí ya hay sesión.
+      const creatorView = createSpellCreatorView(appRoot, {
+        spellCreatorClient: {
+          listDrafts: apiListDrafts,
+          saveDraft: apiSaveDraft,
+          updateDraft: apiUpdateDraft,
+          deleteDraft: apiDeleteDraft,
+          publishSpell: apiPublishSpell,
+          updateExperimental: apiUpdateExperimental,
+          createVariant: apiCreateVariant,
+        },
+        elementFactory,
+      });
+      currentView = { name: viewName, instance: creatorView };
+      await creatorView.render();
       return;
     }
 

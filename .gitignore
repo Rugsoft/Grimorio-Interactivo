@@ -17,6 +17,8 @@ scratch/*.log
 *.db-wal
 # La base canónica de desarrollo vive en database/ y sí se versiona.
 !database/grimorio.db
+# Sandbox efímero de verificación visual (no confundir con la canónica).
+database/grimorio_dev.db
 
 # ----- Basura del sistema y editores ---------------------------------
 Thumbs.db

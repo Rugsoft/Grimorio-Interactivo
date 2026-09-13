@@ -128,9 +128,14 @@ export function createSpellFormControls(componentOptions = {}) {
     select.className = 'spell-form-controls__select';
     select.setAttribute('id', `spell-form-${name}`);
     // El fake necesita una lista de opciones consultable; el select real
-    // las porta como hijos <option> (también creados aquí).
-    select.options = [...options];
-    select.value = defaultValue;
+    // las porta como hijos <option> (read-only del DOM). La asignación solo
+    // prospera en el DOM simulado de los arneses; en el navegador se captura
+    // el TypeError (modo estricto) sin romper el flujo.
+    try {
+      select.options = [...options];
+    } catch {
+      // DOM real: la lista de opciones vive en los <option> añadidos abajo.
+    }
 
     for (const optionValue of options) {
       const option = elementFactory('option');
@@ -138,6 +143,9 @@ export function createSpellFormControls(componentOptions = {}) {
       option.textContent = optionValue;
       select.appendChild(option);
     }
+    // El valor inicial se asienta tras poblar las opciones (en el DOM real
+    // asignarlo antes no tiene efecto).
+    select.value = defaultValue;
 
     const label = elementFactory('label');
     label.className = 'spell-form-controls__label';
