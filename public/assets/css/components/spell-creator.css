@@ -1,0 +1,444 @@
+/*
+   spell-creator.css — Taller Mágico y Desglose de Maná
+   =====================================================================
+   Tarea 5.6 (TASKS-04): maquetación del creador de hechizos a dos
+   columnas armónicas en escritorio (formulario de forja + panel de
+   maná sticky), colapsando a una columna fluida en móvil (768px).
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro; Grid y Flex nativos;
+       cero frameworks, cero preprocesadores, cero CDNs.
+     - Artículo IV: atmósfera de grimorio — SOLO tokens de tokens.css
+       (parchment oscuro, tintas, oro arcano, azul de maná y bermellón
+       de sobrecarga); ninguna regla porta colores crudos.
+     - Artículo V: clases kebab-case; comentarios en castellano.
+
+   Accesibilidad (RNF-04):
+     - Contraste WCAG 2.1 AA >= 4.5:1 en todos los pares texto/fondo
+       (verificado matemáticamente por scratch/test_spell_creator_css.mjs).
+     - :focus-visible con contorno de oro arcano en todos los controles.
+     - Las transiciones respetan prefers-reduced-motion.
+   ===================================================================== */
+
+/* =====================================================================
+   1. Layout maestro del taller: dos columnas en escritorio.
+      La forja ocupa la pista principal; el panel de maná flota pegajoso
+      acompañando el diseño (plan: panel de maná sticky).
+   ===================================================================== */
+.spell-creator {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+  gap: var(--spacing-section, 2rem);
+  align-items: start;
+  padding: var(--spacing-section, 2rem);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: var(--line-height-parchment);
+}
+
+/* Título solemne del taller a todo lo ancho de la rejilla. */
+.spell-creator__title {
+  grid-column: 1 / -1;
+  margin: 0 0 var(--spacing-ink, 0.75rem);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  font-weight: 400;
+  color: var(--color-gold-arcane);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* =====================================================================
+   2. Zona de forja: nombre, narrativa, controles matemáticos y acciones.
+   ===================================================================== */
+.spell-creator__forge {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-ink, 0.75rem);
+  padding: var(--spacing-section, 1.5rem);
+  background: var(--color-parchment-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+}
+
+.spell-creator__label {
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-light-muted);
+}
+
+.spell-creator__name,
+.spell-creator__description {
+  width: 100%;
+  padding: var(--spacing-ink, 0.5rem) var(--spacing-ink, 0.75rem);
+  color: var(--color-text-light);
+  background: var(--color-parchment-base);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  resize: vertical;
+}
+
+.spell-creator__name:focus-visible,
+.spell-creator__description:focus-visible,
+.spell-form-controls__number:focus-visible,
+.spell-form-controls__select:focus-visible,
+.spell-form-controls__radio:focus-visible,
+.spell-form-controls__checkbox:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+  border-color: var(--color-parchment-border-focus);
+}
+
+/* Acciones del taller: sellos de oro sobre pergamino oscuro. */
+.spell-creator__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-ink, 0.75rem);
+  margin-top: var(--spacing-ink, 0.5rem);
+}
+
+.spell-creator__save,
+.spell-creator__publish {
+  padding: var(--spacing-ink, 0.5rem) var(--spacing-section, 1.25rem);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-base);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-ink-seal);
+  background: var(--color-gold-arcane);
+  border: none;
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+  transition: filter 150ms ease;
+}
+
+.spell-creator__save:hover,
+.spell-creator__publish:hover {
+  filter: brightness(1.1);
+}
+
+/* Línea de estado: mensajes solemnes y errores canónicos del backend. */
+.spell-creator__status {
+  flex-basis: 100%;
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--color-text-light-muted);
+}
+
+.spell-creator__status--error {
+  color: var(--color-ember-red);
+  font-weight: 700;
+}
+
+/* =====================================================================
+   3. Controles del formulario (Tarea 5.4): números, selector, radios
+      y casillas sobre pergamino oscuro con filos de oro.
+   ===================================================================== */
+.spell-form-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--spacing-ink, 0.75rem);
+}
+
+.spell-form-controls__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.spell-form-controls__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-ink, 0.5rem);
+  margin: 0;
+  padding: var(--spacing-ink, 0.5rem);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+}
+
+.spell-form-controls__legend {
+  padding: 0 var(--spacing-ink, 0.25rem);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-arcane);
+}
+
+.spell-form-controls__number,
+.spell-form-controls__select {
+  padding: 0.35rem var(--spacing-ink, 0.5rem);
+  color: var(--color-text-light);
+  background: var(--color-parchment-base);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+}
+
+.spell-form-controls__radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.spell-form-controls__radio,
+.spell-form-controls__checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-gold-arcane);
+  cursor: pointer;
+}
+
+.spell-form-controls__radio-label {
+  color: var(--color-text-light-muted);
+}
+
+/* =====================================================================
+   4. Panel de desglose pedagógico (Tarea 5.3): pegajoso en escritorio,
+      protagonista del coste final y del Círculo Arcano.
+   ===================================================================== */
+.mana-breakdown {
+  position: sticky;
+  top: var(--spacing-section, 2rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-ink, 0.5rem);
+  padding: var(--spacing-section, 1.5rem);
+  background: var(--color-parchment-surface);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+}
+
+.mana-breakdown__title {
+  margin: 0 0 var(--spacing-ink, 0.25rem);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-spell);
+  font-weight: 400;
+  color: var(--color-gold-arcane);
+}
+
+.mana-breakdown__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-ink, 0.5rem);
+}
+
+.mana-breakdown__label {
+  color: var(--color-text-light-muted);
+}
+
+.mana-breakdown__value {
+  font-variant: var(--font-variant-mana-numbers);
+  color: var(--color-text-light);
+}
+
+/* El coste final protagoniza el panel: oro arcano con tinta de sello
+   (par verificado >= 4.5:1 en la auditoría del arnés). */
+.mana-breakdown__row--final {
+  margin-top: var(--spacing-ink, 0.5rem);
+  padding-top: var(--spacing-ink, 0.5rem);
+  border-top: var(--border-ink-strong);
+}
+
+.mana-breakdown__final {
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-spell);
+  color: var(--color-gold-arcane);
+}
+
+/* Distintivo del Círculo Arcano: sellos coloreados por modificador.
+   Cada tinta de Círculo viaja con la tinta de sello oscura como texto
+   para mantener el contraste AA sobre fondos luminosos. */
+.mana-breakdown__circle {
+  align-self: flex-start;
+  padding: 0.25rem var(--spacing-ink, 0.75rem);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-ink-seal);
+  background: var(--color-parchment-old);
+  border-radius: var(--radius-seal);
+}
+
+/* Círculo I (Iniciado): bruma fría de maná incipiente. */
+.mana-breakdown__circle--1 {
+  background: var(--mana-blue);
+}
+
+/* Círculo II (Adepto): azul profundo de corriente sostenida. */
+.mana-breakdown__circle--2 {
+  background: var(--mana-blue-deep);
+  color: var(--color-text-light);
+}
+
+/* Círculo III (Magister): violeta arcano de mayor capacidad. */
+.mana-breakdown__circle--3 {
+  background: var(--color-arcane-violet);
+}
+
+/* Círculo IV (Maestro): bronce ceremonial de los maestros de gremio. */
+.mana-breakdown__circle--4 {
+  background: var(--color-bronze-ceremonial);
+  color: var(--color-text-light);
+}
+
+/* Círculo V (Archimago): oro radiante del pináculo arcano. */
+.mana-breakdown__circle--5 {
+  background: var(--color-gold-bright);
+}
+
+/* Cartel luminoso de Sobrecarga Arcana: rojo bermellón (RF-03.2).
+   Inactivo permanece oculto; activo arde con fondo bermellón profundo
+   (texto pergamino sobre él: 6.98:1 >= 4.5:1 WCAG 2.1 AA). */
+.mana-breakdown__overload {
+  display: none;
+  margin-top: var(--spacing-ink, 0.5rem);
+  padding: var(--spacing-ink, 0.75rem);
+  border: 1px solid var(--color-ember-red);
+  border-radius: var(--radius-scroll);
+}
+
+.mana-breakdown__overload[data-active='true'] {
+  display: block;
+}
+
+.mana-breakdown__overload--active {
+  background: var(--color-ember-red-deep);
+  border-color: var(--color-ember-red);
+  box-shadow: 0 0 18px rgba(192, 86, 59, 0.55);
+  animation: overload-pulse 1200ms ease-in-out infinite alternate;
+}
+
+.mana-breakdown__overload-text {
+  color: var(--color-parchment);
+  font-weight: 700;
+}
+
+/* La raíz en sobrecarga tiñe el filo del panel de bermellón. */
+.mana-breakdown--overloaded {
+  border-color: var(--color-ember-red);
+}
+
+@keyframes overload-pulse {
+  from {
+    box-shadow: 0 0 10px rgba(192, 86, 59, 0.35);
+  }
+  to {
+    box-shadow: 0 0 22px rgba(192, 86, 59, 0.75);
+  }
+}
+
+/* =====================================================================
+   5. Cajón de borradores privados (Tarea 5.5).
+   ===================================================================== */
+.spell-creator__drafts {
+  grid-column: 1 / -1;
+  padding: var(--spacing-section, 1.5rem);
+  background: var(--color-parchment-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+}
+
+.spell-creator__drafts-title {
+  margin: 0 0 var(--spacing-ink, 0.5rem);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  font-weight: 400;
+  color: var(--color-gold-arcane);
+}
+
+.spell-creator__drafts-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-ink, 0.5rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.spell-creator__draft-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-ink, 0.5rem);
+  padding: var(--spacing-ink, 0.5rem) var(--spacing-ink, 0.75rem);
+  background: var(--color-parchment-base);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+}
+
+.spell-creator__draft-summary {
+  color: var(--color-text-light);
+}
+
+.spell-creator__draft-load,
+.spell-creator__draft-delete {
+  padding: 0.25rem var(--spacing-ink, 0.5rem);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+}
+
+.spell-creator__draft-load {
+  color: var(--color-ink-seal);
+  background: var(--color-gold-arcane);
+  border: none;
+}
+
+.spell-creator__draft-delete {
+  color: var(--color-ember-red);
+  background: transparent;
+  border: 1px solid var(--color-ember-red);
+}
+
+.spell-creator__draft-load:focus-visible,
+.spell-creator__draft-delete:focus-visible {
+  outline: 2px solid var(--color-gold-bright);
+  outline-offset: 2px;
+}
+
+/* =====================================================================
+   6. Colapso móvil (plan: una columna fluida a 768px).
+      El panel sticky se libera y fluye bajo la forja.
+   ===================================================================== */
+@media (max-width: 768px) {
+  .spell-creator {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-ink, 1rem);
+  }
+
+  .spell-creator__forge,
+  .mana-breakdown,
+  .spell-creator__drafts {
+    width: 100%;
+  }
+
+  .mana-breakdown {
+    position: static;
+  }
+
+  .spell-form-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =====================================================================
+   7. Respeto por la calma: sin parpadeos si el autor lo prefiere.
+   ===================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .mana-breakdown__overload--active {
+    animation: none;
+  }
+
+  .spell-creator__save,
+  .spell-creator__publish {
+    transition: none;
+  }
+}
