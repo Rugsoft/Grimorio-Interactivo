@@ -94,7 +94,9 @@
   color: var(--color-text-light-muted);
 }
 .grimoire-book__spell-mana {
-  color: var(--mana-blue);
+  /* RNF-03: el coste de maná es TEXTO sobre el pergamino del tomo, de modo
+     que usa la variante legible (>= 4.5:1) y no el azul canónico de fondo. */
+  color: var(--mana-blue-readable);
   font-family: var(--font-arcane-seal);
 }
 .grimoire-book__spell-formula {
@@ -360,7 +362,78 @@
 }
 
 /* ---------------------------------------------------------------------
- * 8. Movimiento reducido (RF-06.1 / RNF-03): sin transiciones.
+ * 8. Orquestación de la vista principal (Tarea 5.1): escena, conmutador
+ *    rúnico del catálogo, sellos vocales en reposo y región viva.
+ * ------------------------------------------------------------------- */
+.grimoire-simulator {
+  display: block;
+  width: 100%;
+  color: var(--color-parchment);
+}
+
+.grimoire-simulator__stage {
+  position: relative;
+  display: block;
+  margin-top: 12px;
+}
+
+.grimoire-simulator__dummy-host {
+  display: block;
+  margin-top: 8px;
+}
+
+/* Conmutador del catálogo (RF-01.2): la opción activa invierte el sello. */
+.grimoire-simulator__controls button.grimoire-simulator__catalog-switch--active {
+  color: var(--color-ink);
+  background-color: var(--color-gold-arcane);
+  border-color: var(--color-parchment-border-focus);
+}
+
+/* Sellos vocales en reposo ceremonial (RF-04.4): presentes pero aletargados. */
+.grimoire-simulator__controls button.grimoire-simulator__seal--resting {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.grimoire-simulator__logbook-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+/* Región viva accesible sin presencia visual (RF-06.4). */
+.grimoire-simulator__announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Temblor ceremonial de la página al recibir un impacto (RF-05.1). */
+.grimoire-simulator__stage--tremor {
+  animation: grimoire-simulator-tremor 240ms ease-out;
+}
+
+@keyframes grimoire-simulator-tremor {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(calc(-6px * var(--tremor-intensity, 0.4)));
+  }
+  75% {
+    transform: translateX(calc(6px * var(--tremor-intensity, 0.4)));
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * 9. Movimiento reducido (RF-06.1 / RNF-03): sin transiciones ni temblor.
  * ------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
   .grimoire-book__arrow,
@@ -370,5 +443,8 @@
   .combat-dummy__health-fill,
   .grimoire-simulator__controls button {
     transition: none;
+  }
+  .grimoire-simulator__stage--tremor {
+    animation: none;
   }
 }

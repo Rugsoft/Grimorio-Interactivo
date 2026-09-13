@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Sonda — Tomo a doble página (escritorio)</title>
+<!-- Hojas de estilo REALES del santuario. -->
+<link rel="stylesheet" href="/public/assets/css/tokens.css">
+<link rel="stylesheet" href="/public/assets/css/layout.css">
+<link rel="stylesheet" href="/public/assets/css/components.css">
+<link rel="stylesheet" href="/public/assets/css/components/grimoire-simulator.css">
+<style>
+  /* Solo presentación de la sonda. */
+  html, body { margin: 0; padding: 10px; background-color: #14100e; }
+</style>
+</head>
+<body>
+  <div id="tomeHost"></div>
+
+  <script type="module">
+    // Sonda ligera: SIN lienzos ni bucles RAF (evita bloquear el hilo principal).
+    import { createGrimoireBookComponent } from '/public/assets/js/components/grimoireBookComponent.js';
+
+    const cameraSlot = document.createElement('div');
+    cameraSlot.className = 'grimoire-book__camera-slot';
+
+    // Catálogo de prueba con la forma exacta que entrega la API del santuario.
+    const fixture = [
+      { id: 'spl_genesis_01', slug: 'chispa-de-ignicion', name: 'Chispa de Ignición', magicSchool: 'evocation', elementalAffinity: 'fire', circle: 1, manaCost: 5, castingTime: 'action', incantationFormula: 'Ignis Primordialis, lucem manifestare', description: 'El primer conjuro que todo aprendiz traza en su grimorio. Reúne el maná ambiental en la yema de los dedos y lo libera como una llama serena.' },
+      { id: 'spl_genesis_02', slug: 'velo-de-bruma', name: 'Velo de Bruma', magicSchool: 'abjuration', elementalAffinity: 'water', circle: 2, manaCost: 12, castingTime: 'ritual', incantationFormula: 'Vapor Arcanum, silentium tege', description: 'Teje un manto de neblina fría que amortigua los sentidos y oculta a quien lo invoca tras un velo de silencio.' },
+      { id: 'spl_genesis_03', slug: 'sello-de-tormenta', name: 'Sello de Tormenta', magicSchool: 'evocation', elementalAffinity: 'lightning', circle: 3, manaCost: 26, castingTime: 'action', incantationFormula: 'Fulmen Ligatum, vinculum frange', description: 'Inscribe un sello de rayos encadenados quebrado en el aire; al romperse, descarga su furia sobre el blanco señalado.' },
+    ];
+
+    window.__probeBook = createGrimoireBookComponent({
+      root: document.getElementById('tomeHost'),
+      cameraSlot,
+      spells: fixture,
+      onPageChange: () => {},
+    });
+
+    window.__probeReady = true;
+  </script>
+</body>
+</html>

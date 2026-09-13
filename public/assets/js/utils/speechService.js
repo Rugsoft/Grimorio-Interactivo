@@ -133,11 +133,15 @@ export function createSpeechService(options = {}) {
   /**
    * Comienza a escuchar conjuros (RF-04.3). En cada resultado, si la
    * transcripción valida contra el conjuro activo, llama a `onMatched`.
-   * @param {(spell: object) => void} onMatched - callback de invocación.
+   * @param {(spell: object, transcript?: string) => void} onMatched - callback
+   *   de invocación con la frase reconocida.
    * @param {(message: string) => void} [onError] - aviso solemne de fallo.
    * @returns {boolean} true si la escucha arrancó; false en degradación.
    */
   function startListening(activeSpell, onMatched, onError = () => {}) {
+    // La transcripción acompaña a la invocación: el orquestador necesita la
+    // frase reconocida para el bus `grimoire:speech-triggered` y para el
+    // anuncio accesible (RF-06.4) sin volver a consultar al oráculo.
     if (!isRecognitionSupported()) {
       onError(MESSAGES.recognitionUnsupported);
       return false;
@@ -152,7 +156,7 @@ export function createSpeechService(options = {}) {
     instance.onresult = (event) => {
       const transcript = event.results?.[0]?.[0]?.transcript ?? '';
       if (matchesSpellInvocation(transcript, activeSpell)) {
-        onMatched(activeSpell);
+        onMatched(activeSpell, transcript);
       }
     };
     instance.onerror = (event) => {

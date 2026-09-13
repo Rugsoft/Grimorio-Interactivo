@@ -199,6 +199,10 @@
   /* Acentos místicos: maná y sombras arcanas. */
   --mana-blue: #4f86c6;
   --mana-blue-deep: #2c4a75;
+  /* Variante legible del azul de maná para TEXTO sobre las superficies
+     oscuras del grimorio: el azul canónico (#4f86c6) solo alcanza 4.28:1
+     sobre --color-parchment-surface (#24201c) y RNF-03 exige >= 4.5:1. */
+  --mana-blue-readable: #6ba0d9;
   --color-arcane-violet: #8d6fd1;
   --color-ember-red: #c0563b;
   --color-ember-red-deep: #7e3524;

@@ -100,12 +100,12 @@
 
 ## Fase 5: Integración, Orquestación de Vista y Verificación Integral
 
-- [ ] **Tarea 5.1: Vista principal del Simulador y Bus de Eventos (`grimoireSimulatorView.js`)**
+- [x] **Tarea 5.1: Vista principal del Simulador y Bus de Eventos (`grimoireSimulatorView.js`)**
   * **Alcance:** Crear `public/assets/js/views/grimoireSimulatorView.js` orquestando el libro, el lienzo, el maniquí, los sellos de lanzamiento táctil y por micrófono, el botón «Escuchar Cántico», el botón «Restaurar Maniquí», el conmutador Canónico vs. Ensayos, y la emisión de anuncios accesibles en una región viva `aria-live="polite"`.
   * **Cubre:** `RF-01` a `RF-06`, `RNF-01` a `RNF-05`
   * **Hecho cuando:** La vista responde armónicamente a todos los eventos desacoplados, permitiendo hojear conjuros, declamar la liturgia, invocar por clic o voz, presenciar las partículas y actualizar el maniquí con anuncios accesibles.
 
-- [ ] **Tarea 5.2: Protocolo de verificación frontend y de rendimiento**
+- [x] **Tarea 5.2: Protocolo de verificación frontend y de rendimiento**
   * **Alcance:** Ejecutar en el navegador la batería de pruebas definida en el Plan Técnico (Sec. 6.2): verificación de 60 FPS estables con conjuros de Círculo V, comprobación de auto-throttle ante bajada de tasa de cuadros, validación de `prefers-reduced-motion`, prueba de denegación de micrófono con degradación ceremonial y tolerancia fonética de palabras clave.
   * **Cubre:** `RNF-01`, `RNF-02`, `RNF-03`, `RNF-04`, `RNF-05`
   * **Hecho cuando:** Todos los casos del protocolo se ejecutan satisfactoriamente sin errores en la consola del navegador y cumpliendo rigurosamente el Dogma Vanilla.

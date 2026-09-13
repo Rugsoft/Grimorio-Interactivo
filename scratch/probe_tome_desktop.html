@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Sonda de Escritorio — Tomo Arcano (SPEC-05)</title>
+<style>
+  /* Sonda interna: mide el layout de escritorio del Tomo dentro de un iframe
+     de 1280 px (las media queries responden al ancho del marco, no al de la
+     ventana de la preview). Sin canvas ni bucles: hilo principal libre. */
+  body { margin: 0; font-family: system-ui, sans-serif; background: #0e0b09; color: #efe6d8; }
+  iframe { width: 1280px; height: 820px; border: 0; display: block; }
+</style>
+</head>
+<body>
+  <iframe id="desktopFrame" src="/scratch/probe_book_frame.html" title="Tomo a 1280 px"></iframe>
+</body>
+</html>

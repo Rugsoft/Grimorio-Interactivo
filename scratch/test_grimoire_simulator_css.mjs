@@ -162,7 +162,7 @@ assertCondition(
   `Ninguna regla porta colores hex crudos (todo viaja por var(--…))${rawHexDeclarations.length ? ` — encontrados: ${rawHexDeclarations.slice(0, 2).map((s) => s.trim().slice(0, 60)).join(' | ')}` : ''}`
 );
 
-const consumedTokens = ['--color-parchment', '--color-ink', '--color-gold-arcane', '--mana-blue', '--font-arcane-title', '--font-arcane-body'];
+const consumedTokens = ['--color-parchment', '--color-ink', '--color-gold-arcane', '--mana-blue-readable', '--font-arcane-title', '--font-arcane-body'];
 const missingTokens = consumedTokens.filter((token) => !cssContent.includes(`var(${token})`) && !cssContent.includes(`var(${token},`));
 assertCondition(
   missingTokens.length === 0,
@@ -210,7 +210,11 @@ const contrastPairs = [
   ['Nombre del conjuro sobre pergamino oscuro', 'color-parchment', 'color-parchment-base'],
   ['Metadatos atenuados', 'color-text-light-muted', 'color-parchment-base'],
   ['Fórmula litúrgica en oro arcano', 'color-gold-arcane', 'color-parchment-base'],
-  ['Coste de maná en azul de maná', 'mana-blue', 'color-parchment-base'],
+  // Auditoría a nivel de componente: el texto de maná descansa sobre la
+  // SUPERFICIE del pergamino (--color-parchment-surface), no sobre la base;
+  // contra ella el azul canónico solo alcanza 4.28:1, de ahí la variante
+  // legible que exige RNF-03.
+  ['Coste de maná en azul legible', 'mana-blue-readable', 'color-parchment-surface'],
   ['Rótulos de barrera sobre pergamino', 'color-parchment', 'color-parchment-surface'],
   ['Cartel de sobrecarga sobre bermellón profundo', 'color-parchment', 'color-ember-red-deep'],
 ];

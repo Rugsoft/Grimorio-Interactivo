@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tomo Arcano — Verificación Visual (SPEC-05)</title>
+
+<!-- Hojas de estilo REALES del santuario (Dogma Vanilla, sin CDNs). -->
+<link rel="stylesheet" href="/public/assets/css/tokens.css">
+<link rel="stylesheet" href="/public/assets/css/layout.css">
+<link rel="stylesheet" href="/public/assets/css/components.css">
+<link rel="stylesheet" href="/public/assets/css/components/grimoire-simulator.css">
+
+<style>
+  /* Ajustes propios de la página de verificación (no de producción). */
+  body { margin: 0; padding: 18px 14px 40px; background-color: var(--color-parchment-base); }
+  .demo-bar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    max-width: 1180px; margin: 0 auto 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--color-parchment-border);
+    border-radius: 8px;
+    font-family: var(--font-arcane-body);
+    color: var(--color-parchment);
+  }
+  .demo-bar button {
+    min-height: 44px; padding: 8px 14px; cursor: pointer;
+    font-family: var(--font-arcane-seal); font-size: 0.9rem;
+    color: var(--color-gold-arcane);
+    background-color: var(--color-parchment-surface);
+    border: 1px solid var(--color-gold-arcane); border-radius: 6px;
+  }
+  .demo-bar__note { color: var(--color-text-light-muted); font-size: 0.85rem; }
+  .demo-diagnostics {
+    max-width: 1180px; margin: 14px auto 0; padding: 10px 14px;
+    font-family: var(--font-arcane-body); font-size: 0.82rem;
+    color: var(--color-text-light-muted);
+    border: 1px dotted var(--color-parchment-border); border-radius: 8px;
+  }
+  .demo-diagnostics b { color: var(--color-gold-arcane); font-weight: normal; }
+</style>
+</head>
+<body>
+  <div class="demo-bar">
+    <strong style="font-family: var(--font-arcane-title); color: var(--color-gold-arcane)">Tomo Arcano — Verificación</strong>
+    <button id="foldBtn" type="button">Pliegue mágico (móvil)</button>
+    <button id="reloadBtn" type="button">Recargar de la API</button>
+    <span class="demo-bar__note" id="apiState">Consultando el santuario…</span>
+  </div>
+
+  <!-- Anfitrión del tomo (lo monta grimoireBookComponent). -->
+  <div id="tomeHost"></div>
+
+  <div class="demo-diagnostics" id="diagnostics">
+    <b>Diagnóstico:</b> <span id="diagText">—</span>
+  </div>
+
+  <script type="module">
+    // Módulos de PRODUCCIÓN (ES Modules nativos, sin empaquetadores).
+    const { createGrimoireBookComponent } = await import('/public/assets/js/components/grimoireBookComponent.js');
+    const { createGrimoireClient } = await import('/public/assets/js/api/grimoireClient.js');
+    const { createArcaneCanvasComponent } = await import('/public/assets/js/components/arcaneCanvasComponent.js');
+    const { createCombatDummyComponent } = await import('/public/assets/js/components/combatDummyComponent.js');
+    const { createFloatingCombatTextComponent } = await import('/public/assets/js/components/floatingCombatTextComponent.js');
+    const { createTestLogStorage } = await import('/public/assets/js/utils/testLogStorage.js');
+
+    const apiState = document.getElementById('apiState');
+    const host = document.getElementById('tomeHost');
+
+    // Cliente real contra la API del santuario (mismo origen).
+    const client = createGrimoireClient();
+
+    // --- Cámara de Conjuración (página derecha del tomo) ---
+    const cameraSlot = document.createElement('div');
+    cameraSlot.className = 'grimoire-book__camera-slot';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'arcane-canvas';
+    canvas.style.width = '100%';
+    canvas.style.height = '360px';
+    cameraSlot.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+
+    const dummyHost = document.createElement('div');
+    cameraSlot.appendChild(dummyHost);
+    const dummy = createCombatDummyComponent({ host: dummyHost });
+    const floatingTexts = createFloatingCombatTextComponent({ ctx });
+    const testLog = createTestLogStorage();
+
+    let currentSpell = null;
+    const arcane = createArcaneCanvasComponent({
+      canvas, ctx,
+      onImpact: (detail) => {
+        const result = dummy.applySpellImpact(detail.spell);
+        floatingTexts.spawnImpactTexts({
+          spellName: detail.spell.name,
+          ...detail.spell.effects,
+          fullHealthLegend: result.fullHealthLegend,
+        }, detail.targetCoordinates);
+        testLog.recordImpact({
+          spellName: detail.spell.name,
+          elementalAffinity: detail.spell.elementalAffinity,
+          circle: detail.spell.circle,
+          manaCost: detail.spell.manaCost,
+          damageDealt: detail.spell.effects.damage,
+          barrierAbsorbed: result.barrierAbsorbed,
+          healingApplied: detail.spell.effects.healing,
+          crowdControlApplied: detail.spell.effects.crowdControlType,
+          dummyRemainingHealth: result.remainingHealth,
+        });
+        refreshDiagnostics();
+      },
+    });
+    arcane.start();
+
+    // --- Bucle de la demo: lámina + partículas + textos ---
+    arcane.start();
+    let last = performance.now();
+    function frame(now) {
+      const dt = Math.min((now - last) / 1000, 0.05);
+      last = now;
+      ctx.fillStyle = 'rgba(23, 18, 14, 0.30)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (canvas.width !== canvas.clientWidth) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+      }
+      const t = { x: canvas.width * 0.7, y: canvas.height * 0.5 };
+      ctx.save();
+      ctx.strokeStyle = 'rgba(212, 169, 78, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(t.x, t.y, 44, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      cpuTick(dt, t);
+      floatingTexts.updateAndRender(dt);
+      dummy.tick();
+      requestAnimationFrame(frame);
+    }
+    // El lienzo arcánico ya integra su propio pool; la demo solo dibuja el maniquí.
+    function cpuTick() {}
+    requestAnimationFrame(frame);
+
+    // --- Montaje del Tomo con los conjuros REALES de la API ---
+    let book = null;
+    let spells = [];
+
+    function mountTome(catalog) {
+      host.replaceChildren();
+      book = createGrimoireBookComponent({
+        root: host,
+        cameraSlot,
+        spells: catalog,
+        onPageChange: (detail) => {
+          currentSpell = detail.spell;
+          refreshDiagnostics(detail);
+        },
+      });
+      document.getElementById('diagnostics').dataset.ready = 'true';
+    }
+
+    function currentState() {
+      const st = dummy.getState();
+      return {
+        spell: currentSpell ? `${currentSpell.name} (Círculo ${currentSpell.circle}, ${currentSpell.elementalAffinity})` : '—',
+        dummy: `${st.health}/${st.maxHealth} PV${st.barrier ? ` · [Barrera ${st.barrier}]` : ''}${st.activeCC ? ` · ${st.activeCC}` : ''}`,
+        log: `${testLog.getEntries().length} impactos en la bitácora`,
+        particles: arcane.getActiveParticleCount(),
+        density: arcane.getDensityScale(),
+      };
+    }
+
+    function refreshDiagnostics(detail) {
+      const s = currentState();
+      document.getElementById('diagText').textContent =
+        `Conjuro: ${s.spell} · Maniquí: ${s.dummy} · ${s.log} · Partículas: ${s.particles} · Densidad: ${s.density}` +
+        (detail ? ` · Hoja ${detail.pageNumber}/${detail.totalPages}` : '');
+    }
+
+    async function loadCatalog() {
+      apiState.textContent = 'Consultando el santuario…';
+      const response = await client.fetchSpells({ mode: 'canonical', limit: 10 });
+      if (!response.success) {
+        apiState.textContent = `El santuario respondió con error (${response.status ?? 0}).`;
+        mountTome([]);
+        return;
+      }
+      spells = response.data.spells ?? [];
+      apiState.textContent = `API real: ${response.data.totalSpells} conjuros canónicos (${spells.length} en esta hoja).`;
+      mountTome(spells);
+      refreshDiagnostics();
+    }
+
+    // --- Controles de la demo ---
+    document.getElementById('reloadBtn').addEventListener('click', () => loadCatalog());
+    document.getElementById('foldBtn').addEventListener('click', () => {
+      const tome = host.querySelector('.grimoire-book');
+      if (!tome) return;
+      const folded = tome.classList.toggle('grimoire-book--folded');
+      // Pliegue conmutado: alterna qué lámina descansa (la de lectura o la cámara).
+      const left = tome.querySelector('.grimoire-book__page--left');
+      const right = tome.querySelector('.grimoire-book__page--right');
+      left?.classList.toggle('grimoire-book__page--hidden', folded);
+      right?.classList.toggle('grimoire-book__page--hidden', false);
+      document.getElementById('foldBtn').dataset.folded = String(folded);
+    });
+
+    // Invocación manual sobre el conjuro visible (barra espaciadora).
+    window.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' && currentSpell) {
+        event.preventDefault();
+        const target = { x: canvas.width * 0.7, y: canvas.height * 0.5 };
+        arcane.castSpell(currentSpell, {
+          geometry: currentSpell.areaType ?? 'singleTarget',
+          origin: { x: canvas.width * 0.12, y: canvas.height * 0.78 },
+          target,
+          count: 14,
+        });
+      }
+    });
+
+    await loadCatalog();
+  </script>
+</body>
+</html>

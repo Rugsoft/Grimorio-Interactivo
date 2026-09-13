@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocolo de Verificación — Simulador de Grimorio (SPEC-05)</title>
+
+<!-- Hojas de estilo REALES del santuario (Dogma Vanilla, sin CDNs). -->
+<link rel="stylesheet" href="/public/assets/css/tokens.css">
+<link rel="stylesheet" href="/public/assets/css/layout.css">
+<link rel="stylesheet" href="/public/assets/css/components.css">
+<link rel="stylesheet" href="/public/assets/css/components/grimoire-simulator.css">
+
+<style>
+  /* Presentación propia de la página de protocolo (no de producción). */
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px 14px 48px; background-color: var(--color-parchment-base); color: var(--color-parchment); font-family: var(--font-arcane-body, serif); }
+  .protocol { max-width: 1180px; margin: 0 auto; }
+  .protocol__title { font-family: var(--font-arcane-title, serif); color: var(--color-gold-arcane); margin: 0 0 4px; font-size: 1.3rem; }
+  .protocol__hint { margin: 0 0 14px; color: var(--color-text-light-muted); font-size: 0.85rem; }
+  #stage { margin-bottom: 16px; }
+  #stage main { display: block; }
+  .protocol__report { padding: 12px 14px; border: 1px solid var(--color-parchment-border); border-radius: 8px; background-color: var(--color-parchment-surface); font-size: 0.82rem; }
+  .protocol__case { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dotted var(--color-parchment-border); }
+  .protocol__case-title { color: var(--color-gold-arcane); }
+  .protocol__case--complete .protocol__state { color: var(--color-valid-runes); }
+  .protocol__case--partial .protocol__state { color: var(--color-unstable-seal); }
+  .protocol__case--failed .protocol__state { color: var(--color-ember-red); }
+  .protocol__evidence { margin: 4px 0 0; padding-left: 16px; color: var(--color-text-light-muted); }
+  .protocol__verdict { margin-top: 12px; padding: 10px 12px; border-radius: 6px; background-color: var(--color-parchment-base); color: var(--color-parchment); }
+  .protocol__console { margin-top: 14px; padding: 10px 12px; max-height: 220px; overflow-y: auto; border: 1px dotted var(--color-parchment-border); border-radius: 8px; font-size: 0.78rem; color: var(--color-text-light-muted); white-space: pre-wrap; }
+</style>
+</head>
+<body>
+  <section class="protocol">
+    <h1 class="protocol__title">Protocolo de Verificación Frontend — Simulador de Grimorio</h1>
+    <p class="protocol__hint">
+      Batería del Plan Técnico (Sec. 6.2) sobre los módulos de producción, con cuadros reales.
+      Los permisos de micrófono, la preferencia de movimiento reducido y las transcripciones
+      vocales se sustituyen por dobles: el protocolo manual del plan los controlaría desde las
+      herramientas del navegador. La medición de la <strong>cadencia de pantalla</strong> exige un
+      sustrato que emita cuadros: si el visor no los emite, el caso P1 se declara PARCIAL con su
+      motivo y el <strong>coste del trabajo de cuadro</strong> se mide igualmente contra el
+      presupuesto de 16,6 ms (60 FPS).
+    </p>
+    <div id="stage" aria-label="Cámara de Conjuración del protocolo"></div>
+    <div id="report" class="protocol__report" aria-live="off">Ejecutando el protocolo…</div>
+    <pre id="log" class="protocol__console" aria-label="Crónica del protocolo"></pre>
+  </section>
+
+  <script type="module">
+    import { runSimulatorProtocol } from '/scratch/protocol_grimoire_simulator.mjs';
+
+    // --- Captura de errores de consola (plan 6.2: «sin errores en consola») ---
+    const collectedErrors = [];
+    window.addEventListener('error', (event) => collectedErrors.push(event.message ?? 'error'));
+    window.addEventListener('unhandledrejection', (event) => {
+      collectedErrors.push(String(event.reason?.message ?? event.reason ?? 'rechazo sin capturar'));
+    });
+
+    /** Locución falsa grabadora: audita la declamación sin hablar de verdad. */
+    class RecorderUtterance {
+      constructor(text) { this.text = String(text); }
+    }
+    function createRecorderSynthesis() {
+      const calls = { spoken: [], cancelled: 0, paused: 0, resumed: 0 };
+      return {
+        calls,
+        speak(utterance) {
+          calls.spoken.push({ text: utterance?.text, lang: utterance?.lang, rate: utterance?.rate, pitch: utterance?.pitch });
+        },
+        cancel() { calls.cancelled++; },
+        pause() { calls.paused++; },
+        resume() { calls.resumed++; },
+      };
+    }
+
+    /** Reconocimiento falso: `denied` simula el permiso de micrófono revocado. */
+    function createRecognitionClass(config = {}) {
+      const instances = [];
+      class RecorderRecognition {
+        constructor() { instances.push(this); }
+        start() {
+          if (config.denied) {
+            const error = new Error('Permiso de micrófono denegado');
+            error.name = 'not-allowed';
+            throw error;
+          }
+        }
+        abort() {}
+        speak(transcript) { this.onresult?.({ results: [[{ transcript }]] }); }
+      }
+      RecorderRecognition.instances = instances;
+      return RecorderRecognition;
+    }
+
+    const logLines = [];
+    const environment = {
+      label: `navegador (${navigator.userAgent.includes('Chrome') ? 'Chromium' : 'estándar'})`,
+      realFrames: true,
+      document: window.document,
+      elementFactory: (tagName) => document.createElement(tagName),
+      attachHost(host) {
+        const stage = document.getElementById('stage');
+        stage.replaceChildren(host);
+      },
+      createCanvas(width, height) {
+        const canvas = document.createElement('canvas');
+        canvas.className = 'arcane-canvas';
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        return { canvas, ctx };
+      },
+      raf: (callback) => requestAnimationFrame(callback),
+      caf: (id) => cancelAnimationFrame(id),
+      now: () => performance.now(),
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+      // La preferencia se inyecta como doble: equivale a activarla en las
+      // herramientas del navegador (el plan 6.2.3 lo hace desde el SO).
+      matchMedia: (query, { reduce = false } = {}) => (reduce
+        ? { media: query, matches: true, addEventListener() {}, removeEventListener() {} }
+        : window.matchMedia(query)),
+      createRecognitionClass,
+      synthesis: createRecorderSynthesis(),
+      Utterance: window.SpeechSynthesisUtterance ?? RecorderUtterance,
+      collectedErrors,
+      log: (line) => {
+        logLines.push(line);
+        document.getElementById('log').textContent = logLines.join('\n');
+      },
+    };
+
+    /** Pinta el informe del protocolo en la página. */
+    function renderReport(report) {
+      const container = document.getElementById('report');
+      container.replaceChildren();
+
+      for (const entry of report.cases) {
+        const block = document.createElement('div');
+        block.className = `protocol__case protocol__case--${entry.status}`;
+
+        const title = document.createElement('div');
+        title.className = 'protocol__case-title';
+        title.textContent = `[${entry.id}] ${entry.title} — ${entry.status === 'complete' ? 'COMPLETO' : entry.status === 'partial' ? 'PARCIAL' : 'FALLIDO'}`;
+        block.appendChild(title);
+
+        const state = document.createElement('span');
+        state.className = 'protocol__state';
+        state.textContent = `${entry.checksPassed} aciertos · ${entry.checksFailed} fallos · ${entry.requirements.join(', ')}`;
+        block.appendChild(state);
+
+        const list = document.createElement('ul');
+        list.className = 'protocol__evidence';
+        for (const line of entry.evidence) {
+          const item = document.createElement('li');
+          item.textContent = line;
+          list.appendChild(item);
+        }
+        block.appendChild(list);
+        container.appendChild(block);
+      }
+
+      const verdict = document.createElement('p');
+      verdict.className = 'protocol__verdict';
+      const api = typeof window.SpeechRecognition !== 'undefined' || typeof window.webkitSpeechRecognition !== 'undefined';
+      verdict.textContent = `${report.verdict} · API vocal nativa presente: ${api ? 'sí' : 'no'} · Errores de consola: ${report.errors.length}`;
+      container.appendChild(verdict);
+    }
+
+    // --- Ejecución del protocolo y publicación del informe global ---
+    window.__protocolDone = false;
+    try {
+      const report = await runSimulatorProtocol({ environment });
+      window.__protocolReport = report;
+      window.__protocolText = logLines.join('\n');
+      renderReport(report);
+      console.log(`PROTOCOLO: ${report.verdict}`);
+    } catch (error) {
+      window.__protocolReport = { verdict: `FALLO — ${error?.message}`, cases: [], errors: [String(error?.message)], exitCode: 1, summary: { complete: 0, partial: 0, failed: 0 } };
+      document.getElementById('report').textContent = `El protocolo no pudo completarse: ${error?.message}`;
+      console.error(error);
+    } finally {
+      window.__protocolDone = true;
+    }
+  </script>
+</body>
+</html>
