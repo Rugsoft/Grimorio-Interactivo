@@ -33,22 +33,22 @@
 
 ## Fase 2: Motor de Partículas en Canvas 2D y Abstracción Vocal (Vanilla JS Utils)
 
-- [ ] **Tarea 2.1: Estructura de partícula y Buffer Circular FIFO (`particleEngine.js - Pool`)**
+- [x] **Tarea 2.1: Estructura de partícula y Buffer Circular FIFO (`particleEngine.js - Pool`)**
   * **Alcance:** Desarrollar en `public/assets/js/utils/particleEngine.js` la clase `Particle` (coordenadas x/y, velocidades vx/vy, aceleración, escala, alfa, color, tiempo de vida) y el Ring Buffer `ParticlePool` con un límite estricto de doscientas (200) partículas pre-instanciadas con reciclado circular FIFO continuo.
   * **Cubre:** `RF-03.4`, `RNF-01`, `RNF-05`, `Artículo I`
   * **Hecho cuando:** Al emitir más de 200 partículas continuadas en el motor, las entidades activas no superan nunca el límite de 200 y se reutilizan las más antiguas sin provocar asignaciones de memoria `new Particle()` durante el bucle de renderizado.
 
-- [ ] **Tarea 2.2: Física cinemática por Geometría de Hechizo (`particleEngine.js - Geometries`)**
+- [x] **Tarea 2.2: Física cinemática por Geometría de Hechizo (`particleEngine.js - Geometries`)**
   * **Alcance:** Implementar en `particleEngine.js` los algoritmos de trayectoria física según los modificadores de área y alcance: vector directo parabólico hacia el objetivo (`singleTarget`/`touch`), abanico angular cónico con dispersión $\theta \in [\theta_0 - 25^\circ, \theta_0 + 25^\circ]$ (`cone`), haz lineal colimado continuo (`line`) y deflagración radial esférica centrada en el blanco (`sphere`).
   * **Cubre:** `RF-03.2`, `RNF-02`
   * **Hecho cuando:** El método `emitSpell(geometry, origin, target)` desata la dispersión geométrica correspondiente en el lienzo según el parámetro recibido.
 
-- [ ] **Tarea 2.3: Modulación cromática y dinámica por Afinidad Elemental y Círculo (`particleEngine.js - Elements`)**
+- [x] **Tarea 2.3: Modulación cromática y dinámica por Afinidad Elemental y Círculo (`particleEngine.js - Elements`)**
   * **Alcance:** Implementar en `particleEngine.js` los 8 perfiles elementales (Fuego con ascuas ascendentes, Agua/Escarcha con ondas fluidas, Rayo con arcos fractales instantáneos, Tierra con esquirlas y gravedad pesada, Viento con vórtices helicoidales, Luz con haces prismáticos radiantes, Oscuridad con zarcillos de succión centrípeta y Arcano Puro con constelaciones geométricas) y escalado de densidad por Círculo (I al V).
   * **Cubre:** `RF-03.1`, `RF-03.3`
   * **Hecho cuando:** Cada una de las 8 afinidades elementales produce su paleta de colores y física distintiva, y un conjuro de Círculo V genera mayor volumen de partículas e intensidad lumínica que uno de Círculo I.
 
-- [ ] **Tarea 2.4: Servicio de voz nativo: Síntesis litúrgica y Reconocimiento fonético (`speechService.js`)**
+- [x] **Tarea 2.4: Servicio de voz nativo: Síntesis litúrgica y Reconocimiento fonético (`speechService.js`)**
   * **Alcance:** Crear `public/assets/js/utils/speechService.js` encapsulando `SpeechSynthesis` (declamación en `es-ES`, cadencia solemne a velocidad 0.85 y tono 0.95) y `SpeechRecognition` / `webkitSpeechRecognition` con algoritmo de tolerancia fonética (coincidencia de nombre canónico, fórmula ceremonial o al menos 2 palabras clave significativas de más de 3 letras), con degradación grácil ante denegación de permisos o falta de soporte.
   * **Cubre:** `RF-04.1`, `RF-04.2`, `RF-04.3`, `RF-04.4`, `RNF-04`
   * **Hecho cuando:** `reciteSpell()` sintetiza la frase litúrgica en noble castellano y `matchesSpellInvocation()` valida positivamente frases que contengan al menos 2 palabras clave del conjuro activo.
