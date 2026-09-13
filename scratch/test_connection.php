@@ -126,10 +126,10 @@ $insertOk = false;
 try {
     $pdo->beginTransaction();
     $stmt = $pdo->prepare(
-        'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id, summary, status, is_genesis_sample, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO spells (id, slug, name, author_id, magic_school, mana_cost, math_fingerprint, clan_id, summary, status, is_genesis_sample, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
-    $stmt->execute(['spl_tx_test', 'conjure-test', 'Conjuro de Prueba', 'evocation', 5, 'cln_primordial', 'Resumen de prueba', 'experimental', 0, '2026-09-11T00:00:00Z']);
+    $stmt->execute(['spl_tx_test', 'conjure-test', 'Conjuro de Prueba', 'usr_custodio_primordial', 'evocation', 5, str_repeat('0', 64), 'cln_primordial', 'Resumen de prueba', 'experimental', 0, '2026-09-11T00:00:00Z', '2026-09-11T00:00:00Z']);
     $pdo->commit();
     $insertOk = true;
 } catch (PDOException $e) {

@@ -79,16 +79,21 @@ if ($bootstrapReady === 0) {
     $pdo->exec((string) file_get_contents(__DIR__ . '/../database/seeds.sql'));
 }
 $pdo->prepare(
-    'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id, summary, description,
+    'INSERT INTO spells (id, slug, name, author_id, magic_school, mana_cost, circle, math_fingerprint, clan_id, summary, description,
                          components_verbal, components_somatic, components_material,
-                         status, validation_signatures_count, is_genesis_sample, created_at, validated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                         damage, healing, barrier, crowd_control_type, range_type, area_type, duration_type,
+                         has_verbal, has_somatic, has_material,
+                         status, validation_signatures_count, signatures_count, is_genesis_sample, created_at, updated_at, validated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 )->execute([
-    'spl_user_1', 'llamas-de-frieren', 'Llamas de Frieren', 'evocation', 45, 'cln_primordial',
+    'spl_user_1', 'llamas-de-frieren', 'Llamas de Frieren', 'usr_custodio_primordial', 'evocation', 45, 4,
+    str_repeat('f', 64), 'cln_primordial',
     'Proyecta una ráfaga continua de fuego purificador.',
     'Concentra el maná ambiental en la palma del lanzador.',
     'Ignis Caelestis Dissolvens', 'Palma extendida', 'Ceniza de sauce',
-    'validated', 3, 0, '2026-09-01T00:00:00Z', '2026-09-10T14:30:00Z',
+    30, 0, 0, 'none', 'medium', 'sphere', 'instant',
+    1, 1, 0,
+    'validated', 3, 3, 0, '2026-09-01T00:00:00Z', '2026-09-10T14:30:00Z', '2026-09-10T14:30:00Z',
 ]);
 
 $discoveryService = new SpellDiscoveryService(Connection::getInstance());

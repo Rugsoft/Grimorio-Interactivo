@@ -42,30 +42,63 @@ CREATE TABLE IF NOT EXISTS magic_schools (
 
 -- ---------------------------------------------------------------------
 -- Tabla: spells — Hechizos del santuario
--- (Entidad núcleo de SPEC-01: destacados, catálogo y fichas de detalle)
+-- (Entidad núcleo de SPEC-01: destacados, catálogo y fichas de detalle;
+--  ampliada por la Tarea 1.1 de TASKS-04 con magnitudes cuantitativas)
 --
 -- Estado de moderación conforme al Artículo III:
---   'experimental' → nacimiento de todo hechizo de Editor.
+--   'draft'        → borrador privado del autor (no visible; TASKS-04).
+--   'experimental' → nacimiento de todo hechizo publicado de Editor.
 --   'validated'    → tres firmas de Maestro o ratificación del Admin.
+--
+-- Magnitudes cuantitativas (TASKS-04, Artículo II):
+--   * damage/healing/barrier son los efectos base ponderados por
+--     SpellBalanceService (Tarea 2.2).
+--   * crowd_control_type/range_type/area_type/duration_type son los
+--     modificadores canónicos de la fórmula de maná.
+--   * has_verbal/has_somatic/has_material son los componentes
+--     atenuadores (-10% cada uno, tope del 30% combinado).
+--   * mana_cost/circle/math_fingerprint son RESULTADOS deterministas
+--     del backend (Artículo II: el cliente jamás dicta el coste).
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS spells (
     id                    TEXT PRIMARY KEY,               -- Identificador textual (ej. 'spl_genesis_01')
     slug                  TEXT NOT NULL UNIQUE,           -- Enlace directo '#hechizo-slug' (RF-04.1)
     name                  TEXT NOT NULL,                  -- Nombre visible del conjuro
+    author_id             TEXT NOT NULL REFERENCES users (id),            -- Creador del conjuro (TASKS-04, FK)
     magic_school          TEXT NOT NULL REFERENCES magic_schools (slug),  -- FK: escuela válida (filtro RF-03.5)
-    mana_cost             INTEGER NOT NULL CHECK (mana_cost >= 0),        -- Coste determinista (Artículo II)
+    elemental_affinity    TEXT NOT NULL DEFAULT 'none',   -- Afinidad elemental (matrix SPEC-06; neutro por defecto)
+    casting_time          TEXT NOT NULL DEFAULT 'action', -- 'action', 'reaction', 'ritual'
+    mana_cost             INTEGER NOT NULL CHECK (mana_cost >= 0 AND mana_cost <= 200),  -- Coste determinista (Artículo II: suelo 5, techo 200)
+    circle                INTEGER NOT NULL DEFAULT 1 CHECK (circle >= 1 AND circle <= 5), -- Círculo arcano asignado (1 a 5, TASKS-04)
+    math_fingerprint      TEXT NOT NULL DEFAULT '' CHECK (length(math_fingerprint) = 64), -- SHA-256 hex de parámetros matemáticos (antifraude, TASKS-04)
     clan_id               TEXT NOT NULL REFERENCES clans (id),            -- FK: linaje de origen
     summary               TEXT NOT NULL,                  -- Resumen breve (máx. 3 líneas en tarjeta)
     description           TEXT NOT NULL DEFAULT '',       -- Ficha técnica completa (modal de detalle)
     components_verbal     TEXT NOT NULL DEFAULT '',       -- Componente verbal (fórmula arcana)
     components_somatic    TEXT NOT NULL DEFAULT '',       -- Componente somático (gesto místico)
     components_material   TEXT NOT NULL DEFAULT '',       -- Componente material (reliquia o substancia)
-    status                TEXT NOT NULL DEFAULT 'experimental'
-                          CHECK (status IN ('experimental', 'validated')),  -- Moderación en 2 pasos
+    damage                INTEGER NOT NULL DEFAULT 0 CHECK (damage >= 0),          -- Puntos de daño directo o continuo (TASKS-04)
+    healing               INTEGER NOT NULL DEFAULT 0 CHECK (healing >= 0),         -- Puntos de curación directa (TASKS-04)
+    barrier               INTEGER NOT NULL DEFAULT 0 CHECK (barrier >= 0),         -- Puntos de absorción o protección (TASKS-04)
+    crowd_control_type    TEXT NOT NULL DEFAULT 'none'
+                          CHECK (crowd_control_type IN ('none', 'slow', 'root', 'stun')),  -- Control de masas (TASKS-04)
+    range_type            TEXT NOT NULL DEFAULT 'touch'
+                          CHECK (range_type IN ('touch', 'short', 'medium', 'long')),      -- Alcance del conjuro (TASKS-04)
+    area_type             TEXT NOT NULL DEFAULT 'singleTarget'
+                          CHECK (area_type IN ('singleTarget', 'cone', 'line', 'sphere')), -- Geometría de área (TASKS-04)
+    duration_type         TEXT NOT NULL DEFAULT 'instant'
+                          CHECK (duration_type IN ('instant', 'concentration', 'sustained')), -- Duración (TASKS-04)
+    has_verbal            INTEGER NOT NULL DEFAULT 0 CHECK (has_verbal IN (0, 1)),  -- Componente atenuador verbal (-10%)
+    has_somatic           INTEGER NOT NULL DEFAULT 0 CHECK (has_somatic IN (0, 1)), -- Componente atenuador somático (-10%)
+    has_material          INTEGER NOT NULL DEFAULT 0 CHECK (has_material IN (0, 1)),-- Componente atenuador material (-10%)
+    status                TEXT NOT NULL DEFAULT 'draft'
+                          CHECK (status IN ('draft', 'experimental', 'validated')),  -- Ciclo de vida completo (TASKS-04)
     validation_signatures_count INTEGER NOT NULL DEFAULT 0 CHECK (validation_signatures_count >= 0),
+    signatures_count      INTEGER NOT NULL DEFAULT 0 CHECK (signatures_count >= 0 AND signatures_count <= 3), -- Firmas de Maestros 0/3 (TASKS-04); la columna génesis validation_signatures_count se conserva por compatibilidad hasta SPEC-08
     is_genesis_sample     INTEGER NOT NULL DEFAULT 0 CHECK (is_genesis_sample IN (0, 1)),  -- Pergamino Primordial (RF-01.3)
     created_at            TEXT NOT NULL,                  -- Nacimiento del conjuro (ISO 8601 UTC)
-    validated_at          TEXT                            -- Fecha de validación (NULL si es experimental)
+    updated_at            TEXT NOT NULL,                  -- Última modificación (ISO 8601 UTC, TASKS-04)
+    validated_at          TEXT                            -- Fecha de validación (NULL si no validado)
 );
 
 -- ---------------------------------------------------------------------
@@ -75,6 +108,12 @@ CREATE TABLE IF NOT EXISTS spells (
 -- ---------------------------------------------------------------------
 CREATE INDEX IF NOT EXISTS idx_spells_slug ON spells (slug);
 CREATE INDEX IF NOT EXISTS idx_spells_magic_school ON spells (magic_school);
+
+-- Índices de optimización del ciclo de vida del creador (TASKS-04, Tarea 1.1):
+--   * (author_id, status): cuota de 10 borradores y listas del autor (RF-05.1).
+--   * (clan_id, status): catálogo por linaje y Moderación en 2 pasos (RF-08.2).
+CREATE INDEX IF NOT EXISTS idx_spell_author_status ON spells (author_id, status);
+CREATE INDEX IF NOT EXISTS idx_spell_clan_validated ON spells (clan_id, status);
 
 -- Índices de apoyo para las consultas de descubrimiento del portal:
 CREATE INDEX IF NOT EXISTS idx_spells_status_validated_at ON spells (status, validated_at);
