@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cámara de Conjuración — Demo Integrada (SPEC-05)</title>
+<style>
+  /* Página de demostración interna (scratch/): Dogma Vanilla, cero frameworks. */
+  :root {
+    --bg: #14100e;
+    --panel: #221b16;
+    --ink: #efe6d8;
+    --gold: #d4a94e;
+    --muted: #9c8f7f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
+    padding: 24px;
+  }
+  h1 { margin: 0 0 4px; font-size: 1.5rem; color: var(--gold); }
+  .lede { margin: 0 0 20px; color: var(--muted); font-style: italic; }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid #3a2f24;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+  .controls label { font-size: 0.9rem; }
+  select, button {
+    background: #191410;
+    color: var(--ink);
+    border: 1px solid #5a4a34;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+  }
+  button { cursor: pointer; border-color: var(--gold); color: var(--gold); }
+  button:hover { background: #2a221a; }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 440px;
+    background:
+      radial-gradient(ellipse at 70% 50%, #241d16 0%, #17120e 70%);
+    border: 1px solid #3a2f24;
+    border-radius: 10px;
+  }
+  .status { margin-top: 10px; color: var(--muted); font-size: 0.85rem; }
+  .status b { color: var(--gold); font-weight: normal; }
+  .healthbar {
+    margin-top: 12px;
+    background: #191410;
+    border: 1px solid #3a2f24;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 26px;
+    position: relative;
+  }
+  .healthbar__fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2a9d8f, #457b9d);
+    transition: width 0.2s ease;
+  }
+  .healthbar__label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: var(--ink);
+  }
+  .logbook {
+    margin-top: 14px;
+    background: var(--panel);
+    border: 1px solid #3a2f24;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    max-height: 130px;
+    overflow-y: auto;
+  }
+  .logbook b { color: var(--gold); font-weight: normal; }
+  .logbook div { padding: 2px 0; border-bottom: 1px dotted #3a2f24; }
+</style>
+</head>
+<body>
+  <h1>Cámara de Conjuración — Demo Integrada</h1>
+  <p class="lede">Lienzo Arcano + Maniquí Arcano + Textos Flotantes Escalonados: el ciclo completo de conjuro → vuelo → impacto → reacción. Módulos reales de producción.</p>
+
+  <div class="controls">
+    <label>Afinidad:
+      <select id="elementSelect">
+        <option value="fire">Fuego</option>
+        <option value="water">Agua</option>
+        <option value="lightning">Rayo</option>
+        <option value="earth">Tierra</option>
+        <option value="wind">Viento</option>
+        <option value="light">Luz</option>
+        <option value="darkness">Oscuridad</option>
+        <option value="pureArcane">Arcano Puro</option>
+      </select>
+    </label>
+    <label>Geometría:
+      <select id="geometrySelect">
+        <option value="singleTarget">Objetivo Único</option>
+        <option value="touch">Contacto</option>
+        <option value="cone">Cono</option>
+        <option value="line">Línea</option>
+        <option value="sphere">Esfera</option>
+      </select>
+    </label>
+    <label>Efectos:
+      <select id="effectSelect">
+        <option value="damage">Daño</option>
+        <option value="healing">Curación</option>
+        <option value="barrier">Barrera</option>
+        <option value="mixed">Mixto (daño + curación + CC)</option>
+      </select>
+    </label>
+    <label>Círculo:
+      <select id="circleSelect">
+        <option value="1">I</option>
+        <option value="2">II</option>
+        <option value="3" selected>III</option>
+        <option value="4">IV</option>
+        <option value="5">V</option>
+      </select>
+    </label>
+    <button id="castBtn">Invocar Conjuro</button>
+    <button id="restoreBtn">Restaurar Maniquí</button>
+    <button id="spamBtn">Ráfaga ×8</button>
+  </div>
+
+  <canvas id="forgeCanvas"></canvas>
+
+  <div class="healthbar" role="status" aria-live="polite">
+    <div class="healthbar__fill" id="healthFill" style="width:100%"></div>
+    <div class="healthbar__label" id="healthLabel">Maniquí Arcano — 500 / 500 PV</div>
+  </div>
+
+  <p class="status">
+    Tomo activo: <b id="spellName">—</b> ·
+    Partículas: <b id="activeCount">0</b> / 200 ·
+    FPS: <b id="fpsValue">—</b> ·
+    Densidad: <b id="densityValue">1.0</b>
+  </p>
+
+  <div class="logbook" id="logbook" aria-label="Bitácora de impactos"></div>
+
+  <script type="module">
+    // Módulos reales de producción servidos por el backend.
+    const engine = await import('../public/assets/js/utils/particleEngine.js');
+    const { ParticlePool, ELEMENTAL_PROFILES, CIRCLE_DENSITY_SCALE, CIRCLE_BRIGHTNESS_SCALE } = engine;
+
+    const dummyModule = await import('../public/assets/js/components/combatDummyComponent.js');
+    const { createCombatDummyComponent } = dummyModule;
+
+    const textModule = await import('../public/assets/js/components/floatingCombatTextComponent.js');
+    const { createFloatingCombatTextComponent, TEXT_COLORS } = textModule;
+
+    const canvasModule = await import('../public/assets/js/components/arcaneCanvasComponent.js');
+    const { createArcaneCanvasComponent } = canvasModule;
+
+    const canvas = document.getElementById('forgeCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Nombres solemnes para la inspección (Artículo V).
+    const ELEMENT_NAMES = {
+      fire: 'Fuego', water: 'Agua', lightning: 'Rayo', earth: 'Tierra',
+      wind: 'Viento', light: 'Luz', darkness: 'Oscuridad', pureArcane: 'Arcano Puro',
+    };
+    const ROMAN = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V' };
+    const SPELL_NAMES = {
+      fire: 'Ardor del Alba', water: 'Marea de Escarcha', lightning: 'Ira del Cielo',
+      earth: 'Furia Basáltica', wind: 'Soplo del Zénit', light: 'Aurora Sacra',
+      darkness: 'Abrazo Umbrío', pureArcane: 'Resonancia Rúnica',
+    };
+    const CC_LABELS = { stun: '¡Aturdido!', root: '¡Enraizado!', slow: '¡Ralentizado!' };
+
+    // Dimensionado real del lienzo (canvas interno vs CSS).
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // El maniquí descansa al 70% del ancho, al centro vertical.
+    function targetPoint() {
+      return { x: canvas.width * 0.7, y: canvas.height * 0.5 };
+    }
+    function originPoint() {
+      return { x: canvas.width * 0.12, y: canvas.height * 0.78 };
+    }
+
+    // Pool propio de la demo (el lienzo arcánico trae el suyo).
+    const pool = new ParticlePool();
+
+    // Maniquí de producción (reloj real: Date.now()) sobre un anfitrión
+    // real fuera del flujo visual (su barra se refleja en la barra grande).
+    const dummyHost = document.createElement('div');
+    dummyHost.style.display = 'none';
+    document.body.appendChild(dummyHost);
+    const dummy = createCombatDummyComponent({ host: dummyHost });
+
+    // Textos flotantes de producción sobre el mismo lienzo.
+    const floatingTexts = createFloatingCombatTextComponent({ ctx });
+
+    // Bitácora de impactos (últimos 5, RF-05.2/05.3 estilo).
+    const logbook = document.getElementById('logbook');
+    const logEntries = [];
+
+    // --- Componente del lienzo arcánico con callback de impacto real ---
+    let lastFps = null;
+    const arcane = createArcaneCanvasComponent({
+      canvas,
+      ctx,
+      clock: { now: () => performance.now() },
+      onImpact: (detail) => {
+        // 1. El maniquí resuelve el impacto (RF-02.4).
+        const result = dummy.applySpellImpact(detail.spell);
+        // 2. Textos flotantes escalonados (RF-05.2).
+        floatingTexts.spawnImpactTexts({
+          spellName: detail.spell.name,
+          ...detail.spell.effects,
+          crowdControlLabel: detail.spell.effects.crowdControlType !== 'none'
+            ? CC_LABELS[detail.spell.effects.crowdControlType]
+            : null,
+          fullHealthLegend: result.fullHealthLegend,
+        }, detail.targetCoordinates);
+        // 3. Bitácora (RF-05.3).
+        logEntries.unshift({
+          time: new Date().toLocaleTimeString(),
+          name: detail.spell.name,
+          result,
+        });
+        if (logEntries.length > 5) logEntries.pop();
+        renderLogbook();
+        renderHealth();
+      },
+    });
+
+    function renderLogbook() {
+      logbook.innerHTML = '';
+      for (const entry of logEntries) {
+        const line = document.createElement('div');
+        const strong = document.createElement('b');
+        strong.textContent = entry.time;
+        line.appendChild(strong);
+        line.appendChild(document.createTextNode(
+          ` — ${entry.name}: ` +
+          (entry.result.damageApplied > 0 ? `−${entry.result.damageApplied} PV (absorbido ${entry.result.barrierAbsorbed}) ` : '') +
+          `→ ${entry.result.remainingHealth} PV` +
+          (entry.result.fullHealthLegend ? ' [Salud Plena]' : '')
+        ));
+        logbook.appendChild(line);
+      }
+    }
+
+    function renderHealth() {
+      const state = dummy.getState();
+      const fill = document.getElementById('healthFill');
+      const label = document.getElementById('healthLabel');
+      fill.style.width = `${(state.health / state.maxHealth) * 100}%`;
+      let text = `Maniquí Arcano — ${state.health} / ${state.maxHealth} PV`;
+      if (state.barrier > 0) text += ` · [Barrera ${state.barrier}]`;
+      if (state.activeCC) text += ` · ${CC_LABELS[state.activeCC] ?? state.activeCC}`;
+      if (state.state === 'destroyed') text = 'El armazón se disuelve en paja arcana… (regenerando)';
+      label.textContent = text;
+    }
+
+    function currentSpell() {
+      const element = document.getElementById('elementSelect').value;
+      const effect = document.getElementById('effectSelect').value;
+      const circle = Number(document.getElementById('circleSelect').value);
+      const effects = { damage: 0, healing: 0, barrier: 0, crowdControlType: 'none' };
+      if (effect === 'damage') effects.damage = 45;
+      if (effect === 'healing') effects.healing = 30;
+      if (effect === 'barrier') effects.barrier = 25;
+      if (effect === 'mixed') {
+        effects.damage = 45;
+        effects.healing = 30;
+        effects.crowdControlType = 'stun';
+      }
+      return {
+        name: SPELL_NAMES[element],
+        elementalAffinity: element,
+        circle,
+        geometry: document.getElementById('geometrySelect').value,
+        effects,
+      };
+    }
+
+    function cast() {
+      const spell = currentSpell();
+      const origin = originPoint();
+      const target = targetPoint();
+      const circle = spell.circle;
+
+      const emitted = arcane.castSpell(spell, {
+        geometry: spell.geometry,
+        origin,
+        target,
+        count: 14,
+      });
+
+      document.getElementById('spellName').textContent =
+        `${spell.name} (${ELEMENT_NAMES[spell.elementalAffinity]}, ${spell.geometry}, Círculo ${ROMAN[circle]}, densidad ${arcane.getDensityScale().toFixed(1)})`;
+      document.getElementById('lastEmit')?.replaceChildren();
+    }
+
+    document.getElementById('castBtn').addEventListener('click', cast);
+    document.getElementById('restoreBtn').addEventListener('click', () => {
+      dummy.restore();
+      renderHealth();
+    });
+    document.getElementById('spamBtn').addEventListener('click', () => {
+      for (let i = 0; i < 8; i++) setTimeout(cast, i * 120);
+    });
+
+    // Bucle RAF de la demo: escena de fondo + pool de la demo + textos.
+    arcane.start();
+    let lastTime = performance.now();
+    let frames = 0;
+    let fpsStart = performance.now();
+
+    function frame(now) {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
+
+      // FPS visibles (RF-06.2 estilo).
+      frames += 1;
+      if (now - fpsStart >= 1000) {
+        lastFps = Math.round((frames * 1000) / (now - fpsStart));
+        frames = 0;
+        fpsStart = now;
+        document.getElementById('fpsValue').textContent = String(lastFps);
+        document.getElementById('densityValue').textContent = arcane.getDensityScale().toFixed(1);
+      }
+
+      // Fondo translúcido: estelas mágicas entre cuadros.
+      ctx.fillStyle = 'rgba(23, 18, 14, 0.28)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Pedestal del maniquí.
+      const t = targetPoint();
+      ctx.save();
+      ctx.strokeStyle = 'rgba(212, 169, 78, 0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 46, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(t.x, t.y - 58);
+      ctx.lineTo(t.x, t.y + 58);
+      ctx.moveTo(t.x - 58, t.y);
+      ctx.lineTo(t.x + 58, t.y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Origen del conjuro.
+      const o = originPoint();
+      ctx.save();
+      ctx.fillStyle = 'rgba(156, 143, 127, 0.8)';
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Partículas del pool de la demo (el lienzo arcánico tiene el suyo).
+      pool.updateAndRender(ctx, dt);
+      document.getElementById('activeCount').textContent =
+        String(pool.getActiveCount() + arcane.getActiveParticleCount());
+
+      // Textos flotantes escalonados (RF-05.2).
+      floatingTexts.updateAndRender(dt);
+
+      // Regeneración del maniquí si está destruido.
+      dummy.tick();
+      if (dummy.getState().state === 'destroyed') renderHealth();
+
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    // Primera invocación automática para inspección inmediata.
+    renderHealth();
+    cast();
+  </script>
+</body>
+</html>

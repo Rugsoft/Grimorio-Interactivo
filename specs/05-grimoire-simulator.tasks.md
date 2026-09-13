@@ -57,17 +57,17 @@
 
 ## Fase 3: Componentes de la Cámara de Conjuración (Maniquí, Textos Flotantes y Lienzo Canvas)
 
-- [ ] **Tarea 3.1: Máquina de estados del Maniquí Arcano (`combatDummyComponent.js`)**
+- [x] **Tarea 3.1: Máquina de estados del Maniquí Arcano (`combatDummyComponent.js`)**
   * **Alcance:** Implementar `public/assets/js/components/combatDummyComponent.js` con máquina de estados completa: salud base de 500 PV, absorción prioritaria de barrera con renovación por valor dominante (sin apilamiento infinito), techo inmutable de curación en 500 PV (`[Salud Plena]`), ataduras visuales de control de masas con disipación a los 4 s, persistencia de estado entre páginas y regeneración automática a los 2 s tras caer a 0 PV.
   * **Cubre:** `RF-02.1`, `RF-02.3`, `RF-02.4`, `RF-02.5`, `RF-05.1`
   * **Hecho cuando:** El maniquí resuelve los impactos aplicando la prioridad de barrera, acota la curación a 500 PV, conserva su daño al hojear entre páginas y se regenera automáticamente tras disolverse a los 0 PV.
 
-- [ ] **Tarea 3.2: Componente de Textos Flotantes Arcanos Escalonados (`floatingCombatTextComponent.js`)**
+- [x] **Tarea 3.2: Componente de Textos Flotantes Arcanos Escalonados (`floatingCombatTextComponent.js`)**
   * **Alcance:** Crear `public/assets/js/components/floatingCombatTextComponent.js` para renderizar en el lienzo los rótulos animados con escalonamiento espacial y temporal: cifra de daño en torso central (`-45 PV`, carmesí), curación o barrera con desplazamiento lateral (+35 px, esmeralda o azul zafiro) y rótulo de CC en corona superior (`¡Aturdido!`, oro rúnico) con retardo de 150 ms.
   * **Cubre:** `RF-05.2`, `RNF-04`
   * **Hecho cuando:** Un conjuro con efectos mixtos emite los tres textos en posiciones y tiempos desfasados, flotando hacia arriba y disolviéndose suavemente sin empastarse.
 
-- [ ] **Tarea 3.3: Contenedor del Lienzo Canvas y Control de Rendimiento (`arcaneCanvasComponent.js`)**
+- [x] **Tarea 3.3: Contenedor del Lienzo Canvas y Control de Rendimiento (`arcaneCanvasComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/arcaneCanvasComponent.js` gestionando el lienzo Canvas 2D, bucle `requestAnimationFrame`, suspensión inmediata al ocultar pestaña (`document.visibilitychange`), soporte de `prefers-reduced-motion` (omisión de proyectiles móviles y sustitución por destello estático y texto flotante) y monitor de FPS con auto-throttle de densidad de partículas si cae por debajo de 30 FPS.
   * **Cubre:** `RF-06.1`, `RF-06.2`, `RF-06.3`, `RNF-01`
   * **Hecho cuando:** La animación opera a 60 FPS estables, se suspende inmediatamente al minimizar la pestaña, y activar `prefers-reduced-motion` elimina las trayectorias violentas manteniendo los textos flotantes.
