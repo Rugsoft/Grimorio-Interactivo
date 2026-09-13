@@ -40,6 +40,7 @@ spl_autoload_register(static function (string $className): void {
 });
 
 use Grimorio\Controllers\ClanController;
+use Grimorio\Controllers\GrimoireController;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
@@ -51,6 +52,7 @@ use Grimorio\Core\Router;
 use Grimorio\Core\SessionManager;
 use Grimorio\Middleware\AuthMiddleware;
 use Grimorio\Database\Connection;
+use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\SpellDiscoveryService;
 use Grimorio\Services\SpellManagementService;
 
@@ -80,6 +82,10 @@ function buildRouter(): Router
     // transiciones (Tareas 4.2/4.3) exigen sesión autenticada.
     $spellCreatorController = new SpellCreatorController(null, new SpellManagementService($connection->getPdo()));
 
+    // Simulador de Grimorio (SPEC-05): catálogo del Tomo Arcano con
+    // segmentación canónica/ensayos (el modo essays exige sesión, Tarea 1.3).
+    $grimoireController = new GrimoireController(new GrimoireQueryService($connection->getPdo()));
+
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
@@ -89,6 +95,10 @@ function buildRouter(): Router
     $router->addRoute('GET', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->listDrafts($request));
     $router->addRoute('GET', '/api/v1/spells/{slug}', fn (Request $request, array $routeParams): Response => $spellController->show($request, $routeParams));
     $router->addRoute('GET', '/api/v1/clans/preview', fn (Request $request): Response => $clanController->preview($request));
+
+    // --- Rutas del Simulador de Grimorio (SPEC-05, plan Endpoints 1-2) ---
+    $router->addRoute('GET', '/api/v1/grimoire/spells', fn (Request $request): Response => $grimoireController->listSpells($request));
+    $router->addRoute('GET', '/api/v1/grimoire/spells/{id}', fn (Request $request, array $routeParams): Response => $grimoireController->showSpell($request, $routeParams));
 
     // --- Rutas del Taller de Hechizos (SPEC-04, plan Endpoints 1-3) ---
     // El cálculo es público y sin estado; el ciclo de vida de borradores
