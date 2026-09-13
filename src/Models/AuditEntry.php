@@ -41,6 +41,9 @@ final class AuditEntry
         'DEMOTE_MASTER',
         'CLAN_MODIFY',
         'ACC_LINK_RENOUNCED',
+        'RESET_SIGNATURES_MATH_CHANGE',
+        'UPDATE_DESCRIPTION_INTACT_SIGNATURES',
+        'CREATE_VARIANT_FROM_VALIDATED',
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */
