@@ -46,6 +46,16 @@
       <ul class="site-nav__links" id="navLinks" aria-label="Secciones del santuario">
       </ul>
 
+      <!-- Ranura del distintivo de sesión (Tarea 4.5, SPEC-03): aloja el
+           botón «Cruzar el Umbral» del visitante o el badge del vinculado. -->
+      <div class="site-nav__session" id="navSessionSlot">
+        <button type="button" class="site-nav__threshold" id="navCrossThreshold"
+                aria-haspopup="dialog" aria-controls="accessModal"
+                aria-label="Cruzar el Umbral: abrir el diálogo de acceso">
+          Cruzar el Umbral
+        </button>
+      </div>
+
       <!-- Botón del menú arcano para pantallas estrechas (RF-02.4, < 768 px).
            main.js lo cableará con aria-expanded y manejo por teclado. -->
       <button type="button" class="site-nav__toggle" id="navToggle"
@@ -130,6 +140,11 @@
           <span class="access-form__label">Palabra de paso</span>
           <input type="password" name="registerPassword" autocomplete="new-password" required
                  aria-label="Palabra de paso para la consagración">
+        </label>
+        <label class="access-form__field">
+          <span class="access-form__label">Correo de contacto</span>
+          <input type="email" name="registerEmail" autocomplete="email" required
+                 aria-label="Correo de contacto para la consagración">
         </label>
         <button type="submit" class="access-form__submit">Consagrarse</button>
       </form>

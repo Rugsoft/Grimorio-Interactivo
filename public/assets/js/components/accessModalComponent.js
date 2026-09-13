@@ -33,7 +33,7 @@ const SHELL_FORM_IDS = {
 /** Mapa de campos del shell → contrato de credenciales (inglés, camelCase). */
 const CREDENTIAL_FIELDS = {
   login: { alias: 'loginName', passphrase: 'loginPassword' },
-  register: { alias: 'registerName', passphrase: 'registerPassword' },
+  register: { alias: 'registerName', passphrase: 'registerPassword', email: 'registerEmail' },
 };
 
 /**
@@ -73,10 +73,15 @@ function extractCredentials(event, mode) {
   };
   // Las credenciales viajan con los nombres de campo del shell (contrato
   // del backend SPEC-03): loginName/loginPassword, registerName/registerPassword.
-  return {
+  const credentials = {
     [fieldMap.alias]: readField(fieldMap.alias),
     [fieldMap.passphrase]: readField(fieldMap.passphrase),
   };
+  // El correo solo existe en la consagración (Endpoint 1 exige email).
+  if (fieldMap.email !== undefined) {
+    credentials[fieldMap.email] = readField(fieldMap.email);
+  }
+  return credentials;
 }
 
 /**

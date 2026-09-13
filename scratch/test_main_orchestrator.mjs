@@ -245,7 +245,19 @@ function buildFakeShell(initialUrl) {
   const fakeWindow = createFakeWindow(initialUrl);
   const fakeDocument = { createElement: (tag) => createFakeElement(tag) };
 
-  return { appRoot, navRoot, spellDetailDialog, accessDialog, fakeWindow, fakeDocument, spellClient: createFakeSpellClient() };
+  // authClient de integración (SPEC-03): el bind responde éxito con la
+  // sesión del vínculo (materia prima del FASE 5); el resto devuelve
+  // sobres controlados de visitante.
+  const sessionUser = { id: 'usr_1', alias: 'friki', role: 'editor', clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial' };
+  const authClient = {
+    checkSession: async () => ({ success: true, status: 200, data: { authenticated: false, user: null } }),
+    bind: async (identity, passphrase) => ({ success: true, status: 200, data: { user: sessionUser } }),
+    consecrate: async (data) => ({ success: true, status: 201, data: { user: sessionUser } }),
+    dissolve: async () => ({ success: true, status: 200, data: { dissolved: true } }),
+    dissolveAll: async () => ({ success: true, status: 200, data: { dissolved: true } }),
+  };
+
+  return { appRoot, navRoot, spellDetailDialog, accessDialog, fakeWindow, fakeDocument, spellClient: createFakeSpellClient(), authClient };
 }
 
 console.log('== VERIFICACION TAREA 6.1: main.js (orquestador central) ==\n');
@@ -269,6 +281,7 @@ const app1 = createGrimoireApp({
   spellDetailDialog: shell1.spellDetailDialog,
   accessDialog: shell1.accessDialog,
   spellClient: shell1.spellClient,
+  authClient: shell1.authClient,
   windowRef: shell1.fakeWindow,
   documentRef: shell1.fakeDocument,
 });
@@ -312,6 +325,7 @@ const app3 = createGrimoireApp({
   spellDetailDialog: shell3.spellDetailDialog,
   accessDialog: shell3.accessDialog,
   spellClient: shell3.spellClient,
+  authClient: shell3.authClient,
   windowRef: shell3.fakeWindow,
   documentRef: shell3.fakeDocument,
 });

@@ -47,6 +47,14 @@ import {
   updateExperimental as apiUpdateExperimental,
   createVariant as apiCreateVariant,
 } from './api/spellCreatorClient.js';
+import {
+  checkSession as apiCheckSession,
+  bind as apiBind,
+  consecrate as apiConsecrate,
+  dissolve as apiDissolve,
+  dissolveAll as apiDissolveAll,
+} from './api/authClient.js';
+import { createMemoryBadgeRoot } from './components/userProfileBadge.js';
 
 /**
  * Crea la aplicación orquestada.
@@ -57,6 +65,8 @@ import {
  * @param {HTMLDialogElement} [options.spellDetailDialog] `<dialog>` Nivel 1 (plan 4.2).
  * @param {HTMLDialogElement} [options.accessDialog] `<dialog>` Nivel 2 (plan 4.2).
  * @param {Object} [options.spellClient] Cliente HTTP (inyectable en pruebas).
+ * @param {Object} [options.authClient] Cliente de autenticación SPEC-03 (inyectable en pruebas).
+ * @param {HTMLElement} [options.badgeRoot] Contenedor del distintivo de sesión de la cabecera.
  * @param {Window} [options.windowRef] Ventana (inyectable en pruebas).
  * @param {Document} [options.documentRef] Documento (inyectable en pruebas).
  * @returns {Object} API: { boot, store, navigate, openSpellDetailBySlug, destroy }.
@@ -72,6 +82,14 @@ export function createGrimoireApp(options = {}) {
       fetchSpells: apiFetchSpells,
       fetchSpellBySlug: apiFetchSpellBySlug,
       fetchClansPreview: apiFetchClansPreview,
+    },
+    badgeRoot = globalThis.document?.getElementById?.('navSessionSlot'),
+    authClient = {
+      checkSession: apiCheckSession,
+      bind: apiBind,
+      consecrate: apiConsecrate,
+      dissolve: apiDissolve,
+      dissolveAll: apiDissolveAll,
     },
     windowRef = globalThis.window,
     documentRef = globalThis.document,
@@ -89,6 +107,7 @@ export function createGrimoireApp(options = {}) {
   let navbar = null;
   let detailModal = null;
   let accessModal = null;
+  let sessionBadge = null;
   let historyManager = null;
   let errorView = null;
   let isDestroyed = false;
@@ -288,14 +307,145 @@ export function createGrimoireApp(options = {}) {
     if (isDestroyed) return;
     store.setState({ pendingIntent: { action, targetSlug } });
     accessModal.open({ action, targetSlug });
+    // El selector de linaje exige el catálogo vivo (RF-01.1).
+    void refreshClansForModal();
   }
 
   /**
-   * Autenticación completada (enganche SPEC-03): la intención pendiente se
-   * consume (RF-05.3). El diálogo de acceso se cierra por sí solo.
+   * Autenticación completada (SPEC-03): asienta la sesión, consume la
+   * intención pendiente (RF-05.3) y restablece la navegación retenida
+   * (p. ej. el Taller de Hechizos tras «Cruzar el Umbral»).
+   *
+   * @param {Object|null} user Sobre data.user del authClient (null = fallo).
    */
-  function handleAuthenticated() {
+  function handleAuthenticated(user = null) {
+    if (user !== null && typeof user === 'object') {
+      store.setSession(user);
+      sessionBadge?.setUser(user);
+    }
+    const retainedIntent = store.getState().pendingIntent;
     store.clearPendingIntent();
+    // Restauración de la intención: solo acciones con vista propia.
+    if (retainedIntent?.action === 'openCreator') {
+      void navigate('creator');
+    }
+  }
+
+  /**
+   * Verificación inicial de sesión: el sobre decide el estado del store y
+   * del badge (Tarea 4.2). Los fallos de red degradan a visitante en silencio.
+   */
+  async function apiCheckSessionWrapper() {
+    const envelope = await authClient.checkSession();
+    const sessionUser = envelope?.data?.user ?? null;
+    if (envelope?.success === true && envelope?.data?.authenticated === true && sessionUser !== null) {
+      store.setSession(sessionUser);
+      sessionBadge?.setUser(sessionUser);
+    }
+  }
+
+  /**
+   * Envío de «Renovar Vínculo» (plan Endpoint 2): llama a bind() con las
+   * credenciales del shell. Éxito → handleAuthenticated; fallo → mensaje
+   * del backend en el diálogo (fuente única de verdad), que permanece abierto.
+   *
+   * @param {object} credentials { alias, passphrase } del shell.
+   * @param {Object|null} intent Intención pendiente retenida por el modal.
+   */
+  async function handleBindSubmit(credentials, intent) {
+    // Las credenciales viajan con los nombres de campo del shell
+    // (loginName/loginPassword — contrato del componente de acceso).
+    const envelope = await authClient.bind(
+      credentials.loginName ?? credentials.alias ?? '',
+      credentials.loginPassword ?? credentials.passphrase ?? '',
+    );
+    if (envelope.success === true) {
+      handleAuthenticated(envelope.data?.user ?? null);
+      return;
+    }
+    // El diálogo ya se cerró tras notificar: se exhibe el mensaje del
+    // backend (fuente única de verdad) y se reabre con la intención intacta.
+    accessModal.reportError(envelope);
+    reportAccessError(envelope);
+    accessModal.open(intent);
+  }
+
+  /**
+   * Envío de «Consagrarse» (plan Endpoint 1): llama a consecrate() con el
+   * contrato { alias, email, passphrase, clanId }. El clan es obligatorio
+   * (RF-01.1); sin correo en el shell, el campo email viaja vacío y el
+   * backend responde 400 INVALID_REGISTRATION_DATA (contrato ciego).
+   *
+   * @param {object} credentials { alias, passphrase, clanId? } del shell.
+   * @param {Object|null} intent Intención pendiente retenida por el modal.
+   */
+  async function handleConsecrateSubmit(credentials, intent) {
+    // Contrato del Endpoint 1: { alias, email, passphrase, clanId }. El
+    // correo llega del campo registerEmail del shell; el linaje del
+    // selector obligatorio que el modal añade a las credenciales (RF-01.1).
+    const envelope = await authClient.consecrate({
+      alias: credentials.registerName ?? credentials.alias ?? '',
+      email: credentials.registerEmail ?? credentials.email ?? '',
+      passphrase: credentials.registerPassword ?? credentials.passphrase ?? '',
+      clanId: credentials.clanId ?? '',
+    });
+    if (envelope.success === true) {
+      handleAuthenticated(envelope.data?.user ?? null);
+      return;
+    }
+    accessModal.reportError(envelope);
+    reportAccessError(envelope);
+    accessModal.open(intent);
+  }
+
+  /**
+   * Exhibe el mensaje de error del backend dentro del diálogo (RF-03.1):
+   * nodo accesible <p role="alert"> creado una sola vez y reutilizado.
+   *
+   * @param {Object|null} errorEnvelope Sobre estándar { success, error }.
+   */
+  function reportAccessError(errorEnvelope) {
+    const message = typeof errorEnvelope?.error?.message === 'string' && errorEnvelope.error.message !== ''
+      ? errorEnvelope.error.message
+      : 'La corriente de maná no pudo procesar la petición.';
+    let errorNode = typeof accessDialog.querySelector === 'function'
+      ? accessDialog.querySelector('#accessModalError')
+      : null;
+    if (errorNode === null) {
+      errorNode = documentRef.createElement('p');
+      errorNode.setAttribute('id', 'accessModalError');
+      errorNode.setAttribute('role', 'alert');
+      accessDialog.appendChild(errorNode);
+    }
+    errorNode.textContent = message;
+  }
+
+  /**
+   * Puebla el selector OBLIGATORIO de linaje (RF-01.1) con los clanes del
+   * catálogo (RF-02.2 del portal). Idempotente: se repuebla en cada apertura.
+   */
+  async function refreshClansForModal() {
+    if (typeof accessModal.populateClans !== 'function') return;
+    const envelope = await spellClient.fetchClansPreview();
+    if (envelope?.success === true && Array.isArray(envelope.data)) {
+      accessModal.populateClans(envelope.data.map((clan) => ({ id: clan.id, name: clan.name })));
+    }
+  }
+
+  /**
+   * Disolución de vínculos (RF-02.4) desde el menú del badge.
+   * @param {'dissolve'|'dissolveAll'} variant Variante solicitada.
+   */
+  async function handleDissolve(variant) {
+    const envelope = variant === 'dissolveAll'
+      ? await authClient.dissolveAll()
+      : await authClient.dissolve();
+    if (envelope.success === true) {
+      store.clearSession();
+      sessionBadge?.clearUser();
+    } else {
+      accessModal.reportError(envelope);
+    }
   }
 
   /**
@@ -311,10 +461,30 @@ export function createGrimoireApp(options = {}) {
       windowRef,
     });
     accessModal = createAccessModalComponent(accessDialog, {
-      onAuthenticate: handleAuthenticated,
-      onRegister: handleAuthenticated,
+      onAuthenticate: handleBindSubmit,
+      onRegister: handleConsecrateSubmit,
+      onError: () => {}, // El mensaje lo pinta reportAccessError (nodo accesible).
       documentRef,
     });
+
+    // Distintivo de sesión (Tarea 4.5): reemplaza «Cruzar el Umbral» por el
+    // badge del vinculado y delega las disoluciones en el orquestador.
+    sessionBadge = badgeRoot !== null && badgeRoot !== undefined
+      ? createMemoryBadgeRoot(badgeRoot, {
+          onCrossThreshold: () => handleReservedAction('crossThreshold'),
+          onOpenGrimoire: () => handleReservedAction('openGrimoire'),
+          onChangeClan: () => handleReservedAction('changeClan'),
+          onDissolve: () => handleDissolve('dissolve'),
+          onDissolveAll: () => handleDissolve('dissolveAll'),
+          documentRef,
+        })
+      : null;
+
+    // Verificación de sesión al arrancar (Tarea 4.2): la cookie HttpOnly
+    // decide el estado real; el badge y el store se sincronizan sin recarga.
+    if (authClient?.checkSession) {
+      void apiCheckSessionWrapper();
+    }
 
     // Historial y enlaces directos (plan 4.3): con resolveInitialHash el
     // gestor notifica el hash inicial #hechizo-slug al instante (RF-04.1).
@@ -326,7 +496,7 @@ export function createGrimoireApp(options = {}) {
 
     // Barra de navegación persistente (RF-02.1).
     navbar = createNavbarComponent(navRoot, {
-      isAuthenticated: false, // SPEC-03 sustituirá esto por la sesión real.
+      isAuthenticated: false, // checkSession() ajustará el estado real.
       onNavigate: (viewName) => navigate(viewName),
       onReservedAction: (action) => handleReservedAction(action),
       elementFactory,
