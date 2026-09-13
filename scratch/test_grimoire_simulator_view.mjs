@@ -482,6 +482,18 @@ assertCondition(
   'el acceso vedado a los ensayos se anuncia con un aviso solemne (RF-01.2)',
 );
 assertCondition(forbidden.view.getState().totalPages === 3, 'el tomo canónico permanece intacto tras el rechazo');
+assertCondition(
+  forbidden.client.calls.filter((c) => c.mode === 'canonical').length >= 1,
+  'el refugio reclama el catálogo canónico sin exponer jamás un borrador (RF-01.2)',
+);
+assertCondition(
+  forbidden.view.getState().currentSpell?.name === 'Ardor del Alba',
+  'la lámina del refugio ilumina un conjuro canónico (RF-01.2)',
+);
+assertCondition(
+  !forbidden.view.getState().currentSpell?.status || forbidden.view.getState().currentSpell.status === 'validated',
+  'ningún ensayo privado se filtra en el refugio público (RF-01.2)',
+);
 
 const emptyEssays = buildView({ client: createFakeGrimoireClient({ essays: [] }) });
 await emptyEssays.view.render();

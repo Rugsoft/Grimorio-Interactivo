@@ -2,12 +2,17 @@
  * navbarComponent.js — Barra de navegación persistente (Tarea 4.1).
  *
  * RF-02.1: enlaces persistentes (Inicio, Biblioteca, Salón de Linajes,
- *          Creador de Hechizos) en la cabecera del shell.
+ *          Simulador de Grimorio, Creador de Hechizos) en la cabecera.
  * RF-02.3: el Creador es acción reservada para visitantes — su activación
  *          dispara onReservedAction para que el orquestador abra el diálogo
  *          «Cruzar el Umbral» reteniendo la intención (plan 4.1).
  * RF-02.4: menú desplegable arcano en pantallas estrechas, accesible por
  *          teclado (aria-expanded, aria-controls, Escape).
+ *
+ * Nota (defecto corregido): la bandera del vínculo NO se captura una sola
+ * vez. El orquestador la sincroniza con setSession() cuando la sesión nace
+ * (checkSession, «Renovar Vínculo», consagración) o muere (disolución), y
+ * la activación la consulta SIEMPRE en el instante del click.
  *
  * Constitución:
  *   - Artículo I: ES Modules nativos, sin frameworks.
@@ -23,6 +28,10 @@ export const NAV_LINKS = Object.freeze([
   { view: 'landing', hash: '#/', label: 'Inicio' },
   { view: 'library', hash: '#/biblioteca', label: 'Biblioteca de Hechizos' },
   { view: 'clans', hash: '#/linajes', label: 'Salón de Linajes' },
+  // El Simulador es público: su Tomo Canónico se abre a todo visitante
+  // (RF-01.2 de SPEC-05). El tomo privado de Ensayos se guarda en el umbral
+  // del orquestador, no en el enlace.
+  { view: 'simulator', hash: '#/simulador', label: 'Simulador de Grimorio' },
   { view: 'creator', hash: '#/creador', label: 'Creador de Hechizos', action: 'openCreator' },
 ]);
 
@@ -36,12 +45,13 @@ export const VISITOR_LINK_ACTIONS = Object.freeze({
  *
  * @param {HTMLElement} navRoot Elemento <nav id="siteNav"> del shell.
  * @param {object} componentOptions Contratos y fábricas:
- *   - isAuthenticated: ¿hay vínculo activo (rol >= editor)?
+ *   - isAuthenticated: ¿hay vínculo activo (rol >= editor)? Bandera INICIAL:
+ *     el orquestador la mantiene viva con setSession().
  *   - onNavigate(view): navegación pública a una vista de la SPA.
  *   - onReservedAction(action): interceptación — abrir «Cruzar el Umbral».
  *   - elementFactory (opcional): fábrica de elementos (por defecto
  *     document.createElement; las pruebas inyectan la suya).
- * @returns {object} { render, destroy }.
+ * @returns {object} { render, setSession, destroy, closeMobileMenu, handleMenuKeydown }.
  */
 export function createNavbarComponent(navRoot, componentOptions) {
   const {
@@ -50,6 +60,13 @@ export function createNavbarComponent(navRoot, componentOptions) {
     onReservedAction,
     elementFactory = (tagName) => document.createElement(tagName),
   } = componentOptions;
+
+  /**
+   * Bandera viva del vínculo. Se consulta en el INSTANTE de la activación,
+   * nunca se captura de una vez: si la cabecera quedara creyendo que todo
+   * visitante es anónimo, interceptaría el Taller a un erudito ya vinculado.
+   */
+  let sessionIsAuthenticated = isAuthenticated === true;
 
   /** Elementos del shell cableados en el primer render. */
   let linksList = null;
@@ -67,7 +84,7 @@ export function createNavbarComponent(navRoot, componentOptions) {
     const reservedAction = linkElement.getAttribute('data-action');
     const targetView = linkElement.getAttribute('data-view');
 
-    if (reservedAction !== null && !isAuthenticated) {
+    if (reservedAction !== null && !sessionIsAuthenticated) {
       // RF-02.3: el orquestador abrirá «Cruzar el Umbral» y el store
       // retendrá la intención (pendingIntent.action = openCreator).
       onReservedAction?.(reservedAction);
@@ -189,6 +206,30 @@ export function createNavbarComponent(navRoot, componentOptions) {
     }
   }
 
+  /**
+   * Sincroniza la cabecera con el vínculo vivo (RF-02.1, RF-02.3).
+   *
+   * Idempotente: si la bandera no cambia, no toca el DOM. Cuando cambia
+   * (sesión que nace o muere), vuelve a pintar la lista —`render()` está
+   * declarado idempotente justo para esto— dejando enlaces nuevos con sus
+   * manejadores limpios, sin apilar listeners.
+   *
+   * @param {boolean} isAuthenticated ¿hay vínculo consagrado activo?
+   */
+  function setSession(isAuthenticated) {
+    const nextFlag = isAuthenticated === true;
+    if (nextFlag === sessionIsAuthenticated) {
+      return;
+    }
+    sessionIsAuthenticated = nextFlag;
+
+    // Si la lista aún no se ha pintado (primer render pendiente), la bandera
+    // queda asentada para que el primer render ya nazca con el estado real.
+    if (linksList !== null) {
+      render();
+    }
+  }
+
   /** Baja limpia de listeners del componente. */
   function destroy() {
     for (const linkElement of linksList?.children ?? []) {
@@ -202,6 +243,7 @@ export function createNavbarComponent(navRoot, componentOptions) {
 
   return {
     render,
+    setSession,
     destroy,
     // Expuestos para pruebas y orquestador:
     closeMobileMenu,

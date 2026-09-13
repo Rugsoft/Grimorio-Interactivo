@@ -38,6 +38,8 @@ import { createLibraryView } from './views/libraryView.js';
 import { createClansPreviewView } from './views/clansPreviewView.js';
 import { createErrorView } from './views/errorView.js';
 import { createSpellCreatorView } from './views/spellCreatorView.js';
+import { createGrimoireSimulatorView } from './views/grimoireSimulatorView.js';
+import { createGrimoireClient } from './api/grimoireClient.js';
 import {
   listDrafts as apiListDrafts,
   saveDraft as apiSaveDraft,
@@ -66,6 +68,7 @@ import { createMemoryBadgeRoot } from './components/userProfileBadge.js';
  * @param {HTMLDialogElement} [options.accessDialog] `<dialog>` Nivel 2 (plan 4.2).
  * @param {Object} [options.spellClient] Cliente HTTP (inyectable en pruebas).
  * @param {Object} [options.authClient] Cliente de autenticación SPEC-03 (inyectable en pruebas).
+ * @param {Object} [options.grimoireClient] Cliente del grimorio SPEC-05 (inyectable en pruebas).
  * @param {HTMLElement} [options.badgeRoot] Contenedor del distintivo de sesión de la cabecera.
  * @param {Window} [options.windowRef] Ventana (inyectable en pruebas).
  * @param {Document} [options.documentRef] Documento (inyectable en pruebas).
@@ -91,6 +94,7 @@ export function createGrimoireApp(options = {}) {
       dissolve: apiDissolve,
       dissolveAll: apiDissolveAll,
     },
+    grimoireClient = createGrimoireClient(),
     windowRef = globalThis.window,
     documentRef = globalThis.document,
   } = options;
@@ -105,6 +109,15 @@ export function createGrimoireApp(options = {}) {
 
   /** Instancias de infraestructura creadas en boot(). */
   let navbar = null;
+
+  /**
+   * Vigilante del vínculo para la cabecera: la navbar nace con una bandera
+   * y la sesión puede nacer (checkSession, «Renovar Vínculo», consagración)
+   * o morir (disolución) en cualquier momento de la SPA. Sin esta guarda, el
+   * enlace reservado seguía interceptando al erudito YA vinculado.
+   */
+  let unsubscribeSessionWatch = null;
+  let navbarSessionFlag = false;
   let detailModal = null;
   let accessModal = null;
   let sessionBadge = null;
@@ -122,9 +135,11 @@ export function createGrimoireApp(options = {}) {
 
   /**
    * Enrutador frontend (plan 4.1): cambia de vista sin recarga completa.
-   * @param {'landing'|'library'|'clans'|'error'} viewName Vista destino.
+   * @param {'landing'|'library'|'clans'|'creator'|'simulator'|'error'} viewName Vista destino.
+   * @param {Object} [navigateOptions]
+   * @param {'canonical'|'essays'} [navigateOptions.catalogMode] Tomo del Simulador.
    */
-  async function navigate(viewName) {
+  async function navigate(viewName, navigateOptions = {}) {
     if (isDestroyed) return;
     destroyCurrentView();
 
@@ -199,6 +214,28 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: viewName, instance: creatorView };
       await creatorView.render();
+      return;
+    }
+
+    if (viewName === 'simulator') {
+      // Simulador de Grimorio (SPEC-05). El Tomo Canónico es público para
+      // cualquier visitante; el tomo privado de Ensayos Arcanos exige un
+      // vínculo consagrado (RF-01.2), de modo que la guardia retiene la
+      // intención, despliega «Cruzar el Umbral» y deja al visitante en el
+      // Tomo Canónico en lugar de ante un pergamino en blanco.
+      const requestsEssays = navigateOptions.catalogMode === 'essays';
+      const hasSession = store.getState().isAuthenticated === true;
+      if (requestsEssays && !hasSession) {
+        handleReservedAction('openGrimoire');
+      }
+      const simulatorView = createGrimoireSimulatorView(appRoot, {
+        grimoireClient,
+        elementFactory,
+        document: documentRef,
+        initialMode: requestsEssays && hasSession ? 'essays' : 'canonical',
+      });
+      currentView = { name: viewName, instance: simulatorView };
+      await simulatorView.render();
       return;
     }
 
@@ -328,7 +365,24 @@ export function createGrimoireApp(options = {}) {
     // Restauración de la intención: solo acciones con vista propia.
     if (retainedIntent?.action === 'openCreator') {
       void navigate('creator');
+    } else if (retainedIntent?.action === 'openGrimoire') {
+      // «Ver mi libro personal» retenido en el umbral: ahora con vínculo,
+      // el Simulador abre directamente el tomo privado (RF-01.2).
+      void navigate('simulator', { catalogMode: 'essays' });
     }
+  }
+
+  /**
+   * «Ver mi libro personal» (RF-07.1 de SPEC-03): con vínculo abre el Tomo de
+   * Ensayos; sin él, retiene la intención y despliega «Cruzar el Umbral».
+   */
+  function handleOpenGrimoire() {
+    if (isDestroyed) return;
+    if (store.getState().isAuthenticated === true) {
+      void navigate('simulator', { catalogMode: 'essays' });
+      return;
+    }
+    handleReservedAction('openGrimoire');
   }
 
   /**
@@ -472,7 +526,7 @@ export function createGrimoireApp(options = {}) {
     sessionBadge = badgeRoot !== null && badgeRoot !== undefined
       ? createMemoryBadgeRoot(badgeRoot, {
           onCrossThreshold: () => handleReservedAction('crossThreshold'),
-          onOpenGrimoire: () => handleReservedAction('openGrimoire'),
+          onOpenGrimoire: () => handleOpenGrimoire(),
           onChangeClan: () => handleReservedAction('changeClan'),
           onDissolve: () => handleDissolve('dissolve'),
           onDissolveAll: () => handleDissolve('dissolveAll'),
@@ -494,14 +548,24 @@ export function createGrimoireApp(options = {}) {
       resolveInitialHash: true,
     });
 
-    // Barra de navegación persistente (RF-02.1).
+    // Barra de navegación persistente (RF-02.1). Nace con la bandera VIVA
+    // del store (checkSession() puede haber resuelto antes del primer
+    // pintado) y se mantiene sincronizada con cada cambio de vínculo.
+    navbarSessionFlag = store.getState().isAuthenticated === true;
     navbar = createNavbarComponent(navRoot, {
-      isAuthenticated: false, // checkSession() ajustará el estado real.
+      isAuthenticated: navbarSessionFlag,
       onNavigate: (viewName) => navigate(viewName),
       onReservedAction: (action) => handleReservedAction(action),
       elementFactory,
     });
     navbar.render();
+
+    unsubscribeSessionWatch = store.subscribe((nextState) => {
+      const nextFlag = nextState.isAuthenticated === true;
+      if (nextFlag === navbarSessionFlag) return;
+      navbarSessionFlag = nextFlag;
+      navbar?.setSession(nextFlag);
+    });
 
     // Enrutado inicial: la ruta por defecto del santuario es la portada.
     // Un hash directo #hechizo-slug montará la portada de fondo mientras el
@@ -518,6 +582,7 @@ export function createGrimoireApp(options = {}) {
     isDestroyed = true;
     destroyCurrentView();
     errorView?.destroy?.();
+    unsubscribeSessionWatch?.();
     navbar?.destroy?.();
     detailModal?.destroy?.();
     accessModal?.destroy?.();

@@ -66,6 +66,11 @@ const FALLBACK_CANVAS = Object.freeze({ width: 800, height: 400 });
 /**
  * Crea la vista del Simulador de Grimorio.
  *
+ * El tomo inicial lo fija `options.initialMode`: el orquestador abre el Tomo
+ * Canónico para cualquier visitante y reserva los Ensayos Arcanos al vínculo
+ * consagrado (RF-01.2). La vista, aun así, degrada sola si el santuario
+ * responde 401.
+ *
  * @param {HTMLElement} mountRoot Punto de montaje (`<main id="app">`).
  * @param {Object} options
  * @param {Object} options.grimoireClient Cliente HTTP del grimorio (Tarea 4.1).
@@ -81,6 +86,8 @@ const FALLBACK_CANVAS = Object.freeze({ width: 800, height: 400 });
  * @param {{now: () => number}} [options.clock] Reloj monótono.
  * @param {MediaQueryList|null} [options.motionQuery] Consulta de movimiento reducido.
  * @param {Object|null} [options.speechSynthesis] Doble de síntesis (RF-06.3).
+ * @param {'canonical'|'essays'} [options.initialMode] Tomo que abre la vista;
+ *   el orquestador lo decide tras la guardia del libro personal (RF-01.2).
  * @returns {Object} API: { render, destroy, switchCatalog, nextPage,
  *   previousPage, castCurrentSpell, restoreDummy, reciteCurrentSpell,
  *   toggleMicrophone, getAnnouncements, getState }.
@@ -112,9 +119,14 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     storage: storage ?? (typeof localStorage !== 'undefined' ? localStorage : null),
   });
 
+  /** Tomo con el que abre la vista (RF-01.2): canónico si no se indica otro. */
+  const initialMode = options.initialMode === CATALOG_MODES.essays
+    ? CATALOG_MODES.essays
+    : CATALOG_MODES.canonical;
+
   /** Estado de orquestación de la vista. */
   const state = {
-    mode: CATALOG_MODES.canonical,
+    mode: initialMode,
     spells: [],
     currentSpell: null,
     pageNumber: 1,
@@ -284,11 +296,12 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     if (!response?.success) {
       if (mode === CATALOG_MODES.essays) {
         // Aislamiento de ensayos (RF-01.2): sin vínculo consagrado, el tomo
-        // canónico permanece abierto y el aviso es solemne, jamás técnico.
+        // canónico se reclama como refugio y el aviso es solemne, jamás
+        // técnico. El visitante nunca queda ante un pergamino en blanco.
         state.mode = CATALOG_MODES.canonical;
         syncCatalogSwitch();
         announce('Los Ensayos Arcanos solo se abren a los eruditos consagrados: el Tomo Canónico permanece abierto.');
-        return false;
+        return loadCatalog(CATALOG_MODES.canonical);
       }
       state.spells = [];
       mountTome([]);
@@ -717,7 +730,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     probeVoiceSupport();
     refreshLogbook();
     syncCatalogSwitch();
-    await loadCatalog(CATALOG_MODES.canonical);
+    await loadCatalog(initialMode);
     arcane.start();
     startScene();
   }
