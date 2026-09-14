@@ -99,30 +99,65 @@ assertCondition(
     "Existe un indice sobre spells.magic_school"
 );
 
+// Fixture completo del plano: author_id y updated_at son NOT NULL sin DEFAULT,
+// y math_fingerprint exige 64 caracteres. Omitir cualquiera de las tres haria
+// fracasar la insercion por un motivo ajeno a la clave foranea, que es
+// precisamente lo que aqui se pretende medir. Devuelve null si el motor la
+// acepta, o el motivo exacto del rechazo.
+$attemptSpellInsert = static function (PDO $pdo, string $id, string $slug, string $school, string $clanId): ?string {
+    try {
+        $pdo->prepare(
+            'INSERT INTO spells (id, slug, name, author_id, magic_school, mana_cost, math_fingerprint,
+                                 clan_id, summary, status, is_genesis_sample, created_at, updated_at, validated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            $id,
+            $slug,
+            'Conjuro Fantasma',
+            'usr_custodio_primordial',
+            $school,
+            10,
+            str_repeat('f', 64),
+            $clanId,
+            'Prueba FK',
+            'experimental',
+            0,
+            '2026-01-01T00:00:00Z',
+            '2026-01-01T00:00:00Z',
+            '2026-01-01T00:00:00Z',
+        ]);
+
+        return null;
+    } catch (PDOException $e) {
+        return $e->getMessage();
+    }
+};
+
+// Caso de control previo: el mismo fixture con referencias VALIDAS debe
+// aceptarse. Sin esta comprobacion, un rechazo por columna obligatoria omitida
+// se confundiria con una violacion de clave foranea y el aserto pasaria en
+// verde sin haber medido nada. Se deshace para no alterar el censo posterior.
+$pdo->beginTransaction();
+$controlReason = $attemptSpellInsert($pdo, 'spl_fk_control', 'fk-control', 'evocation', 'cln_primordial');
+$pdo->rollBack();
+assertCondition(
+    $controlReason === null,
+    'El fixture de control con referencias validas se inserta sin rechazo' . ($controlReason !== null ? " — {$controlReason}" : '')
+);
+
 // Comprobacion funcional de la clave foranea: insertar un hechizo con clan inexistente debe fallar.
-$fkEnforced = false;
-try {
-    $pdo->prepare(
-        'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id, summary, status, is_genesis_sample, validated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    )->execute(['spl_fk_test', 'fk-test', 'Conjuro Fantasma', 'evocation', 10, 'cln_inexistente', 'Prueba FK', 'experimental', 0, '2026-01-01T00:00:00Z']);
-} catch (PDOException $e) {
-    // Se espera una violacion de integridad referencial: la FK funciona.
-    $fkEnforced = true;
-}
-assertCondition($fkEnforced, "La clave foranea spells.clan_id -> clans.id rechaza registros huerfanos");
+$fkReason = $attemptSpellInsert($pdo, 'spl_fk_test', 'fk-test', 'evocation', 'cln_inexistente');
+assertCondition(
+    $fkReason !== null && stripos($fkReason, 'foreign key') !== false,
+    "La clave foranea spells.clan_id -> clans.id rechaza registros huerfanos ({$fkReason})"
+);
 
 // Comprobacion funcional de la clave foranea de escuela de magia.
-$fkSchoolEnforced = false;
-try {
-    $pdo->prepare(
-        'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id, summary, status, is_genesis_sample, validated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    )->execute(['spl_fk_test2', 'fk-test-2', 'Conjuro Fantasma II', 'escuela_inexistente', 10, 'cln_primordial', 'Prueba FK escuela', 'experimental', 0, '2026-01-01T00:00:00Z']);
-} catch (PDOException $e) {
-    $fkSchoolEnforced = true;
-}
-assertCondition($fkSchoolEnforced, "La clave foranea spells.magic_school -> magic_schools.slug rechaza escuelas invalidas");
+$fkSchoolReason = $attemptSpellInsert($pdo, 'spl_fk_test2', 'fk-test-2', 'escuela_inexistente', 'cln_primordial');
+assertCondition(
+    $fkSchoolReason !== null && stripos($fkSchoolReason, 'foreign key') !== false,
+    "La clave foranea spells.magic_school -> magic_schools.slug rechaza escuelas invalidas ({$fkSchoolReason})"
+);
 
 // --- FASE 4: Los 3 Pergaminos Primordiales canonicos (RF-01.3) ---
 echo "\nFASE 4: Pergaminos Primordiales de genesis\n";
