@@ -41,6 +41,8 @@ spl_autoload_register(static function (string $className): void {
 
 use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\GrimoireController;
+use Grimorio\Controllers\ElementalMatrixController;
+use Grimorio\Services\ElementalMatrixService;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
@@ -85,6 +87,7 @@ function buildRouter(): Router
     // Simulador de Grimorio (SPEC-05): catálogo del Tomo Arcano con
     // segmentación canónica/ensayos (el modo essays exige sesión, Tarea 1.3).
     $grimoireController = new GrimoireController(new GrimoireQueryService($connection->getPdo()));
+    $elementalMatrixController = new ElementalMatrixController(new ElementalMatrixService());
 
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
@@ -99,6 +102,11 @@ function buildRouter(): Router
     // --- Rutas del Simulador de Grimorio (SPEC-05, plan Endpoints 1-2) ---
     $router->addRoute('GET', '/api/v1/grimoire/spells', fn (Request $request): Response => $grimoireController->listSpells($request));
     $router->addRoute('GET', '/api/v1/grimoire/spells/{id}', fn (Request $request, array $routeParams): Response => $grimoireController->showSpell($request, $routeParams));
+
+    // --- Rutas de la Matriz Elemental (SPEC-06, plan Endpoints 1-3) ---
+    $router->addRoute('GET', '/api/v1/elements/matrix', fn (Request $request): Response => $elementalMatrixController->getMatrix($request));
+    $router->addRoute('GET', '/api/v1/elements/reactions/{element}', fn (Request $request, array $routeParams): Response => $elementalMatrixController->getElementReactions($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/elements/resolve-combo', fn (Request $request): Response => $elementalMatrixController->resolveCombo($request));
 
     // --- Rutas del Taller de Hechizos (SPEC-04, plan Endpoints 1-3) ---
     // El cálculo es público y sin estado; el ciclo de vida de borradores
