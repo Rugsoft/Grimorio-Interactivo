@@ -41,8 +41,10 @@ spl_autoload_register(static function (string $className): void {
 
 use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\GrimoireController;
+use Grimorio\Controllers\LineageController;
 use Grimorio\Controllers\ElementalMatrixController;
 use Grimorio\Services\ElementalMatrixService;
+use Grimorio\Services\LineageSynergyService;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
@@ -89,6 +91,10 @@ function buildRouter(): Router
     $grimoireController = new GrimoireController(new GrimoireQueryService($connection->getPdo()));
     $elementalMatrixController = new ElementalMatrixController(new ElementalMatrixService());
 
+    // Salón de los Linajes (SPEC-07): el canon de los 8 Linajes es un dato
+    // en memoria del servicio (Tarea 2.2), de lectura pública y sin estado.
+    $lineageController = new LineageController(new LineageSynergyService());
+
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
@@ -98,6 +104,9 @@ function buildRouter(): Router
     $router->addRoute('GET', '/api/v1/spells/drafts', fn (Request $request): Response => $spellCreatorController->listDrafts($request));
     $router->addRoute('GET', '/api/v1/spells/{slug}', fn (Request $request, array $routeParams): Response => $spellController->show($request, $routeParams));
     $router->addRoute('GET', '/api/v1/clans/preview', fn (Request $request): Response => $clanController->preview($request));
+
+    // --- Rutas del Salón de los Linajes (SPEC-07, plan Endpoint 10) ---
+    $router->addRoute('GET', '/api/v1/lineages', fn (Request $request): Response => $lineageController->index($request));
 
     // --- Rutas del Simulador de Grimorio (SPEC-05, plan Endpoints 1-2) ---
     $router->addRoute('GET', '/api/v1/grimoire/spells', fn (Request $request): Response => $grimoireController->listSpells($request));
