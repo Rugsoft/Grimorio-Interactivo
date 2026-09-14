@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonda visual — Glifo Rúnico de Afinidad en las fichas del Tomo (SPEC-06, Tarea 4.4)</title>
+<link rel="stylesheet" href="/public/assets/css/tokens.css">
+<link rel="stylesheet" href="/public/assets/css/components/grimoire-simulator.css">
+<link rel="stylesheet" href="/public/assets/css/components/elemental-codex.css">
+<style>
+  /* Sonda interna (scratch/): Dogma Vanilla, cero frameworks. */
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--color-bg-deep, #141318);
+    color: var(--color-parchment, #f5f0e6);
+    font-family: var(--font-arcane-body, Georgia, serif);
+  }
+  h1 { font-variant: small-caps; letter-spacing: 0.06em; color: var(--color-gold-arcane); margin: 0 0 4px; }
+  p.lead { margin: 0 0 20px; color: var(--color-text-light-muted, #9e9382); font-size: 0.9rem; }
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 460px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  section {
+    background: var(--color-surface-raised, #24201c);
+    border: 1px solid var(--color-border-arcane, #3d352b);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  h2 { font-size: 1rem; color: var(--color-gold-arcane); margin: 0 0 12px; font-variant: small-caps; }
+  /* Registro de sucesos del bus. */
+  #event-log {
+    margin: 0; padding: 12px 14px; list-style: none;
+    background: var(--color-surface-sunken, #191612);
+    border: 1px solid var(--color-border-arcane, #3d352b);
+    border-radius: 8px;
+    font-size: 0.85rem; max-height: 180px; overflow-y: auto;
+  }
+  #event-log li { padding: 3px 0; border-bottom: 1px dashed #2e2820; }
+  #event-log li:last-child { border-bottom: none; }
+  .hint { font-size: 0.82rem; color: var(--color-text-light-muted, #9e9382); margin: 10px 0 0; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<h1>Glifo Rúnico de Afinidad — Tarea 4.4</h1>
+<p class="lead">Pulsa el glifo dorado junto a la afinidad de la ficha: el Tomo emite <code>grimoire:codex-focus</code> y la Rueda Rúnica real preselecciona el elemento con sus enlaces iluminados. Prueba también el foco con <kbd>Tab</kbd>.</p>
+<main>
+  <section>
+    <h2>Tomo Arcano (fichas con glifo)</h2>
+    <div id="tome-host"></div>
+    <p class="hint">El glifo «⌘» viaja con la ficha al hojear las flechas del Tomo.</p>
+  </section>
+  <section>
+    <h2>Códice de Afinidades (Rueda real)</h2>
+    <div id="wheel-host"></div>
+    <h2 style="margin-top:16px;">Registro de sucesos</h2>
+    <ul id="event-log"></ul>
+  </section>
+</main>
+<script type="module">
+  // Sonda de verificación (scratch/): consume la API real del Códice y
+  // conecta el evento canónico del glifo (RF-01.3) con la Rueda real.
+  const log = document.getElementById('event-log');
+  function record(message) {
+    const li = document.createElement('li');
+    li.textContent = message;
+    log.appendChild(li);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Catálogo real del Códice desde el endpoint autoritativo.
+  const matrixResponse = await fetch('/api/v1/elements/matrix');
+  const matrixPayload = await matrixResponse.json();
+  const graph = matrixPayload.data ?? matrixPayload;
+  record(`Códice cargado de la API: ${graph.elements.length} elementos, ${graph.reactions.length} reacciones`);
+
+  // Rueda Rúnica real montada a la derecha.
+  const { createElementalWheelComponent } = await import('/public/assets/js/components/elementalWheelComponent.js');
+  const wheelHost = document.getElementById('wheel-host');
+  const wheel = createElementalWheelComponent({
+    host: wheelHost,
+    catalog: graph,
+    eventTarget: wheelHost,
+  });
+  wheel.mount(wheelHost);
+  record('Rueda Rúnica montada');
+
+  // Tomo con dos fichas (Agua y Rayo): el par detona Electrocución Fluida.
+  const { createGrimoireBookComponent } = await import('/public/assets/js/components/grimoireBookComponent.js');
+  const spells = [
+    { id: 'w', name: 'Ola Abisal', circle: 2, elementalAffinity: 'water', manaCost: 25, castingTime: 'action', areaType: 'singleTarget', rangeType: 'ranged', durationType: 'instant', magicSchool: 'evocation', hasVerbal: true, hasSomatic: true, hasMaterial: false, incantationFormula: '¡Olas del abismo, arredrad al intruso!', description: 'Lanza una masa de agua a presión contra el blanco.', effects: { damage: 40, healing: 0, barrier: 0, crowdControlType: 'none' } },
+    { id: 'l', name: 'Flecha Fulgurante', circle: 3, elementalAffinity: 'lightning', manaCost: 35, castingTime: 'action', areaType: 'singleTarget', rangeType: 'ranged', durationType: 'instant', magicSchool: 'evocation', hasVerbal: true, hasSomatic: false, hasMaterial: false, incantationFormula: '¡Saeta del trueno, vuela recta!', description: 'Un dardo relampagueante atraviesa la distancia.', effects: { damage: 90, healing: 0, barrier: 0, crowdControlType: 'none' } },
+  ];
+  const tomeHost = document.getElementById('tome-host');
+  createGrimoireBookComponent({
+    root: tomeHost,
+    spells,
+    onPageChange: (detail) => record(`Hojeo → página ${detail.pageNumber}: ${detail.spell.name}`),
+  });
+  record('Tomo montado con 2 fichas (Agua, Rayo)');
+
+  // Cable canónico (el de la vista): el foco del glifo preselecciona el
+  // elemento en la Rueda — RF-01.3, criterio «Hecho cuando» de la 4.4.
+  tomeHost.addEventListener('grimoire:codex-focus', (event) => {
+    const { elementId, source } = event.detail;
+    wheel.highlightElement(elementId);
+    record(`⌘ grimoire:codex-focus → elementId=${elementId} (source=${source}) → Rueda preseleccionada`);
+  });
+  record('Escucha grimoire:codex-focus conectada al Códice');
+</script>
+</body>
+</html>

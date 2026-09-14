@@ -206,6 +206,13 @@ export function createElementalWheelComponent(options = {}) {
     selectedElementId = elementId;
     renderFilaments(elementId);
     renderPlate(elementId);
+    // Móvil (Tarea 3.3): la lámina vive en el acordeón — la preselección
+    // despliega además la hoja del elemento solicitado (RF-01.3, Tarea
+    // 4.4: «sus enlaces iluminados» incluyen la lámina en todo viewport).
+    if (mobileLayout && elementId !== null) {
+      openAccordionElementId = elementId;
+      renderAccordionState();
+    }
   }
 
   /** Despeja la selección, los filamentos y la lámina. */
@@ -213,6 +220,10 @@ export function createElementalWheelComponent(options = {}) {
     selectedElementId = null;
     renderFilaments(null);
     renderPlate(null);
+    if (mobileLayout) {
+      openAccordionElementId = null;
+      renderAccordionState();
+    }
   }
 
   /** Elemento con selección fija (null si ninguno). */
