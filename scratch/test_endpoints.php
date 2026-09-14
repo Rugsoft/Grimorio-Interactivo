@@ -16,6 +16,7 @@
  *   3. GET /api/v1/spells?query=<250 chars> -> 200 (truncado a 100 sin fallar, RF-03.4).
  *   4. GET /api/v1/spells/conjuro-inexistente -> 404 con SCROLL_LOST_IN_AETHER.
  *   5. GET /api/v1/clans/preview            -> 200 con linajes en modo lectura.
+ *   6. GET /api/v1/lineages                 -> 200 con los 8 Linajes Canónicos (SPEC-07).
  *
  * Extra del estándar de la API (AGENTS.md 6.1 / plan 3): 400 ante parámetros basura.
  *
@@ -97,13 +98,19 @@ $seedPdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql')
 $seedPdo->exec((string) file_get_contents($projectRoot . '/database/seeds.sql'));
 
 // Hechizo de usuario con 'frieren' en el nombre para el escenario 2 (plan 7.1.2).
+// Se declaran las columnas obligatorias del plano que el cargador de semillas
+// también provee: author_id y updated_at (NOT NULL sin DEFAULT) y la huella
+// matemática de 64 caracteres que exige su CHECK.
 $seedPdo->prepare(
-    'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id, summary, status, is_genesis_sample, created_at, validated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    'INSERT INTO spells (id, slug, name, author_id, magic_school, mana_cost,
+                         math_fingerprint, clan_id, summary, status,
+                         is_genesis_sample, created_at, updated_at, validated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
 )->execute([
-    'spl_user_frieren', 'llamas-de-frieren', 'Llamas de Frieren', 'evocation', 45,
+    'spl_user_frieren', 'llamas-de-frieren', 'Llamas de Frieren',
+    'usr_custodio_primordial', 'evocation', 45, str_repeat('f', 64),
     'cln_primordial', 'Ráfaga continua de fuego purificador del bosque eterno.',
-    'validated', 0, '2026-09-01T00:00:00Z', '2026-09-10T14:30:00Z',
+    'validated', 0, '2026-09-01T00:00:00Z', '2026-09-01T00:00:00Z', '2026-09-10T14:30:00Z',
 ]);
 
 $seededSpells = (int) $seedPdo->query('SELECT COUNT(*) FROM spells')->fetchColumn();
@@ -192,6 +199,21 @@ assertCondition(
     && count($clansPayload['data'] ?? []) >= 1
     && isset($clansPayload['data'][0]['domainPoints']),
     'La lista de linajes llega con domainPoints en camelCase'
+);
+
+// 7.1.6 — Salón de los Linajes: canon canónico servido por HTTP real (SPEC-07, Tarea 3.1).
+[$lineagesStatus, $lineagesPayload] = httpGetJson($serverBaseUrl . '/api/v1/lineages');
+assertCondition($lineagesStatus === 200, 'GET /lineages -> 200 OK (lectura pública del canon)');
+assertCondition(
+    count($lineagesPayload['data'] ?? []) === 8,
+    'El canon comprende exactamente 8 Linajes Mágicos Canónicos (RF-02.1)'
+);
+assertCondition(
+    array_column($lineagesPayload['data'] ?? [], 'id') === [
+        'primordialFlame', 'celestialTides', 'eternalTempest', 'worldRoots',
+        'dawnWinds', 'solarCrown', 'abyssalShadows', 'aetherWeavers',
+    ],
+    'Las 8 claves canónicas viajan en inglés camelCase y en el orden del canon'
 );
 
 // Extra del estándar: 400 ante parámetros inválidos (AGENTS.md 6.1).

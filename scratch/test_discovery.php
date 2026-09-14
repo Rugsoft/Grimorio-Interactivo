@@ -75,20 +75,28 @@ function prepareTestDatabase(): PDO
  */
 function insertUserSpell(PDO $pdo, string $slug, string $school, int $manaCost, string $validatedAt): void
 {
+    // El plano exige tres columnas que el cargador de semillas tampoco omite:
+    // author_id y updated_at (NOT NULL sin DEFAULT) y math_fingerprint, cuyo
+    // DEFAULT '' no satisface su propio CHECK (length = 64). El autor es el
+    // Maestro Custodio de la casa primordial, coherente con el clan_id.
     $pdo->prepare(
-        'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id,
-                             summary, status, is_genesis_sample, created_at, validated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO spells (id, slug, name, author_id, magic_school, mana_cost,
+                             math_fingerprint, clan_id, summary, status,
+                             is_genesis_sample, created_at, updated_at, validated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )->execute([
         'spl_' . md5($slug),
         $slug,
         'Conjuro de prueba ' . $slug,
+        'usr_custodio_primordial',
         $school,
         $manaCost,
+        str_repeat('f', 64),
         'cln_primordial',
         'Resumen arcano de ' . $slug,
         'validated',
         0,
+        $validatedAt,
         $validatedAt,
         $validatedAt,
     ]);
@@ -281,10 +289,14 @@ assertCondition($noExperimental, "El catálogo base no incluye hechizos experime
 
 // Al incluirlos explícitamente, aparecen. El slug 'boceto-prohibido' ya
 // vive en seeds.sql (RF-03.2): se siembra otro slug para esta fase.
+// Mismas columnas obligatorias del plano: autor, huella matemática de 64
+// caracteres y marca de actualización, además de la de creación.
 $pdoFresh->prepare(
-    'INSERT INTO spells (id, slug, name, magic_school, mana_cost, clan_id, summary, status, is_genesis_sample, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-)->execute(['spl_exp_1', 'runa-erratica', 'Runa Errática', 'necromancy', 60, 'cln_primordial', 'Hechizo experimental', 'experimental', 0, '2026-09-11T00:00:00Z']);
+    'INSERT INTO spells (id, slug, name, author_id, magic_school, mana_cost,
+                         math_fingerprint, clan_id, summary, status,
+                         is_genesis_sample, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+)->execute(['spl_exp_1', 'runa-erratica', 'Runa Errática', 'usr_custodio_primordial', 'necromancy', 60, str_repeat('0', 64), 'cln_primordial', 'Hechizo experimental', 'experimental', 0, '2026-09-11T00:00:00Z', '2026-09-11T00:00:00Z']);
 
 $experimentalCatalog = $serviceFresh->getSpells(includeExperimental: true);
 $hasExperimental = count(array_filter($experimentalCatalog['items'], fn (Spell $s) => $s->getStatus() === 'experimental')) > 0;
