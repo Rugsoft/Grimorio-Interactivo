@@ -19,17 +19,171 @@
 -- =====================================================================
 
 -- ---------------------------------------------------------------------
--- Tabla: clans — Linajes mágicos que compiten por el Dominio semanal
--- (Artículo III de la Constitución; RF-02.2, Salón de Linajes)
+-- Tabla: clans — Hermandades del santuario: identidad heráldica, gobierno
+-- y gloria del Dominio Semanal (Artículo III; SPEC-01 y SPEC-07)
+--
+-- Conserva la forma fundacional de SPEC-01 (id, slug, name, motto,
+-- created_at) y le suma las columnas del Sistema de Clanes, Linajes y
+-- Dominio Semanal [RF-01.2, RF-01.3, RF-01.5, RF-01.9, RF-02.1, RF-05.3]:
+--   * coat_of_arms      → blasón rúnico/icono SVG del estandarte.
+--   * lineage_type      → uno de los 8 Linajes Canónicos (RF-02.1).
+--   * admission_mode    → 'open' | 'byApplication' (RF-01.5).
+--   * status            → 'active' | 'archived' (Herencia Ancestral, RF-05.3).
+--   * patriarch_id      → Patriarca/Matriarca en funciones (RF-01.3);
+--                         ANULABLE: una casa puede quedar acéfala y disolverse
+--                         hacia `archived` sin Patriarca vivo (RF-05.3).
+--   * weekly_points     → PDA de la semana en curso (RF-03, RF-04.3).
+--   * historical_points → acumulado perpetuo de todos los tiempos.
+--   * last_activity_at  → última actividad del Patriarca (RF-01.9).
+--   * updated_at        → marca de la última modificación.
+--
+-- UN SOLO CONTADOR DE GLORIA (Tarea 2.6, TASKS-07): la columna
+-- `domain_points` de SPEC-01 quedó RETIRADA del plano. Medía exactamente lo
+-- mismo que `weekly_points` —el catálogo público rotulaba su valor como
+-- «Dominio semanal»— y carecía de escritor alguno, de modo que era un tercer
+-- contador condenado a divergir en silencio. Quedan, por tanto, DOS
+-- contadores canónicos y uno por concepto: `weekly_points` (la contienda en
+-- curso) y `historical_points` (la gloria perpetua). El contrato público
+-- conserva su clave `domainPoints`, ahora servida desde `weekly_points`.
+-- `slug` (enlace público único) sí se preserva: es carga estructural de los
+-- enlaces directos del catálogo.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clans (
-    id          TEXT PRIMARY KEY,                         -- Identificador textual (ej. 'cln_primordial')
-    slug        TEXT NOT NULL UNIQUE,                     -- Enlace público del linaje
-    name        TEXT NOT NULL,                            -- Nombre en castellano visible al usuario
-    motto       TEXT NOT NULL DEFAULT '',                 -- Lema temático del linaje
-    domain_points INTEGER NOT NULL DEFAULT 0,             -- Puntos de Dominio del Grimorio (SPEC-07)
-    created_at  TEXT NOT NULL                             -- Fecha de fundación (ISO 8601 UTC)
+    id                TEXT PRIMARY KEY,                   -- Identificador textual (ej. 'cln_primordial')
+    slug              TEXT NOT NULL UNIQUE,               -- Enlace público del linaje
+    name              TEXT NOT NULL,                      -- Nombre Canónico Único (RF-01.2, RF-05.4)
+    motto             TEXT NOT NULL DEFAULT '',            -- Lema heráldico en castellano
+    created_at        TEXT NOT NULL,                      -- Fundación (ISO 8601 UTC)
+    coat_of_arms      TEXT NOT NULL DEFAULT '',            -- Blasón rúnico identificador
+    lineage_type      TEXT NOT NULL DEFAULT 'primordialFlame'
+                      CHECK (lineage_type IN (
+                          'primordialFlame', 'celestialTides', 'eternalTempest', 'worldRoots',
+                          'dawnWinds', 'solarCrown', 'abyssalShadows', 'aetherWeavers'
+                      )),                                  -- Linaje rector (RF-02.1)
+    admission_mode    TEXT NOT NULL DEFAULT 'open'
+                      CHECK (admission_mode IN ('open', 'byApplication')),  -- Régimen (RF-01.5)
+    status            TEXT NOT NULL DEFAULT 'active'
+                      CHECK (status IN ('active', 'archived')),  -- Herencia Ancestral (RF-05.3)
+    patriarch_id      TEXT REFERENCES users (id) ON UPDATE CASCADE,  -- Corona (RF-01.3)
+    weekly_points     INTEGER NOT NULL DEFAULT 0,          -- PDA de la semana (RF-03)
+    historical_points INTEGER NOT NULL DEFAULT 0,          -- Gloria perpetua (RF-04.3)
+    last_activity_at  TEXT NOT NULL DEFAULT '',            -- Actividad del Patriarca (RF-01.9)
+    updated_at        TEXT NOT NULL DEFAULT ''             -- Última modificación
 );
+
+-- ---------------------------------------------------------------------
+-- Tabla: clan_members — Membresías, roles y Convalecencia Arcana
+-- [RF-01.1, RF-01.3, RF-01.4, RF-01.6, RF-01.8, RF-01.9]
+--
+-- AUTORIDAD ÚNICA de la afiliación de un mago. `left_at` NULL señala la
+-- afiliación ACTIVA; `convalescence_expires_at` fija el fin de los 14 días
+-- naturales de meditación (RF-01.6). El índice único parcial
+-- `idx_active_member` garantiza la pertenencia única simultánea (RF-01.1) y
+-- las filas cerradas constituyen el historial que sostiene el veto de 30
+-- días a los Maestros (RF-01.8, Artículo III). Jamás se borra una fila.
+-- `users.clan_id` es solo su espejo denormalizado.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clan_members (
+    id                       TEXT PRIMARY KEY,                       -- UUID v4 (ej. 'clm_01928a3b')
+    clan_id                  TEXT NOT NULL,                          -- Clan de vinculación
+    user_id                  TEXT NOT NULL,                          -- Usuario adepto
+    role                     TEXT NOT NULL DEFAULT 'adept'
+                             CHECK (role IN ('patriarch', 'adept')), -- Rol canónico (RF-01.3)
+    joined_at                TEXT NOT NULL,                          -- Ingreso formal (ISO 8601 UTC)
+    left_at                  TEXT,                                   -- Partida o expulsión (NULL = activo)
+    convalescence_expires_at TEXT,                                   -- Fin de los 14 días (RF-01.6)
+    FOREIGN KEY (clan_id) REFERENCES clans (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- ---------------------------------------------------------------------
+-- Tabla: clan_applications — Solicitudes de ingreso [RF-01.5]
+--
+-- El régimen `byApplication` exige deliberación del Patriarca; un mismo
+-- usuario no puede acumular más de 3 solicitudes `pending` (el tope lo
+-- refuerza ClanApplicationRepository).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS clan_applications (
+    id          TEXT PRIMARY KEY,                                    -- UUID v4
+    clan_id     TEXT NOT NULL,                                       -- Clan al que se postula
+    user_id     TEXT NOT NULL,                                       -- Usuario postulante
+    status      TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+    created_at  TEXT NOT NULL,                                       -- Emisión (ISO 8601 UTC)
+    resolved_at TEXT,                                                -- Veredicto (NULL = en deliberación)
+    FOREIGN KEY (clan_id) REFERENCES clans (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- ---------------------------------------------------------------------
+-- Tabla: weekly_cycles — Registro histórico de ciclos y campeones
+-- [RF-04.1, RF-04.2, RF-04.4, RF-06.1]
+--
+-- Cada fila es una semana concluida (corte dominical a las 23:59:59 UTC) y
+-- alimenta el Libro Mayor de Campeones del Salón de los Linajes.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS weekly_cycles (
+    id                 TEXT PRIMARY KEY,                             -- UUID v4
+    week_number        INTEGER NOT NULL,                             -- Número ISO de semana (1 a 53)
+    cycle_year         INTEGER NOT NULL,                             -- Año del ciclo (ej. 2026)
+    regent_clan_id     TEXT NOT NULL,                                -- Clan proclamado soberano
+    winning_points     INTEGER NOT NULL,                             -- PDA de la coronación
+    winner_spell_count INTEGER NOT NULL,                             -- Conjuros validados de la semana
+    closed_at          TEXT NOT NULL,                                -- Corte dominical (ISO 8601 UTC)
+    FOREIGN KEY (regent_clan_id) REFERENCES clans (id) ON UPDATE CASCADE
+);
+
+-- ---------------------------------------------------------------------
+-- Tabla: daily_simulator_tracker — Techo diario de 50 PDA [RF-03.2, RNF-02]
+--
+-- Acumulador diario por adepto y clan; se reinicia a las 00:00:00 UTC porque
+-- `cycle_date` es la fecha UTC del día en curso.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS daily_simulator_tracker (
+    id             TEXT PRIMARY KEY,                                 -- UUID v4
+    user_id        TEXT NOT NULL,                                    -- Adepto que practicó
+    clan_id        TEXT NOT NULL,                                    -- Clan beneficiario
+    cycle_date     TEXT NOT NULL,                                    -- Fecha UTC (YYYY-MM-DD)
+    points_awarded INTEGER NOT NULL DEFAULT 0,                       -- Acumulado del día (tope 50)
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (clan_id) REFERENCES clans (id) ON DELETE CASCADE,
+    UNIQUE (user_id, clan_id, cycle_date)
+);
+
+-- Índices del Sistema de Clanes y Dominio Semanal (SPEC-07).
+--
+-- `idx_active_member` es la GARANTÍA ESTRUCTURAL de RF-01.1: pertenencia
+-- única simultánea (la unicidad ignora las filas con `left_at` cerrado, que
+-- son precisamente el historial del Artículo III).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_active_member
+    ON clan_members (user_id) WHERE left_at IS NULL;
+
+-- RF-05.4: el Nombre Canónico queda reservado a perpetuidad, incluso para
+-- clanes disueltos; por eso la unicidad abarca TODAS las filas.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_clans_name_reserved
+    ON clans (name);
+
+-- Rankings del Salón de los Linajes (RF-06.1): semanal e histórico.
+CREATE INDEX IF NOT EXISTS idx_clans_leaderboard
+    ON clans (status, weekly_points DESC);
+CREATE INDEX IF NOT EXISTS idx_clans_historical
+    ON clans (status, historical_points DESC);
+
+-- Tope de 3 solicitudes pendientes por usuario (RF-01.5).
+CREATE INDEX IF NOT EXISTS idx_applications_user
+    ON clan_applications (user_id, status);
+
+-- Veto ético de 30 días a los Maestros (RF-01.8, Artículo III).
+CREATE INDEX IF NOT EXISTS idx_member_history_ethics
+    ON clan_members (user_id, clan_id, left_at);
+
+-- Acumulado diario del simulador (RF-03.2) y crónica del Libro Mayor (RF-06.1).
+CREATE INDEX IF NOT EXISTS idx_daily_tracker_lookup
+    ON daily_simulator_tracker (user_id, cycle_date);
+CREATE INDEX IF NOT EXISTS idx_weekly_cycles_chronicle
+    ON weekly_cycles (cycle_year DESC, week_number DESC);
+CREATE INDEX IF NOT EXISTS idx_weekly_cycles_regent
+    ON weekly_cycles (regent_clan_id);
 
 -- ---------------------------------------------------------------------
 -- Tabla: magic_schools — Catálogo canónico de Escuelas de Magia
@@ -172,7 +326,13 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,                             -- Frase de paso hasheada (BCRYPT coste 12)
     role          TEXT NOT NULL DEFAULT 'editor'
                   CHECK (role IN ('reader', 'editor', 'master', 'supremeAdmin')),  -- Jerarquía sagrada (RF-05.1)
-    clan_id       TEXT NOT NULL REFERENCES clans (id),       -- FK: linaje de afiliación obligatorio (RF-01.1)
+    -- ANULABLE a propósito: un mago consagrado puede no pertenecer a ningún
+    -- linaje (RF-01.2 exige fundar uno sin pertenecer a otro). La AUTORIDAD
+    -- de la afiliación es `clan_members` (SPEC-07); esta columna es un
+    -- ESPEJO denormalizado de la membresía ACTIVA, mantenido en exclusiva
+    -- por ClanMemberRepository y reconciliado por la migración
+    -- sql/07_membership_single_source.sql. NULL = sin linaje.
+    clan_id       TEXT REFERENCES clans (id),
     recovery_token_hash         TEXT NOT NULL DEFAULT '',    -- SHA-256 del pergamino activo ('' = sin pergamino, RF-04.1)
     recovery_token_expires_at   TEXT,                        -- Vigencia de 60 minutos del pergamino (RF-04.1)
     created_at    TEXT NOT NULL,                             -- Alta del iniciado (ISO 8601 UTC)
@@ -228,13 +388,18 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 CREATE INDEX IF NOT EXISTS idx_ip_attempt ON login_attempts (ip_address, attempted_at);
 
 -- ---------------------------------------------------------------------
--- Tabla: clan_history — Historial de linajes del iniciado [RF-06, RF-07]
+-- Tabla: clan_history — LEGADO, superada por `clan_members` [RF-06, RF-07]
 --
--- Incompatibilidad histórica de 30 días (RF-06.1, Artículo III): un
--- Maestro no juzga conjuros de linajes que habitó en el último mes.
--- left_at NULL indica el clan actualmente activo. El índice
--- (user_id, left_at) sostiene la consulta histórica del conflicto.
--- id autoincremental: en MySQL usar AUTO_INCREMENT (ver nota arriba).
+-- RETIRADA DEL CAMINO CRÍTICO. Ninguna clase de src/ escribe ni lee ya en
+-- esta tabla: la afiliación y su historia viven en `clan_members` (SPEC-07),
+-- que el ClanMemberRepository materializa y jamás borra. Se conserva
+-- únicamente porque los arneses de SPEC-01/03 la siembran y para no romper
+-- bases ya construidas; la migración sql/07_membership_single_source.sql
+-- importa su contenido hacia `clan_members`.
+--
+-- Incompatibilidad histórica de 30 días (RF-06.1, Artículo III): un Maestro
+-- no juzga conjuros de linajes que habitó en el último mes. left_at NULL
+-- indicaba el clan activo. id autoincremental: en MySQL usar AUTO_INCREMENT.
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clan_history (
     id        INTEGER PRIMARY KEY,                           -- Rowid autoincremental (SQLite)
@@ -298,3 +463,60 @@ BEFORE DELETE ON audit_log
 BEGIN
     SELECT RAISE(ABORT, 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se borran.');
 END;
+
+-- ---------------------------------------------------------------------
+-- Libro de Gloria del Dominio Semanal (SPEC-07, Tarea 2.5)
+--
+-- Se declara al final del plano porque sus claves foráneas apuntan a `users`
+-- y a `spells`, ambas ya creadas: así la sentencia sigue siendo válida en
+-- MySQL/MariaDB, que exige que la tabla referenciada exista antes.
+-- ---------------------------------------------------------------------
+
+-- Libreta de Favoritos del santuario [RF-03.3, RNF-02].
+--
+-- La UNICIDAD (user_id, spell_id) es la garantía ESTRUCTURAL de RNF-02: una
+-- misma cuenta jamás podrá registrar más de un voto computable sobre el
+-- mismo conjuro, por más que pulse el elogio repetidamente o desde varias
+-- pestañas. El linaje beneficiario NO se duplica aquí: se deriva del
+-- `spells.clan_id` del conjuro, que es patrimonio inviolable de su clan
+-- (RF-05.1) y por tanto el único destino legítimo de los cinco PDA.
+CREATE TABLE IF NOT EXISTS favorites (
+    id         TEXT PRIMARY KEY,                         -- UUID v4
+    user_id    TEXT NOT NULL,                            -- Mago que elogia (autor del voto)
+    spell_id   TEXT NOT NULL,                            -- Conjuro sellado elogiado
+    created_at TEXT NOT NULL,                            -- Instante del elogio (ISO 8601 UTC)
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (spell_id) REFERENCES spells (id) ON DELETE CASCADE,
+    UNIQUE (user_id, spell_id)                           -- Un solo voto computable (RNF-02)
+);
+
+-- Libro de acreditaciones de PDA que no tienen otro registro [RF-03.1, RF-03.3].
+--
+-- Cada validación de conjuro y cada elogio comunitario se asienta UNA sola
+-- vez: la unicidad (action_type, source_id) es la garantía estructural de que
+-- una gloria jamás se cobra dos veces (RNF-01), con `source_id` = el conjuro
+-- validado o la fila de favorito que la motivó.
+--
+-- La práctica del simulador NO se asienta aquí: su acumulador canónico con el
+-- techo diario de 50 PDA es `daily_simulator_tracker` (plan 2.1), y duplicarlo
+-- contaría dos veces la misma gloria.
+CREATE TABLE IF NOT EXISTS dominion_awards (
+    id             TEXT PRIMARY KEY,                     -- UUID v4
+    clan_id        TEXT NOT NULL,                        -- Linaje acreditado (patrimonio del conjuro)
+    user_id        TEXT NOT NULL,                        -- Adepto cuyo mérito acreditó la gloria
+    action_type    TEXT NOT NULL
+                   CHECK (action_type IN ('spellValidated', 'communityFavorite')),
+    base_points    INTEGER NOT NULL DEFAULT 0 CHECK (base_points >= 0),    -- Valor base de la acción
+    awarded_points INTEGER NOT NULL DEFAULT 0 CHECK (awarded_points > 0),  -- Gloria realmente acreditada
+    has_synergy    INTEGER NOT NULL DEFAULT 0 CHECK (has_synergy IN (0, 1)), -- Bonificación de linaje (RF-03.4)
+    source_id      TEXT NOT NULL,                        -- Conjuro validado o favorito que la motiva
+    awarded_at     TEXT NOT NULL,                        -- Marca temporal UTC (ISO 8601)
+    FOREIGN KEY (clan_id) REFERENCES clans (id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    UNIQUE (action_type, source_id)                      -- Cada mérito paga exactamente una vez
+);
+
+-- Elogios por conjuro (RF-03.3) y libro de gloria por adepto (RF-01.9).
+CREATE INDEX IF NOT EXISTS idx_favorites_spell ON favorites (spell_id);
+CREATE INDEX IF NOT EXISTS idx_dominion_awards_clan ON dominion_awards (clan_id, awarded_at);
+CREATE INDEX IF NOT EXISTS idx_dominion_awards_member ON dominion_awards (user_id, clan_id);
