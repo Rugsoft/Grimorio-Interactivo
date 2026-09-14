@@ -91,12 +91,16 @@ final class AuthController
         $alias      = isset($payload['alias']) ? (string) $payload['alias'] : '';
         $email      = isset($payload['email']) ? (string) $payload['email'] : '';
         $passphrase = isset($payload['passphrase']) ? (string) $payload['passphrase'] : '';
-        $clanId     = isset($payload['clanId']) ? (string) $payload['clanId'] : '';
+        // El linaje electo es OPCIONAL (RF-01.2): un mago puede consagrarse sin
+        // hermandad y fundar la suya más adelante.
+        $clanId = isset($payload['clanId']) && trim((string) $payload['clanId']) !== ''
+            ? (string) $payload['clanId']
+            : null;
 
-        if ($alias === '' || $email === '' || $passphrase === '' || $clanId === '') {
+        if ($alias === '' || $email === '' || $passphrase === '') {
             return $this->forgeBadRequest(
                 'INVALID_REGISTRATION_DATA',
-                'La consagración exige alias, correo, frase de paso y linaje electo.'
+                'La consagración exige alias, correo y frase de paso (el linaje es potestativo).'
             );
         }
 
@@ -116,7 +120,8 @@ final class AuthController
             ], 409);
         }
 
-        // El contrato del plan (Endpoint 1) exige clanId y clanName.
+        // El contrato del plan (Endpoint 1) declara clanId y clanName; ambos
+        // viajan nulos para quien nace sin linaje.
         $clanName = $this->resolveClanName($clanId);
 
         // La consagración próspera vincula sesión automáticamente (RF-01.2).
@@ -220,7 +225,9 @@ final class AuthController
                     'alias'    => $userRow['alias'],
                     'role'     => $userRow['role'],
                     'clanId'   => $userRow['clan_id'],
-                    'clanName' => $this->resolveClanName((string) $userRow['clan_id']),
+                    'clanName' => $this->resolveClanName(
+                        $userRow['clan_id'] === null ? null : (string) $userRow['clan_id']
+                    ),
                 ],
             ],
         ], 200);
@@ -544,8 +551,14 @@ final class AuthController
     /**
      * Nombre solemne del linaje para los contratos data.user (plan 2.2).
      */
-    private function resolveClanName(string $clanId): string
+    private function resolveClanName(?string $clanId): string
     {
+        // Un mago sin hermandad (RF-01.2) no tiene nombre de linaje que
+        // resolver: el contrato emite `clanId: null` y cadena vacía aquí.
+        if ($clanId === null || trim($clanId) === '') {
+            return '';
+        }
+
         $statement = $this->pdo->prepare('SELECT name FROM clans WHERE id = :clanId');
         $statement->execute([':clanId' => $clanId]);
         $clanName = $statement->fetchColumn();

@@ -52,7 +52,7 @@ final class User implements JsonSerializable
         private readonly string $alias,
         private readonly string $email,
         private readonly string $role,
-        private readonly string $clanId,
+        private readonly ?string $clanId,
         private readonly string $passwordHash,
         private readonly string $createdAt,
         private readonly string $updatedAt,
@@ -90,8 +90,15 @@ final class User implements JsonSerializable
         return $this->role;
     }
 
-    /** Identificador del linaje de afiliación actual. */
-    public function getClanId(): string
+    /**
+     * Identificador del linaje de afiliación actual.
+     *
+     * Devuelve `null` cuando el iniciado no pertenece a ninguna hermandad:
+     * es el estado canónico de quien aún no ha fundado un clan ni ha sido
+     * admitido en uno (RF-01.2). La autoridad de la afiliación es
+     * `clan_members`; este valor es su espejo denormalizado.
+     */
+    public function getClanId(): ?string
     {
         return $this->clanId;
     }
@@ -168,7 +175,9 @@ final class User implements JsonSerializable
             alias: (string) ($databaseRow['alias'] ?? ''),
             email: (string) ($databaseRow['email'] ?? ''),
             role: (string) ($databaseRow['role'] ?? ''),
-            clanId: (string) ($databaseRow['clan_id'] ?? ''),
+            clanId: isset($databaseRow['clan_id']) && $databaseRow['clan_id'] !== null && (string) $databaseRow['clan_id'] !== ''
+                ? (string) $databaseRow['clan_id']
+                : null,
             passwordHash: (string) ($databaseRow['password_hash'] ?? ''),
             createdAt: (string) ($databaseRow['created_at'] ?? ''),
             updatedAt: (string) ($databaseRow['updated_at'] ?? ''),

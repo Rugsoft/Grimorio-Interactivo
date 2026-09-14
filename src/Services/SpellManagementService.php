@@ -75,6 +75,11 @@ final class SpellManagementService
      */
     public function createDraft(User $author, SpellCreateDto $createDto): array
     {
+        // Todo conjuro nace bajo un estandarte (RF-05.1): sin hermandad no
+        // hay linaje al que atribuir el patrimonio, así que se rechaza antes
+        // de tocar la base en vez de provocar una violación del esquema.
+        $this->assertForgerBelongsToClan($author);
+
         // Cuota dura de borradores (RF-05.1, plan Decisión 3): el 11.º
         // intento se rechaza ANTES de cualquier escritura.
         $quotaStatement = $this->pdo->prepare(
@@ -299,6 +304,28 @@ final class SpellManagementService
      *
      * @throws SpellImmutableException Si la ficha del titular está validada.
      */
+    /**
+     * Exige que el forjador pertenezca a una hermandad antes de inscribir
+     * cualquier conjuro (RF-05.1).
+     *
+     * La afiliación se resuelve contra su espejo `users.clan_id`, mantenido
+     * por ClanMemberRepository; sin linaje no existe estandarte al que
+     * atribuir el patrimonio, de modo que se rechaza aquí —con una leyenda
+     * solemne— en lugar de dejar que el esquema responda con una violación
+     * NOT NULL convertida en error del servidor.
+     *
+     * @throws RuntimeException Si el forjador no milita en ningún clan.
+     */
+    private function assertForgerBelongsToClan(User $author): void
+    {
+        $clanId = $author->getClanId();
+        if ($clanId === null || trim($clanId) === '') {
+            throw new RuntimeException(
+                'Ningún conjuro puede forjarse sin estandarte: el mago ha de pertenecer a una hermandad del santuario.'
+            );
+        }
+    }
+
     private function rejectIfValidated(User $author, string $spellId): void
     {
         $validatedStatement = $this->pdo->prepare(
@@ -330,6 +357,10 @@ final class SpellManagementService
      */
     public function createVariant(User $invoker, string $spellId): array
     {
+        // La variante hereda el linaje del invocador (RF-05.1): sin
+        // hermandad no hay estandarte bajo el que inscribirla.
+        $this->assertForgerBelongsToClan($invoker);
+
         // Identidad del origen legítimo (se preserva para la bitácora:
         // el parámetro $spellId se reutiliza como id de la nueva variante).
         $validatedSourceId = $spellId;

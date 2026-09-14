@@ -43,6 +43,7 @@ require __DIR__ . '/../src/Services/AuditService.php';
 require __DIR__ . '/../src/Services/BindResult.php';
 require __DIR__ . '/../src/Services/ConsecrationResult.php';
 require __DIR__ . '/../src/Services/RecoveryResult.php';
+require __DIR__ . '/../src/Repositories/ClanMemberRepository.php';
 require __DIR__ . '/../src/Services/AuthService.php';
 require __DIR__ . '/../src/Controllers/AuthController.php';
 
@@ -110,8 +111,8 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-12T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at) VALUES
-     ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at) VALUES
+     ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}')"
 );
 
 // Cableado de producción idéntico al E2E (test_auth_rbac.php).

@@ -98,9 +98,9 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-12T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at) VALUES
-     ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}'),
-     ('cln_ember', 'ember-wardens', 'Guardianes de Ascuas', 'Fuego', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at) VALUES
+     ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}'),
+     ('cln_ember', 'ember-wardens', 'Guardianes de Ascuas', 'Fuego', '{$now}')"
 );
 
 // Cableado de producción: los mismos servicios que montará el front controller.
@@ -135,7 +135,9 @@ $emberBind = new AuthService($pdo, new SessionManager($pdo, '127.0.0.1', 'Arnés
 $emberBind->consecrate('EisenElHachazo', 'eisen@sanctuario.arc', 'hacha-arcana-larga-123', 'cln_ember');
 
 // El Maestro de las pruebas de conflicto necesita fila real en BD:
-// clan_history (Prueba 4) porta FK user_id → users.
+// clan_members (Prueba 4) porta FK user_id → users. Su afiliación se
+// inscribe además en la AUTORIDAD (clan_members, Tarea 2.3 de TASKS-07):
+// milita hoy en `cln_astral`, y habitó `cln_ember` hasta hace 10 días.
 $pdo->prepare(
     'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
      VALUES (:id, :alias, :email, :passwordHash, :role, :clanId, :createdAt, :updatedAt)'
@@ -149,6 +151,12 @@ $pdo->prepare(
     ':createdAt'    => $now,
     ':updatedAt'    => $now,
 ]);
+
+$pdo->exec(
+    "INSERT INTO clan_members (id, clan_id, user_id, role, joined_at, left_at, convalescence_expires_at) VALUES
+     ('clm_rbac_astral', 'cln_astral', 'usr_master_heiter', 'adept', '2025-03-01T00:00:00Z', NULL, NULL),
+     ('clm_rbac_ember',  'cln_ember',  'usr_master_heiter', 'adept', '2026-01-01T00:00:00Z', '2026-09-02T00:00:00Z', NULL)"
+);
 
 // =====================================================================
 // PRUEBA 2 (plan 5.1): Login con cookie segura vía HTTP real.
@@ -177,7 +185,7 @@ $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec(file_get_contents(__DIR__ . '/../database/schema.sql'));
 $now = '2026-09-12T12:00:00Z';
-$pdo->exec("INSERT INTO clans (id, slug, name, motto, domain_points, created_at) VALUES ('c1','s','N','M',0,'{$now}')");
+$pdo->exec("INSERT INTO clans (id, slug, name, motto, created_at) VALUES ('c1','s','N','M','{$now}')");
 $pdo->exec("INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at) VALUES ('u1','a','a@b.c','" . str_repeat('x', 60) . "','editor','c1','{$now}','{$now}')");
 $sm = new SessionManager($pdo, '127.0.0.1', 'probe/1.0');
 $sm->createSession('u1');
@@ -289,10 +297,9 @@ assertArcane(
 );
 
 // 4b. Historial: abandonó cln_ember hace 10 días → vetado; hace 45 → libre.
-$recentLeft = '2026-09-02T00:00:00Z'; // 10 días antes de la marca base.
-$pdo->prepare('INSERT INTO clan_history (user_id, clan_id, joined_at, left_at) VALUES (:userId, :clanId, :joinedAt, :leftAt)')
-    ->execute([':userId' => 'usr_master_heiter', ':clanId' => 'cln_ember', ':joinedAt' => '2026-01-01T00:00:00Z', ':leftAt' => $recentLeft]);
-
+// La autoridad del historial es `clan_members` (Tarea 2.3, TASKS-07); la
+// tabla `clan_history` quedó retirada del camino crítico porque ninguna
+// clase de src/ escribía en ella.
 $recentVerdict = $conflictService->canMasterSignSpell(
     $masterAstral,
     authorId: 'usr_ember_author',
@@ -300,12 +307,12 @@ $recentVerdict = $conflictService->canMasterSignSpell(
     now: new DateTimeImmutable('2026-09-12T12:00:00Z'),
 );
 assertArcane(
-    !$recentVerdict->isAllowed && str_contains($recentVerdict->reason, '30 días'),
+    !$recentVerdict->isAllowed && str_contains($recentVerdict->reason, 'treinta días'),
     'Un linaje abandonado hace 10 días está vetado por la ventana de 30 días'
 );
 
 // Reescritura del historial: salida hace 45 días (fuera de la ventana).
-$pdo->prepare('UPDATE clan_history SET left_at = :leftAt WHERE user_id = :userId AND clan_id = :clanId')
+$pdo->prepare('UPDATE clan_members SET left_at = :leftAt WHERE user_id = :userId AND clan_id = :clanId')
     ->execute([':leftAt' => '2026-07-29T00:00:00Z', ':userId' => 'usr_master_heiter', ':clanId' => 'cln_ember']);
 
 $ancientVerdict = $conflictService->canMasterSignSpell(

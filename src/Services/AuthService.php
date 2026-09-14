@@ -31,6 +31,7 @@ namespace Grimorio\Services;
 use DateTimeImmutable;
 use Grimorio\Core\ActiveSession;
 use Grimorio\Core\SessionManager;
+use Grimorio\Repositories\ClanMemberRepository;
 use InvalidArgumentException;
 use PDO;
 use RuntimeException;
@@ -77,12 +78,19 @@ final class AuthService
     /**
      * Consagra un nuevo iniciado (RF-01.1, RF-01.2): valida los datos,
      * comprueba la anti-enumeración (alias/correo ya reclamados responden
-     * neutro), crea la cuenta con rol editor y vincula el clan.
+     * neutro), crea la cuenta con rol editor y, si se solicita, lo vincula
+     * a un linaje.
+     *
+     * El linaje es OPCIONAL desde la reconciliación de la afiliación
+     * (Tarea 2.3, TASKS-07): un mago puede nacer sin hermandad, que es el
+     * estado imprescindible para fundar la suya propia (RF-01.2). Cuando se
+     * elige uno, la afiliación se inscribe en `clan_members` —la única
+     * autoridad—, que a su vez refleja el vínculo en `users.clan_id`.
      *
      * @throws InvalidArgumentException Si algún dato viola el canon.
-     * @throws RuntimeException Si la identidad ya está reclamada (409 neutro).
+     * @throws RuntimeException         Si la identidad ya está reclamada (409 neutro).
      */
-    public function consecrate(string $alias, string $email, string $passphrase, string $clanId, ?DateTimeImmutable $now = null): ConsecrationResult
+    public function consecrate(string $alias, string $email, string $passphrase, ?string $clanId = null, ?DateTimeImmutable $now = null): ConsecrationResult
     {
         $instant = $now ?? new DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
@@ -103,11 +111,20 @@ final class AuthService
             throw new InvalidArgumentException('El correo electrónico no es válido.');
         }
 
-        // El clan es OBLIGATORIO (RF-01.1): debe existir en el catálogo.
-        $clanStatement = $this->pdo->prepare('SELECT id FROM clans WHERE id = :clanId');
-        $clanStatement->execute([':clanId' => $clanId]);
-        if ($clanStatement->fetchColumn() === false) {
-            throw new InvalidArgumentException('El linaje seleccionado no existe en el santuario.');
+        // Linaje electo (opcional): si se declara, debe existir en el catálogo.
+        $clanId = $clanId === null ? null : trim($clanId);
+        if ($clanId === '') {
+            // Un mago puede consagrarse sin hermandad: nacerá sin linaje y
+            // podrá fundar el suyo (RF-01.2).
+            $clanId = null;
+        }
+
+        if ($clanId !== null) {
+            $clanStatement = $this->pdo->prepare('SELECT id FROM clans WHERE id = :clanId');
+            $clanStatement->execute([':clanId' => $clanId]);
+            if ($clanStatement->fetchColumn() === false) {
+                throw new InvalidArgumentException('El linaje seleccionado no existe en el santuario.');
+            }
         }
 
         // Anti-enumeración (RF-01.3): si el alias o el correo ya viven en
@@ -124,23 +141,55 @@ final class AuthService
         $userId = 'usr_' . bin2hex(random_bytes(6));
         $passwordHash = password_hash($passphrase, PASSWORD_BCRYPT, ['cost' => self::BCRYPT_COST]);
 
-        $insertStatement = $this->pdo->prepare(
-            'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
-             VALUES (:id, :alias, :email, :passwordHash, :role, :clanId, :createdAt, :updatedAt)'
-        );
-        $inserted = $insertStatement->execute([
-            ':id'           => $userId,
-            ':alias'        => $alias,
-            ':email'        => $email,
-            ':passwordHash' => $passwordHash,
-            ':role'         => 'editor',   // Rol técnico por defecto (RF-01.2).
-            ':clanId'       => $clanId,
-            ':createdAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
-            ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
-        ]);
+        // La cuenta y su eventual afiliación se inscriben como un solo gesto:
+        // o el iniciado nace con su linaje vigente, o no nace.
+        $this->pdo->beginTransaction();
 
-        if (!$inserted) {
-            throw new RuntimeException('La consagración no pudo inscribirse en el registro de iniciados.');
+        try {
+            $insertStatement = $this->pdo->prepare(
+                'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
+                 VALUES (:id, :alias, :email, :passwordHash, :role, :clanId, :createdAt, :updatedAt)'
+            );
+            $inserted = $insertStatement->execute([
+                ':id'           => $userId,
+                ':alias'        => $alias,
+                ':email'        => $email,
+                ':passwordHash' => $passwordHash,
+                ':role'         => 'editor',   // Rol técnico por defecto (RF-01.2).
+                // El espejo lo inscribe ClanMemberRepository, único escritor de
+                // `users.clan_id`: aquí la cuenta nace aún sin linaje.
+                ':clanId'       => null,
+                ':createdAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
+                ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
+            ]);
+
+            if (!$inserted) {
+                throw new RuntimeException('La consagración no pudo inscribirse en el registro de iniciados.');
+            }
+
+            if ($clanId !== null) {
+                // `clan_members` es la autoridad de la afiliación (Tarea 2.3).
+                $membershipRepository = new ClanMemberRepository($this->pdo);
+                $membership = $membershipRepository->addMember(
+                    'mem_' . bin2hex(random_bytes(6)),
+                    $clanId,
+                    $userId,
+                    'adept',
+                    $instant->format('Y-m-d\TH:i:s\Z'),
+                );
+
+                if ($membership === null) {
+                    throw new RuntimeException('El iniciado ya militaba en una hermandad del santuario.');
+                }
+            }
+
+            $this->pdo->commit();
+        } catch (\Throwable $failure) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            throw $failure;
         }
 
         return new ConsecrationResult(userId: $userId);

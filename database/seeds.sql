@@ -31,10 +31,17 @@ INSERT INTO magic_schools (slug, name) VALUES ('transmutation', 'Transmutación'
 -- No compite por el Dominio del Grimorio (dominio de puntos a 0 y
 -- nunca acumula contribuciones de usuarios; ver Artículo III).
 -- ---------------------------------------------------------------------
-INSERT INTO clans (id, slug, name, motto, domain_points, created_at) VALUES
+-- `patriarch_id` se deja NULL en este INSERT y se fija más abajo: la clave
+-- foránea exige que el tutor exista ya en `users`, y las semillas de linaje
+-- preceden a las de los iniciados.
+INSERT INTO clans (id, slug, name, motto, created_at,
+                   coat_of_arms, lineage_type, admission_mode, status,
+                   weekly_points, historical_points, last_activity_at, updated_at) VALUES
     ('cln_primordial', 'custodios-del-fuego-primordial',
      'Custodios del Fuego Primordial',
-     'Antes de la primera palabra, ya ardimos.', 0, '2026-01-01T00:00:00Z');
+     'Antes de la primera palabra, ya ardimos.', '2026-01-01T00:00:00Z',
+     'rune_flame_shield', 'primordialFlame', 'open', 'active',
+     0, 0, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 
 -- ---------------------------------------------------------------------
 -- Tutor de los Pergaminos Primordiales (TASKS-04, Tarea 1.1): la
@@ -47,6 +54,19 @@ INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, u
     ('usr_custodio_primordial', 'El Custodio Primordial',
      'custodio@primordialis.arc', 'x', 'master', 'cln_primordial',
      '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
+
+-- La corona del linaje fundacional, ya con el tutor inscrito en `users`.
+UPDATE clans SET patriarch_id = 'usr_custodio_primordial'
+ WHERE id = 'cln_primordial';
+
+-- Afiliación del tutor en la AUTORIDAD (`clan_members`). El mundo sembrado
+-- ha de ser coherente con la reconciliación: `users.clan_id` es solo el
+-- espejo denormalizado de esta fila, y el Patriarca pertenece a su casa
+-- (RF-01.3). Sin esta fila, el linaje fundacional quedaría acéfalo y el
+-- tutor figuraría en un clan al que no pertenece.
+INSERT INTO clan_members (id, clan_id, user_id, role, joined_at, left_at, convalescence_expires_at) VALUES
+    ('clm_custodio_primordial', 'cln_primordial', 'usr_custodio_primordial',
+     'patriarch', '2026-01-01T00:00:00Z', NULL, NULL);
 
 -- ---------------------------------------------------------------------
 -- Pergaminos Primordiales (RF-01.3): las tres muestras canónicas no

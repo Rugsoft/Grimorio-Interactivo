@@ -17,10 +17,18 @@
  *     y documentación en castellano noble.
  *
  * Algoritmo (plan 3.1):
- *   Regla 1: el Maestro no es el autor del conjuro.
- *   Regla 2: el clan actual del Maestro no es el del conjuro.
- *   Regla 3: el Maestro no habitó el clan del conjuro en los últimos
- *            30 días (clan_history, con left_at NULL como clan vivo).
+ *   Regla 1: el Maestro no es el autor del conjuro (propia de SPEC-03).
+ *   Reglas 2 y 3: el Maestro no milita ahora en el clan del conjuro ni lo
+ *   habitó en los últimos 30 días. **Delegadas en ClanEthicsValidator**
+ *   (Tarea 2.3, TASKS-07), cuya autoridad es el historial de membresía
+ *   `clan_members` —el único que tiene escritor real—.
+ *
+ * Reconciliación de la afiliación (Tarea 2.3, TASKS-07): este servicio leía
+ * antes `users.clan_id` para el clan actual y la tabla `clan_history` para el
+ * historial; ambas vías resultaban inertes en producción, porque ninguna
+ * clase de src/ escribía en `clan_history`. Hoy hay una sola autoridad y una
+ * sola lógica de veto, de modo que el Artículo III muerde de verdad en lugar
+ * de aprobar todo por falta de datos.
  */
 
 declare(strict_types=1);
@@ -29,6 +37,7 @@ namespace Grimorio\Services;
 
 use DateTimeImmutable;
 use Grimorio\Models\User;
+use Grimorio\Repositories\ClanMemberRepository;
 use PDO;
 
 /**
@@ -36,11 +45,11 @@ use PDO;
  */
 final class ClanConflictService
 {
-    /** Ventana histórica de incompatibilidad, en días (RF-06.1). */
-    private const HISTORICAL_WINDOW_DAYS = 30;
-
     /** Conexión PDO al plano arcano. */
     private PDO $pdo;
+
+    /** Veto ético sobre el historial de membresía (autoridad única). */
+    private ClanEthicsValidator $ethicsValidator;
 
     /**
      * Veredicto de la comprobación de conflicto de intereses.
@@ -48,6 +57,7 @@ final class ClanConflictService
     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
+        $this->ethicsValidator = new ClanEthicsValidator(new ClanMemberRepository($pdo));
     }
 
     /**
@@ -71,38 +81,13 @@ final class ClanConflictService
             );
         }
 
-        // Regla 2 (plan 3.1): el vínculo de sangre nubla el juicio — el
-        // linaje ACTUAL del Maestro coincide con el del conjuro.
-        if ($master->getClanId() === $spellClanId) {
-            return new ClanConflictVerdict(
-                isAllowed: false,
-                reason: 'El vínculo de sangre nubla el juicio: un Maestro no puede juzgar el trabajo de su propio linaje actual.',
-            );
-        }
-
-        // Regla 3 (plan 3.1): incompatibilidad HISTÓRICA de 30 días.
-        // Se consultan los linajes habitados por el Maestro cuyo abandono
-        // sea nulo (clan aún activo en el historial) o posterior al inicio
-        // de la ventana. El índice idx_user_clan_time (user_id, left_at)
-        // sostiene esta consulta (Tarea 1.1).
-        $windowStart = $instant->modify('-' . self::HISTORICAL_WINDOW_DAYS . ' days');
-        $historyStatement = $this->pdo->prepare(
-            'SELECT clan_id FROM clan_history
-             WHERE user_id = :userId
-               AND (left_at IS NULL OR left_at >= :windowStart)'
-        );
-        $historyStatement->execute([
-            ':userId'      => $master->getId(),
-            ':windowStart' => $windowStart->format('Y-m-d\TH:i:s\Z'),
-        ]);
-
-        foreach ($historyStatement->fetchAll(PDO::FETCH_COLUMN) as $historicalClanId) {
-            if ((string) $historicalClanId === $spellClanId) {
-                return new ClanConflictVerdict(
-                    isAllowed: false,
-                    reason: 'El Maestro ha pertenecido a este linaje en los últimos 30 días: firma vetada por incompatibilidad histórica.',
-                );
-            }
+        // Reglas 2 y 3 (plan 3.1): el linaje del conjuro no puede ser el
+        // actual del Maestro ni uno que habitó en los últimos 30 días. La
+        // lógica y la autoridad viven en ClanEthicsValidator (Tarea 2.3,
+        // TASKS-07); aquí solo se traduce su veredicto al contrato de SPEC-03.
+        $vetoReason = $this->ethicsValidator->vetoReasonFor($master->getId(), $spellClanId, $instant);
+        if ($vetoReason !== null) {
+            return new ClanConflictVerdict(isAllowed: false, reason: $vetoReason);
         }
 
         // Ninguna regla se activa: la firma solemne queda aprobada.

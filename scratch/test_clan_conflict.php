@@ -81,8 +81,8 @@ $now = '2026-09-12T12:00:00Z';
 foreach (['cln_astral' => 'Eruditos Astrales', 'cln_ember' => 'Heraldos de Brasas', 'cln_tide' => 'Mareas del Alba'] as $clanId => $clanName) {
     $slug = str_replace('cln_', '', $clanId);
     $pdo->exec(
-        "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-         VALUES ('{$clanId}', '{$slug}', '{$clanName}', 'Lema', 0, '{$now}')"
+        "INSERT INTO clans (id, slug, name, motto, created_at)
+         VALUES ('{$clanId}', '{$slug}', '{$clanName}', 'Lema', '{$now}')"
     );
 }
 
@@ -116,6 +116,17 @@ $masterUser = new User(
     passwordHash: str_repeat('x', 60),
     createdAt: $now,
     updatedAt: $now,
+);
+
+// Historial de membresía del Maestro. La AUTORIDAD es `clan_members`
+// (Tarea 2.3, TASKS-07): milita hoy en `cln_astral`, y habitó `cln_ember`
+// hasta hace 10 días y `cln_tide` hasta hace 45 días. La tabla `clan_history`
+// quedó retirada del camino crítico: ninguna clase de src/ la escribía.
+$pdo->exec(
+    "INSERT INTO clan_members (id, clan_id, user_id, role, joined_at, left_at, convalescence_expires_at) VALUES
+     ('clm_m1_astral', 'cln_astral', '{$masterId}', 'adept', '2025-03-01T00:00:00Z', NULL, NULL),
+     ('clm_m1_ember',  'cln_ember',  '{$masterId}', 'adept', '2026-05-01T00:00:00Z', '2026-09-02T00:00:00Z', NULL),
+     ('clm_m1_tide',   'cln_tide',   '{$masterId}', 'adept', '2026-01-01T00:00:00Z', '2026-07-29T00:00:00Z', NULL)"
 );
 
 // ---------------------------------------------------------------------
@@ -158,17 +169,7 @@ assertArcane(
 // ---------------------------------------------------------------------
 echo "\n[3] Veto por linaje histórico de los últimos 30 días\n";
 
-// Historial: el maestro habitó cln_ember hasta hace 10 días y cln_tide
-// hasta hace 45 días.
-$pdo->exec(
-    "INSERT INTO clan_history (user_id, clan_id, joined_at, left_at)
-     VALUES ('{$masterId}', 'cln_ember', '2026-05-01T00:00:00Z', '2026-09-02T00:00:00Z')"
-);
-$pdo->exec(
-    "INSERT INTO clan_history (user_id, clan_id, joined_at, left_at)
-     VALUES ('{$masterId}', 'cln_tide', '2026-01-01T00:00:00Z', '2026-07-29T00:00:00Z')"
-);
-
+// (El historial del Maestro se sembró en el bloque de fixtures de arriba.)
 $recentClanVerdict = $conflictService->canMasterSignSpell(
     $masterUser,
     authorId: 'usr_otro_autor',
@@ -177,8 +178,8 @@ $recentClanVerdict = $conflictService->canMasterSignSpell(
 );
 assertArcane($recentClanVerdict->isAllowed === false, 'La firma sobre un linaje abandonado hace 10 días queda VETADA');
 assertArcane(
-    str_contains($recentClanVerdict->reason, '30 días'),
-    'El motivo menciona la ventana histórica de 30 días'
+    str_contains($recentClanVerdict->reason, 'treinta días'),
+    'El motivo menciona la ventana histórica de treinta días'
 );
 
 // Linaje abandonado hace 45 días: fuera de la ventana histórica → permitido.
@@ -206,15 +207,15 @@ assertArcane($cleanVerdict->isAllowed === true, 'La firma sobre un linaje ajeno 
 assertArcane($cleanVerdict->reason === '', 'La aprobación no porta motivo de veto');
 
 // ---------------------------------------------------------------------
-// 5. Historial con left_at NULL: el clan activo también veta.
+// 5. Membresía vigente (left_at NULL): el clan que habita también veta.
 // ---------------------------------------------------------------------
-echo "\n[5] Historial con left_at NULL (clan activo en clan_history)\n";
+echo "\n[5] Membresía vigente en la autoridad (left_at NULL)\n";
 
-// Un segundo maestro cuyo clan activo figura en clan_history con NULL.
+// Un segundo maestro que milita HOY en cln_ember: su membresía activa.
 $secondMasterId = forgeUserRow($pdo, 'usr_master_02', 'MaestroDoble', 'cln_astral', $now);
 $pdo->exec(
-    "INSERT INTO clan_history (user_id, clan_id, joined_at, left_at)
-     VALUES ('{$secondMasterId}', 'cln_ember', '2026-05-01T00:00:00Z', NULL)"
+    "INSERT INTO clan_members (id, clan_id, user_id, role, joined_at, left_at, convalescence_expires_at)
+     VALUES ('clm_m2_ember', 'cln_ember', '{$secondMasterId}', 'adept', '2026-05-01T00:00:00Z', NULL, NULL)"
 );
 
 $secondMasterUser = new User(
@@ -234,7 +235,7 @@ $nullLeftVerdict = $conflictService->canMasterSignSpell(
     spellClanId: 'cln_ember',
     now: new DateTimeImmutable($now),
 );
-assertArcane($nullLeftVerdict->isAllowed === false, 'Un clan con left_at NULL en el historial (aún activo allí) queda VETADO');
+assertArcane($nullLeftVerdict->isAllowed === false, 'Una membresía vigente (left_at NULL) en el linaje del conjuro queda VETADA');
 
 // ---------------------------------------------------------------------
 // 6. La ventana se evalúa contra «ahora» inyectado (determinismo).
