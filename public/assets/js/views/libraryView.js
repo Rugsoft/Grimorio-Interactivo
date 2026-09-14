@@ -23,7 +23,10 @@
  * DATO (textContent + parámetros), nunca como markup ejecutable.
  */
 
-import { createSpellCardComponent } from '../components/spellCardComponent.js';
+import {
+  createSpellCardComponent,
+  REGENT_RIBBON_CLASS,
+} from '../components/spellCardComponent.js';
 import { normalizeSearchText } from '../utils/textNormalizer.js';
 
 /** Latencia del debounce de la búsqueda (plan: reactiva pero contenida). */
@@ -56,6 +59,8 @@ const MAGIC_SCHOOLS = Object.freeze([
  * @param {Object} options.spellClient Cliente HTTP (Tarea 3.3; necesita fetchSpells).
  * @param {(slug: string) => void} options.onSpellSelect Notifica la selección de tarjeta.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica inyectable (tests).
+ * @param {Object} [options.dominionClient] Cliente del Dominio (Tarea 5.1; necesita
+ *   fetchLeaderboard). Best-effort: si falta o cae, el Tomo se sirve sin ribete.
  * @returns {Object} API: { render, destroy, retry, setSpellClient }.
  */
 export function createLibraryView(mountRoot, options) {
@@ -63,8 +68,16 @@ export function createLibraryView(mountRoot, options) {
     store,
     spellClient,
     onSpellSelect,
+    dominionClient = null,
     elementFactory = (tagName) => document.createElement(tagName),
   } = options;
+
+  /**
+   * Clave del linaje que ciñe la corona esta semana ('' = aún sin revelar).
+   * Es un ESPEJO de solo lectura: la autoridad del reinado es el santuario
+   * (Artículo II) y esta vista jamás computa el podio por su cuenta.
+   */
+  let regentClanId = '';
 
   /** Cliente HTTP vivo (conmutable en reintentos tras fallo). */
   let activeSpellClient = spellClient;
@@ -217,6 +230,54 @@ export function createLibraryView(mountRoot, options) {
     }
   }
 
+  /**
+   * ¿Luce el conjuro el ribete ceremonial dorado del Clan Regente? (RF-04.4)
+   *
+   * @param {object} spellSummaryDto Ficha de tarjeta del catálogo.
+   */
+  function isRegentSpell(spellSummaryDto) {
+    return regentClanId !== '' && String(spellSummaryDto?.clanId ?? '') === regentClanId;
+  }
+
+  /**
+   * Ciñe el ribete dorado a las tarjetas ya pintadas cuya casa reina
+   * (RF-04.4). Se invoca cuando el Salón revela al regente después de que el
+   * catálogo esté en pantalla: cero re-render, cero salto de rejilla.
+   */
+  function applyRegentRibbon() {
+    if (regentClanId === '' || !catalogGrid) return;
+
+    for (const card of [...(catalogGrid.children ?? [])]) {
+      const clanId = String(card?.getAttribute?.('data-clan-id') ?? '');
+      if (clanId === '' || clanId !== regentClanId) continue;
+      if (String(card.className ?? '').includes(REGENT_RIBBON_CLASS)) continue;
+
+      // Composición por cadena: la misma vía con la que nace la tarjeta, de
+      // modo que el DOM real y los dobles de los arneses se comporten igual.
+      card.className = `${card.className} ${REGENT_RIBBON_CLASS}`;
+      card.setAttribute?.('data-regent', 'true');
+    }
+  }
+
+  /**
+   * Consulta best-effort de quién ciñe la corona (Endpoint 11). La portada y
+   * el Salón ya exhiben al soberano; aquí solo se decide qué tarjetas lucen
+   * su ribete dorado. Sin respuesta, el Tomo queda sin ribete —jamás roto—.
+   */
+  async function loadRegentClan() {
+    if (typeof dominionClient?.fetchLeaderboard !== 'function') return;
+
+    try {
+      const envelope = await dominionClient.fetchLeaderboard();
+      if (envelope?.success !== true) return;
+
+      regentClanId = String(envelope.data?.currentRegentClan?.id ?? '');
+      applyRegentRibbon();
+    } catch {
+      // Corte de maná: el Tomo sigue siendo el Tomo, sin ribete ceremonial.
+    }
+  }
+
   function renderCatalogCards(items, renderMode = 'replace') {
     if (renderMode === 'replace') {
       catalogGrid.replaceChildren?.();
@@ -231,6 +292,8 @@ export function createLibraryView(mountRoot, options) {
     for (const spellSummaryDto of items) {
       const card = createSpellCardComponent(spellSummaryDto, {
         onSpellSelect: (slug, originElement) => onSpellSelect?.(slug, originElement),
+        // Ribete ceremonial del Clan Regente (SPEC-07, RF-04.4).
+        isRegent: isRegentSpell(spellSummaryDto),
         elementFactory,
       });
       catalogGrid.appendChild(card);
@@ -623,6 +686,12 @@ export function createLibraryView(mountRoot, options) {
     loadMoreSlot = track(elementFactory('div'));
     loadMoreSlot.className = 'load-more-slot';
     viewRoot.appendChild(loadMoreSlot);
+
+    // En paralelo y best-effort: quién ciñe la corona esta semana decide qué
+    // tarjetas lucen el ribete dorado (SPEC-07, RF-04.4). El Tomo jamás
+    // espera al Salón: si la respuesta llega después, el ribete se ciñe a las
+    // tarjetas ya pintadas.
+    void loadRegentClan();
 
     // Primera consulta: el propio fetchAndRenderCatalog despliega los
     // «Pergaminos Espectrales» (RF-04.1) — ya no hace falta un texto suelto.

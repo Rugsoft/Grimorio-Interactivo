@@ -197,6 +197,9 @@ export function createGrimoireApp(options = {}) {
         store,
         spellClient,
         onSpellSelect: (slug, originElement) => openSpellDetailBySlug(slug, { originElement }),
+        // El Tomo consulta al Salón quién reina para ceñir el ribete dorado a
+        // los conjuros de su casa (SPEC-07, RF-04.4). Best-effort.
+        dominionClient,
         elementFactory,
       });
       currentView = { name: viewName, instance: libraryView };
@@ -282,6 +285,9 @@ export function createGrimoireApp(options = {}) {
         elementFactory,
         document: documentRef,
         initialMode: requestsEssays && hasSession ? 'essays' : 'canonical',
+        // Gloria de hermandad de cada reacción detonada (SPEC-07, RF-03.2):
+        // el orquestador aporta la sesión y el cliente; la Cámara solo narra.
+        awardSimulatorPractice: (comboElement) => awardSimulatorPractice(comboElement),
       });
       currentView = { name: viewName, instance: simulatorView };
       await simulatorView.render();
@@ -293,6 +299,65 @@ export function createGrimoireApp(options = {}) {
       // navegar aquí sin estado concreto muestra el genérico de rescate.
       showSpellError(null);
     }
+  }
+
+  /**
+   * Acredita al clan del adepto la gloria de una reacción de combo elemental
+   * recién detonada en la Cámara de Conjuración (SPEC-07, RF-03.2).
+   *
+   * Frontera declarada: el orquestador es quien conoce el vínculo arcano y el
+   * cliente del Dominio; la vista solo narra el recibo que aquí se retorne. El
+   * techo diario de 50 PDA por adepto y su reinicio a las 00:00:00 UTC los
+   * decide SIEMPRE el santuario: aquí no se recorta, acumula ni descuenta nada.
+   *
+   * Un visitante anónimo (el Tomo Canónico es público) practica combos sin que
+   * se curse orden alguna: sin casa no hay gloria que acreditar.
+   *
+   * @param {string} comboElement Afinidad elemental del conjuro entrante.
+   * @returns {Promise<Object|null>} Sobre del santuario, o null si no procede.
+   */
+  async function awardSimulatorPractice(comboElement) {
+    if (store.getState().isAuthenticated !== true) return null;
+    if (typeof dominionClient?.awardSimulatorCombo !== 'function') return null;
+
+    try {
+      const envelope = await dominionClient.awardSimulatorCombo(comboElement);
+
+      // Efecto dirigido por eventos (plan 4.1): el Salón en vivo y —cuando lo
+      // haya— el Tomo reaccionan al nuevo marcador sin sondear el reloj.
+      if (envelope?.success === true) {
+        dispatchDominionEvent('dominion:points-awarded', {
+          clanId: String(envelope.data?.clanId ?? ''),
+          comboElement: String(envelope.data?.comboElement ?? ''),
+          dailyCap: Number(envelope.data?.dailyCap ?? 0) || 0,
+          awardedPoints: Number(envelope.data?.award?.awardedPoints ?? 0) || 0,
+          hasSynergy: envelope.data?.award?.hasSynergy === true,
+          reason: envelope.data?.award?.reason ?? null,
+        });
+      }
+
+      return envelope;
+    } catch {
+      // Corte de maná: la conjuración no se detiene por la gloria perdida.
+      return null;
+    }
+  }
+
+  /**
+   * Despacha un evento del bus arcano del plan 4.1 desde la raíz de la SPA:
+   * burbujea hasta el `window`, donde escuchan las vistas y los componentes.
+   *
+   * @param {string} eventName Nombre canónico del evento.
+   * @param {Object} detail Carga útil del evento.
+   */
+  function dispatchDominionEvent(eventName, detail) {
+    if (typeof appRoot?.dispatchEvent !== 'function') return;
+
+    const event = typeof CustomEvent === 'function'
+      ? new CustomEvent(eventName, { detail, bubbles: true })
+      : { type: eventName, detail, bubbles: true };
+
+    appRoot.dispatchEvent(event);
   }
 
   /**

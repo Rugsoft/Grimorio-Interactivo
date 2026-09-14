@@ -391,6 +391,23 @@ assertCondition(
     !in_array('spl_ember_draft', $emberIds, true) && !in_array('spl_ember_exp', $emberIds, true),
     'Ni borradores ni experimentales componen el legado (solo `validated`)',
 );
+
+// RF-05.2 · El borrador es libreta del autor, jamás patrimonio de una casa.
+$draftRow = $pdo->query(
+    "SELECT author_id, status FROM spells WHERE id = 'spl_ember_draft'"
+)->fetch();
+assertCondition(
+    ($draftRow['author_id'] ?? '') === 'usr_ember_pat' && ($draftRow['status'] ?? '') === 'draft',
+    'El borrador sigue en la libreta de su autor aunque este haya partido de la hermandad (RF-05.2)',
+);
+$tideIds = array_map(
+    static fn (array $spell): string => (string) $spell['id'],
+    payloadOf(dispatch('GET', '/api/v1/clans/cln_tide/spells'))['data']['spells'],
+);
+assertCondition(
+    !in_array('spl_ember_draft', $tideIds, true),
+    'El borrador tampoco engrosa el patrimonio de una casa ajena: solo se vinculará al publicarse (RF-05.2)',
+);
 assertCondition(
     !in_array('spl_tide_one', $emberIds, true),
     'Las obras de una casa ajena jamás se atribuyen a este estandarte',

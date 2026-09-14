@@ -25,6 +25,12 @@
 
 import { createLineageHallComponent } from '../components/lineageHallComponent.js';
 
+/** Evento del plan 4.1: alguien acaba de acreditar PDA a su hermandad. */
+const POINTS_AWARDED_EVENT = 'dominion:points-awarded';
+
+/** Evento del plan 4.1: el corte dominical proclamó al nuevo Clan Regente. */
+const WEEK_CLOSED_EVENT = 'dominion:week-closed';
+
 /**
  * Crea la vista del Salón de los Linajes.
  *
@@ -38,6 +44,10 @@ import { createLineageHallComponent } from '../components/lineageHallComponent.j
  *        casa del podio o del histórico (la ficha llegará con la Tarea 6.4).
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
+ * @param {EventTarget} [options.eventTarget] Bus del plan 4.1; el Salón se
+ *        refresca solo cuando alguien acredita gloria (`dominion:points-awarded`)
+ *        o se proclama la semana (`dominion:week-closed`), sin sondear el reloj
+ *        (RNF-02). Por defecto, la raíz de montaje.
  * @returns {Object} API: { render, destroy, retry, setDominionClient }.
  */
 export function createLineageHallView(mountRoot, options = {}) {
@@ -47,6 +57,10 @@ export function createLineageHallView(mountRoot, options = {}) {
     onClanSelect,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
   } = options;
+
+  /** Bus de eventos: la gloria recién acreditada llega por evento, no por sondeo. */
+  const eventTarget = options.eventTarget
+    ?? (typeof globalThis.addEventListener === 'function' ? globalThis : mountRoot);
 
   /** Cliente HTTP vivo (conmutable en reintentos tras un fallo). */
   let activeDominionClient = dominionClient;
@@ -112,6 +126,17 @@ export function createLineageHallView(mountRoot, options = {}) {
     hall.setHall(hallResult.data ?? null);
   }
 
+  /**
+   * Refresco dirigido por evento (plan 4.1): la gloria recién acreditada en
+   * la Cámara de Conjuración —o el corte dominical— relanza la consulta del
+   * Salón, de modo que el podio semanal en vivo refleje el nuevo marcador sin
+   * sondear el reloj (RNF-02). Es SOLO LECTURA: ningún evento decide montos.
+   */
+  function handleDominionAwarded() {
+    if (isDestroyed || hall === null) return;
+    void load();
+  }
+
   /** Reintenta la última consulta tras un corte de corriente (RNF). */
   async function retry() {
     fetchSequence += 1; // invalida respuestas en vuelo del cliente fallido.
@@ -150,6 +175,13 @@ export function createLineageHallView(mountRoot, options = {}) {
     });
     hall.render();
 
+    // El Salón escucha el bus mientras vive: la gloria acreditada en la
+    // Cámara de Conjuración y la proclamación dominical lo refrescan.
+    if (typeof eventTarget?.addEventListener === 'function') {
+      eventTarget.addEventListener(POINTS_AWARDED_EVENT, handleDominionAwarded);
+      eventTarget.addEventListener(WEEK_CLOSED_EVENT, handleDominionAwarded);
+    }
+
     await load();
   }
 
@@ -160,6 +192,12 @@ export function createLineageHallView(mountRoot, options = {}) {
    */
   function destroy(removeFromMount = true) {
     fetchSequence += 1; // invalida respuestas en vuelo.
+
+    if (typeof eventTarget?.removeEventListener === 'function') {
+      eventTarget.removeEventListener(POINTS_AWARDED_EVENT, handleDominionAwarded);
+      eventTarget.removeEventListener(WEEK_CLOSED_EVENT, handleDominionAwarded);
+    }
+
     hall?.destroy?.();
     hall = null;
 

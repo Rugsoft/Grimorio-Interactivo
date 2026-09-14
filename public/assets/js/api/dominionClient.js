@@ -204,5 +204,29 @@ export function createDominionClient(options = {}) {
         headers: { ...(presented !== null ? { [CRON_SECRET_HEADER]: presented } : {}) },
       });
     },
+
+    /**
+     * Endpoint 14 (Tarea 7.1, RF-03.2): acredita al clan del adepto la gloria
+     * de una reacción de combo elemental ejecutada en la Cámara de Conjuración.
+     *
+     * El techo de 50 PDA por adepto y día UTC NO se decide aquí: el recibo que
+     * retorna el santuario porta `awardedPoints` y, con el cupo colmado,
+     * `reason: DAILY_SIMULATOR_CAP_REACHED` con cero gloria. El cliente jamás
+     * recorta, acumula ni descuenta: solo cursa la orden y propaga el recibo.
+     *
+     * @param {string} [comboElement] Afinidad elemental del conjuro entrante,
+     *   o cadena vacía para un combo sin afinidad (jamás devenga sinergia).
+     * @returns {Promise<object>} 200 con {clanId, comboElement, dailyCap, award},
+     *   401 UNAUTHENTICATED sin vínculo, 409 NO_CLAN_AFFILIATION sin hermandad.
+     */
+    awardSimulatorCombo(comboElement = '') {
+      const element = typeof comboElement === 'string' ? comboElement.trim() : '';
+
+      return requestJson(`${apiBase}/dominion/simulator-combo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ comboElement: element }),
+      });
+    },
   };
 }

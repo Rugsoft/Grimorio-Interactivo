@@ -16,6 +16,12 @@
  *   - Artículo V: identificadores en inglés camelCase; comentarios en castellano.
  */
 
+/**
+ * Clase del ribete ceremonial dorado del Clan Regente (SPEC-07, RF-04.4).
+ * Su vestidura vive en `clan-heraldry.css`.
+ */
+export const REGENT_RIBBON_CLASS = 'spell-card-regent-border';
+
 /** Clases de los sellos de estado (components.css, Tarea 2.4). */
 export const SPELL_BADGE_KINDS = Object.freeze({
   genesis: 'spell-card__badge--genesis',
@@ -28,6 +34,8 @@ export const SPELL_BADGE_KINDS = Object.freeze({
  * @param {object} spellSummaryDto DTO del plan 2.1 (camelCase).
  * @param {object} componentOptions Opciones:
  *   - onSpellSelect(slug): callback de selección (click/Enter/Space).
+ *   - isRegent: ¿pertenece el conjuro al Clan Regente de la semana? Si lo es,
+ *     la tarjeta luce el ribete ceremonial dorado (SPEC-07, RF-04.4).
  *   - elementFactory: fábrica de elementos (por defecto document.createElement;
  *     las pruebas inyectan su DOM simulado).
  * @returns {HTMLElement} Nodo <article role="article" tabindex="0">.
@@ -35,6 +43,7 @@ export const SPELL_BADGE_KINDS = Object.freeze({
 export function createSpellCardComponent(spellSummaryDto, componentOptions = {}) {
   const {
     onSpellSelect,
+    isRegent = false,
     elementFactory = (tagName) => document.createElement(tagName),
   } = componentOptions;
 
@@ -79,10 +88,19 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
 
   // --- Raíz de la tarjeta ---
   cardElement = elementFactory('article');
-  cardElement.className = 'spell-card';
+  // El ribete dorado se COMPONE sobre la clase canónica: la tarjeta sigue
+  // siendo la del Tomo —pergamino, tinta y tipografía intactos— y solo muda
+  // su filo (SPEC-07, RF-04.4).
+  cardElement.className = isRegent ? `spell-card ${REGENT_RIBBON_CLASS}` : 'spell-card';
+  if (isRegent) {
+    cardElement.setAttribute('data-regent', 'true');
+  }
   cardElement.setAttribute('role', 'article');
   cardElement.setAttribute('tabindex', '0');
   cardElement.setAttribute('data-slug', spellSummaryDto.slug);
+  // El linaje de origen viaja en el DOM para que el Tomo pueda ceñir el
+  // ribete a posteriori, cuando el Salón revele quién reina (RF-04.4).
+  cardElement.setAttribute('data-clan-id', String(spellSummaryDto.clanId ?? ''));
   // Nombre accesible: el lector anuncia el conjuro al enfocar (RNF-03).
   cardElement.setAttribute(
     'aria-label',

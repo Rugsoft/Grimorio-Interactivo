@@ -78,6 +78,13 @@ const CODEX_EFFECT_TO_CC = Object.freeze({
 const CODEX_BARRIER_SHATTER = 50;
 
 /**
+ * Motivo canónico del recibo de dominio cuando el adepto ya colmó su techo
+ * diario de práctica (SPEC-07, RF-03.2). Espejo de
+ * `DominionAwardDto::REASON_DAILY_SIMULATOR_CAP_REACHED`.
+ */
+const SIMULATOR_CAP_REASON = 'DAILY_SIMULATOR_CAP_REACHED';
+
+/**
  * PRNG determinista mulberry32 para las deflagraciones de combo (RNF-01):
  * la semilla fija garantiza que dos detonaciones de la misma reacción
  * con los mismos parámetros pinten idéntica coreografía de estelas.
@@ -124,6 +131,11 @@ const FALLBACK_CANVAS = Object.freeze({ width: 800, height: 400 });
  * @param {Object|null} [options.speechSynthesis] Doble de síntesis (RF-06.3).
  * @param {'canonical'|'essays'} [options.initialMode] Tomo que abre la vista;
  *   el orquestador lo decide tras la guardia del libro personal (RF-01.2).
+ * @param {(comboElement: string) => Promise<object|null>} [options.awardSimulatorPractice]
+ *   Acredita al clan del adepto la gloria de la reacción recién detonada
+ *   (SPEC-07, RF-03.2). Devolverá el sobre del santuario o null si no hay
+ *   vínculo que acreditar. Sin este contrato la Cámara de Conjuración
+ *   funciona exactamente igual, solo que sin gloria de hermandad.
  * @returns {Object} API: { render, destroy, switchCatalog, nextPage,
  *   previousPage, castCurrentSpell, restoreDummy, reciteCurrentSpell,
  *   toggleMicrophone, getAnnouncements, getState }.
@@ -305,6 +317,9 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
    * residencia del aura entre páginas — jamás se purga al hojear (RF-02.3).
    */
   let activeAuraElement = null;
+
+  /** La vista quedó desmontada: ninguna gloria tardía narra ya nada. */
+  let isDestroyed = false;
 
   /** Cola determinista FIFO de impactos (plan 3.3): un impacto por cuadro. */
   const impactQueue = createSpellImpactQueue({
@@ -592,6 +607,12 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     // Tarea 4.2, RF-06.1/06.2): solo la detonación de una reacción fusiona
     // las estelas de ambos elementos y corona el rótulo ceremonial.
     if (verdict.isReaction === true) {
+      // Gloria de hermandad (SPEC-07, Tarea 7.1): la reacción recién detonada
+      // devenga PDA al clan del adepto (RF-03.2). La vista NO decide el monto
+      // ni el techo diario —eso es del santuario—: cursa la orden y narra el
+      // recibo que retorne.
+      void creditSimulatorPractice(comboElements?.incoming ?? '');
+
       const comboTarget = {
         x: Number(targetCoordinates?.x ?? 0),
         y: Number(targetCoordinates?.y ?? 0),
@@ -664,6 +685,50 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     // pantalla prioricen la reacción recién desatada.
     if (verdict?.isReaction === true) {
       announce(composeReactionAnnouncement(verdict, result));
+    }
+  }
+
+  /**
+   * Cursa la gloria de hermandad de un combo recién detonado (SPEC-07, RF-03.2).
+   *
+   * El elemento que se declara es el del CONJURO ENTRANTE —la firma del
+   * propio adepto—, no el del aura prestada del blanco: la sinergia temática
+   * premia la especialización de quien lanza, y el santuario sigue siendo
+   * quien la evalúa contra la afinidad rectora del linaje.
+   *
+   * Degradación elegante (AGENTS.md 8): sin contrato inyectado, sin vínculo
+   * arcano o con la red caída, la Cámara de Conjuración sigue igual de viva;
+   * simplemente no se narra gloria alguna. Con el techo diario colmado el
+   * recibo llega con cero PDA y su motivo canónico, y la vista lo canta como
+   * lo que es: una jornada de práctica ya colmada, jamás un error.
+   *
+   * @param {string} comboElement Afinidad elemental del conjuro entrante.
+   */
+  async function creditSimulatorPractice(comboElement) {
+    if (typeof options.awardSimulatorPractice !== 'function') return;
+
+    try {
+      const envelope = await options.awardSimulatorPractice(String(comboElement ?? ''));
+      if (isDestroyed) return; // La vista murió mientras la petición volaba.
+      if (envelope?.success !== true) return;
+
+      const award = envelope.data?.award ?? {};
+      const awardedPoints = Number(award.awardedPoints ?? 0) || 0;
+
+      if (awardedPoints > 0) {
+        const remainder = Number(award.dailyQuotaRemaining ?? 0) || 0;
+        const synergy = award.hasSynergy === true ? ' (sinergia de linaje)' : '';
+        announce(
+          `La hermandad cobra ${awardedPoints} PDA${synergy}; restan ${remainder} para el techo diario.`,
+        );
+        return;
+      }
+
+      if (award.reason === SIMULATOR_CAP_REASON) {
+        announce('La hermandad ya colmó su techo diario de 50 PDA: la práctica de hoy no devenga más gloria.');
+      }
+    } catch {
+      // Corte de maná: la gloria se pierde en silencio; la conjuración no.
     }
   }
 
@@ -1018,6 +1083,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
 
   /** Desmonta la vista liberando bucles y listeners. */
   function destroy() {
+    isDestroyed = true;
     stopScene();
     arcane.stop();
     elementalAura.destroy();

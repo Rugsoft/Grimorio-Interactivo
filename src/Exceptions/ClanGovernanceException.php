@@ -42,6 +42,7 @@ final class ClanGovernanceException extends RuntimeException
     public const APPLICATION_ALREADY_RESOLVED = 'APPLICATION_ALREADY_RESOLVED';
     public const NOT_PATRIARCH = 'NOT_PATRIARCH';
     public const NOT_A_MEMBER = 'NOT_A_MEMBER';
+    public const NO_CLAN_AFFILIATION = 'NO_CLAN_AFFILIATION';
     public const PATRIARCH_MUST_TRANSFER_CROWN = 'PATRIARCH_MUST_TRANSFER_CROWN';
     public const CANNOT_EXPEL_SELF = 'CANNOT_EXPEL_SELF';
     public const INVALID_DECISION = 'INVALID_DECISION';
@@ -224,6 +225,20 @@ final class ClanGovernanceException extends RuntimeException
             404,
             "El mago «{$userId}» no milita actualmente en esta hermandad.",
             'REVIEW_MEMBERSHIP',
+        );
+    }
+
+    /**
+     * El adepto no milita en casa alguna: sin linaje no hay gloria que
+     * acreditar (Endpoint 14, RF-03.2).
+     */
+    public static function noClanAffiliation(string $userId): self
+    {
+        return new self(
+            self::NO_CLAN_AFFILIATION,
+            409,
+            "El mago «{$userId}» no milita en hermandad alguna: el Dominio solo se acredita bajo un estandarte.",
+            'JOIN_OR_FOUND_CLAN',
         );
     }
 

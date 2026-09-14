@@ -152,8 +152,10 @@ function buildRouter(): Router
     // --- Rutas del Dominio Semanal (SPEC-07, plan Endpoints 11-12) ---
     // El Salón es de lectura pública; el corte dominical exige el sello del
     // custodio en la cabecera X-Arcane-Cron-Secret.
-    $router->addRoute('GET', '/api/v1/dominion/leaderboard', fn (Request $request): Response => $dominionController->leaderboard($request));
-    $router->addRoute('POST', '/api/v1/dominion/cron-cycle-close', fn (Request $request): Response => $dominionController->closeCycle($request));
+    $router->addRoute('GET', '/api/v1/dominion/leaderboard', fn (Request $request): Response => $dominionController->leaderboard($request));    $router->addRoute('POST', '/api/v1/dominion/cron-cycle-close', fn (Request $request): Response => $dominionController->closeCycle($request));
+    // Endpoint 14 (SPEC-07, Tarea 7.1): la gloria que el Simulador devenga al
+    // ejecutar una reacción de combo elemental (RF-03.2).
+    $router->addRoute('POST', '/api/v1/dominion/simulator-combo', fn (Request $request): Response => $dominionController->awardSimulatorCombo($request));
 
     // --- Rutas del Simulador de Grimorio (SPEC-05, plan Endpoints 1-2) ---
     $router->addRoute('GET', '/api/v1/grimoire/spells', fn (Request $request): Response => $grimoireController->listSpells($request));

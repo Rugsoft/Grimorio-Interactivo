@@ -244,6 +244,106 @@ assertCondition(
 );
 
 // =====================================================================
+// [4b] Endpoint 14 · Gloria del Simulador (Tarea 7.1, RF-03.2)
+// =====================================================================
+console.log('\n[4b] Endpoint 14 · awardSimulatorCombo()');
+
+const AWARD_PAYLOAD = {
+  success: true,
+  data: {
+    clanId: 'cln_llama',
+    comboElement: 'fire',
+    dailyCap: 50,
+    award: {
+      actionType: 'simulatorCombo',
+      basePoints: 10,
+      awardedPoints: 13,
+      hasSynergy: true,
+      synergyBonus: 3,
+      awardedAt: '2026-09-14T12:00:00Z',
+      dailyQuotaRemaining: 37,
+      reason: null,
+    },
+  },
+};
+
+const awardStub = createFetchStub([
+  { path: '/api/v1/dominion/simulator-combo', method: 'POST', status: 200, body: AWARD_PAYLOAD },
+]);
+const awardClient = createDominionClient({ fetch: awardStub });
+const awardResult = await awardClient.awardSimulatorCombo('  fire  ');
+const awardCall = awardStub.calls.at(-1);
+assertCondition(
+  awardCall.method === 'POST' && awardCall.path === '/api/v1/dominion/simulator-combo',
+  `la gloria del combo se invoca por POST en su ruta propia (${awardCall.method} ${awardCall.path})`
+);
+assertCondition(
+  awardCall.body === JSON.stringify({ comboElement: 'fire' }),
+  `el elemento viaja declarado y saneado en el cuerpo (${awardCall.body})`
+);
+assertCondition(
+  String(awardCall.headers['Content-Type'] ?? '').startsWith('application/json'),
+  'la orden del combo declara su cuerpo JSON'
+);
+assertCondition(awardCall.credentials === 'same-origin', 'la sesión del adepto acompaña sola: la autoridad es la cookie HttpOnly');
+assertCondition(
+  awardResult.success === true
+    && awardResult.data?.clanId === 'cln_llama'
+    && awardResult.data?.award?.awardedPoints === 13,
+  'el recibo del santuario se propaga íntegro con la casa acreditada'
+);
+assertCondition(
+  awardResult.data?.dailyCap === 50,
+  'el sobre declara el techo diario canónico de 50 PDA (la vista jamás lo supone)'
+);
+
+// El techo colmado NO es un error: llega como 200 con cero gloria y su motivo.
+const cappedStub = createFetchStub([
+  {
+    path: '/api/v1/dominion/simulator-combo',
+    method: 'POST',
+    status: 200,
+    body: {
+      success: true,
+      data: {
+        clanId: 'cln_llama',
+        comboElement: 'fire',
+        dailyCap: 50,
+        award: { actionType: 'simulatorCombo', basePoints: 0, awardedPoints: 0, hasSynergy: false, synergyBonus: 0, awardedAt: '2026-09-14T20:00:00Z', dailyQuotaRemaining: 0, reason: 'DAILY_SIMULATOR_CAP_REACHED' },
+      },
+    },
+  },
+]);
+const cappedResult = await createDominionClient({ fetch: cappedStub }).awardSimulatorCombo('fire');
+assertCondition(
+  cappedResult.success === true
+    && cappedResult.data?.award?.awardedPoints === 0
+    && cappedResult.data?.award?.reason === 'DAILY_SIMULATOR_CAP_REACHED',
+  'el techo diario colmado llega como jornada agotada, jamás como error de la petición'
+);
+
+// Un mago sin hermandad: 409 con su código canónico, sin lanzar.
+const homelessStub = createFetchStub([
+  {
+    path: '/api/v1/dominion/simulator-combo',
+    method: 'POST',
+    status: 409,
+    body: { success: false, error: { code: 'NO_CLAN_AFFILIATION', message: 'El mago no milita en hermandad alguna: el Dominio solo se acredita bajo un estandarte.', recoveryAction: 'JOIN_OR_FOUND_CLAN' } },
+  },
+]);
+const homelessResult = await createDominionClient({ fetch: homelessStub }).awardSimulatorCombo('fire');
+assertCondition(
+  homelessResult?.status === 409 && homelessResult?.error?.code === 'NO_CLAN_AFFILIATION',
+  'sin hermandad el santuario responde 409 NO_CLAN_AFFILIATION y el cliente lo propaga'
+);
+
+await createDominionClient({ fetch: awardStub }).awardSimulatorCombo();
+assertCondition(
+  awardStub.calls.at(-1).body === JSON.stringify({ comboElement: '' }),
+  'un combo sin afinidad declarada viaja con la cadena vacía, jamás con undefined'
+);
+
+// =====================================================================
 // [5] Credencial Bearer opcional y aditiva
 // =====================================================================
 console.log('\n[5] Credenciales');
@@ -295,7 +395,15 @@ function routePatternToRegExp(pattern) {
   return new RegExp(`^${escaped.replace(/\\\{[^}]+\\\}/g, '[^/]+')}$`);
 }
 
-const consulted = [...stub.calls, ...unsealedStub.calls, ...foreignSealStub.calls, ...bearerStub.calls].map((call) => call.path);
+const consulted = [
+  ...stub.calls,
+  ...unsealedStub.calls,
+  ...foreignSealStub.calls,
+  ...bearerStub.calls,
+  ...awardStub.calls,
+  ...cappedStub.calls,
+  ...homelessStub.calls,
+].map((call) => call.path);
 const orphanCalls = consulted.filter((path) => !registeredRoutes.some((route) => routePatternToRegExp(route.pattern).test(path)));
 assertCondition(
   orphanCalls.length === 0,
@@ -308,8 +416,12 @@ assertCondition(
   'los tres endpoints del Salón están registrados con su método propio'
 );
 assertCondition(
-  registeredRoutes.filter((route) => route.pattern.startsWith('/api/v1/dominion')).length === 2,
-  'el Salón solo expone dos rutas de Dominio: la lectura pública y el corte sellado'
+  registeredRoutes.some((route) => route.method === 'POST' && route.pattern === '/api/v1/dominion/simulator-combo'),
+  'la gloria del simulador (Endpoint 14, Tarea 7.1) está registrada con su método propio'
+);
+assertCondition(
+  registeredRoutes.filter((route) => route.pattern.startsWith('/api/v1/dominion')).length === 3,
+  'el Dominio expone tres rutas: la lectura pública, el corte sellado y la gloria del simulador'
 );
 
 // =====================================================================

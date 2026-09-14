@@ -10,6 +10,12 @@
  *   - GET  /api/v1/dominion/leaderboard      → 200 (Salón del Dominio).
  *   - POST /api/v1/dominion/cron-cycle-close → 200 (proclamación y reinicio).
  *
+ * Tarea 7.1 (TASKS-07): añade el Endpoint 14, que abre por HTTP la gloria que
+ * el Simulador devenga al detonar una reacción de combo elemental (RF-03.2):
+ * `POST /api/v1/dominion/simulator-combo`. El techo diario y su reinicio UTC no
+ * se reimplementan aquí: el controlador resuelve adepto y casa y delega
+ * ÍNTEGRAMENTE en el servicio (Artículo II).
+ *
  * El Salón del Dominio comprende las CUATRO secciones del plan: la
  * clasificación semanal en vivo, el prestigio histórico, el Clan Regente
  * vigente y el Libro Mayor de Campeones. La lectura consume la salvaguarda
@@ -24,9 +30,8 @@
  * Constitución:
  *   - Artículo I (Dogma Vanilla): Request/Response nativos y `hash_equals`
  *     nativo para la comparación de secretos; cero librerías.
- *   - Artículo IV (El Velo Arcano): toda leyenda viaja en noble castellano.
- *   - Artículo V: identificadores en inglés camelCase, claves de entorno en
- *     mayúsculas, documentación en castellano.
+ *   - Artículo IV: toda leyenda viaja en noble castellano.
+ *   - Artículo V: identificadores en inglés camelCase; documentación en castellano.
  *   - RNF-01: el cómputo es determinista y auditable; el corte deriva del
  *     último domingo concluido, no del capricho de quien lo invoca.
  */
@@ -37,6 +42,9 @@ namespace Grimorio\Controllers;
 
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
+use Grimorio\Dto\DominionAwardDto;
+use Grimorio\Exceptions\ClanGovernanceException;
+use Grimorio\Models\User;
 use Grimorio\Services\WeeklyDominionService;
 
 /**
@@ -125,6 +133,65 @@ final class DominionController
     }
 
     /**
+     * POST /api/v1/dominion/simulator-combo — Gloria del Simulador (Endpoint 14).
+     *
+     * Entrada: `{ "comboElement": "lightning" }`. El elemento es OPCIONAL: sin
+     * él (o marcado `none`) el combo no devenga sinergia, pero tampoco es un
+     * error —un conjuro sin afinidad es legítimo (RF-03.4)—.
+     *
+     * Respuestas:
+     *   - 200 OK: `{clanId, comboElement, dailyCap, award}`. El recibo canónico
+     *     (`award`) porta los PDA acreditados; con el techo diario colmado
+     *     llega con `awardedPoints: 0` y `reason: DAILY_SIMULATOR_CAP_REACHED`
+     *     —una agonía del cupo, jamás un error de la petición—.
+     *   - 400 INVALID_REQUEST_BODY: el cuerpo no es un objeto JSON válido.
+     *   - 401 UNAUTHENTICATED: sin vínculo arcano activo.
+     *   - 404 NOT_A_MEMBER: la membresía vigente no es la que declara el espejo.
+     *   - 409 NO_CLAN_AFFILIATION: el adepto no milita en hermandad alguna.
+     *
+     * El techo de 50 PDA por adepto y día UTC y su reinicio a las 00:00:00 UTC
+     * residen en el servicio (RF-03.2); el controlador jamás los recalcula.
+     */
+    public function awardSimulatorCombo(Request $request): Response
+    {
+        $member = $this->requireAuthenticatedMember($request);
+        if ($member === null) {
+            return $this->unauthenticatedResponse();
+        }
+
+        $payload = $request->getJsonBody();
+        if ($payload === null) {
+            return $this->invalidBodyResponse();
+        }
+
+        $comboElement = $this->readComboElement($payload);
+
+        // El espejo denormalizado declara la casa del adepto; el servicio la
+        // contrasta acto seguido contra la AUTORIDAD (`clan_members`), de modo
+        // que un espejo rancio jamás acredite gloria a una casa ajena.
+        $clanId = (string) ($member->getClanId() ?? '');
+        if ($clanId === '') {
+            return $this->rejection(ClanGovernanceException::noClanAffiliation($member->getId()));
+        }
+
+        try {
+            $award = $this->dominionService->awardSimulatorCombo($member, $clanId, $comboElement);
+        } catch (ClanGovernanceException $veto) {
+            return $this->rejection($veto);
+        }
+
+        return Response::json([
+            'success' => true,
+            'data'    => [
+                'clanId'       => $clanId,
+                'comboElement' => $comboElement,
+                'dailyCap'     => DominionAwardDto::DAILY_SIMULATOR_CAP,
+                'award'        => $award,
+            ],
+        ], 200);
+    }
+
+    /**
      * Verifica el sello del custodio; devuelve la Response de rechazo o null
      * si el corte queda autorizado.
      */
@@ -158,5 +225,62 @@ final class DominionController
         }
 
         return null;
+    }
+
+    /** Titular consagrado de la petición, o null si no hay vínculo activo. */
+    private function requireAuthenticatedMember(Request $request): ?User
+    {
+        $member = $request->getUser();
+
+        return $member === null || $member->getId() === '' ? null : $member;
+    }
+
+    /**
+     * Elemento del combo declarado por el adepto, saneado y acotado.
+     *
+     * Un elemento ajeno al Códice Elemental no se rechaza: la sinergia es una
+     * coincidencia estricta con la afinidad rectora del linaje, así que lo
+     * desconocido simplemente no devenga bonificación (misma tolerancia que
+     * `LineageSynergyService::hasSynergy`). El recorte evita que un payload
+     * hostil infle el recibo.
+     */
+    private function readComboElement(array $payload): string
+    {
+        $declared = $payload['comboElement'] ?? null;
+        $element = is_string($declared) ? trim($declared) : '';
+
+        return mb_substr($element, 0, 32);
+    }
+
+    /** Sobre canónico del veto de gobernanza (AGENTS.md 6.1). */
+    private function rejection(ClanGovernanceException $veto): Response
+    {
+        return Response::json($veto->toPayload(), $veto->httpStatus);
+    }
+
+    /** 401: sin vínculo arcano activo (contrato SPEC-03). */
+    private function unauthenticatedResponse(): Response
+    {
+        return Response::json([
+            'success' => false,
+            'error'   => [
+                'code'           => 'UNAUTHENTICATED',
+                'message'        => 'El vínculo arcano no está activo: conságrate o vincula tu identidad antes de sumar gloria a una hermandad.',
+                'recoveryAction' => 'BIND_OR_CONSECRATE',
+            ],
+        ], 401);
+    }
+
+    /** 400: el cuerpo de la petición no es un objeto JSON válido. */
+    private function invalidBodyResponse(): Response
+    {
+        return Response::json([
+            'success' => false,
+            'error'   => [
+                'code'           => 'INVALID_REQUEST_BODY',
+                'message'        => 'El cuerpo de la petición debe ser un objeto JSON válido.',
+                'recoveryAction' => 'CORRECT_THE_PAYLOAD',
+            ],
+        ], 400);
     }
 }

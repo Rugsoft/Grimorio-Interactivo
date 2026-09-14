@@ -136,19 +136,19 @@
 
 - [x] **Tarea 6.4: Vista de Detalle de Clan y Legado Ancestral (`clanView.js`)**
   * **Alcance:** Desarrollar `public/assets/js/views/clanView.js` que visualice el blasón del clan, lema, Patriarca, lista de miembros activos, botón de unirse/postularse (sujeto a cupo de 30 y convalecencia), botón de renuncia para adeptos, y catálogo de conjuros sellados bajo su sello (distinguiendo la «Herencia Ancestral» si el clan está archivado).
-  * **Cubre:** `RF-01.2`, `RF-01.4`, `RF-01.5`, `RF-05.1`, `RF-05.3`, `RF-05.4`
+  * **Cubre:** `RF-01.2`, `RF-01.4`, `RF-01.5`, `RF-05.1`, `RF-05.2`, `RF-05.3`, `RF-05.4`
   * **Hecho cuando:** La vista muestra los conjuros validados del clan independientemente de si los autores siguen en la hermandad, y marca con el sello de «Herencia Ancestral» si el clan está en estado `archived`.
 
 ---
 
 ## Fase 7: Verificación Integral, Cierre Dominical y Trazabilidad End-to-End
 
-- [ ] **Tarea 7.1: Integración cruzada con Portal, Simulador y Tomo de Conjuros**
+- [x] **Tarea 7.1: Integración cruzada con Portal, Simulador y Tomo de Conjuros**
   * **Alcance:** Conectar la acreditación de 10 PDA en combos del simulador (SPEC-05/06) respetando el techo de 50 PDA diarios a las 00:00:00 UTC, asociar los conjuros validados creados por miembros a su clan (SPEC-04) y proyectar el ribete dorado ceremonial en las fichas de conjuros del Clan Regente en el Tomo.
   * **Cubre:** `RF-03.1`, `RF-03.2`, `RF-03.5`, `RF-04.4`, `RNF-01`, `RNF-02`
   * **Hecho cuando:** La ejecución de un combo en el simulador acredita puntos al clan del usuario reflejándose en el ranking semanal en vivo y deteniéndose al alcanzar el tope diario de 50 PDA.
 
-- [ ] **Tarea 7.2: Verificación completa de suite de pruebas y cierre de especificación**
+- [x] **Tarea 7.2: Verificación completa de suite de pruebas y cierre de especificación**
   * **Alcance:** Ejecutar todas las pruebas unitarias y de integración backend (`test_clans_dominion.php`), comprobar la ausencia total de librerías externas o dependencias npm, validar la tipificación estricta en PHP 8.2+ y verificar la conformidad con los Artículos I, II, III, IV y V de la Constitución.
   * **Cubre:** `RF-01.1` a `RF-06.2`, `RNF-01` a `RNF-05`, `Criterios de Finalización de SPEC-07`
   * **Hecho cuando:** Todos los asertos automatizados pasan con éxito y se confirma que la tríada canónica (`spec.md`, `plan.md`, `tasks.md`) de SPEC-07 se encuentra totalmente alineada y lista para la ejecución.
