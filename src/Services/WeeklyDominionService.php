@@ -33,6 +33,7 @@ namespace Grimorio\Services;
 
 use DateTimeImmutable;
 use DateTimeZone;
+use Grimorio\Dto\ClanDto;
 use Grimorio\Dto\DominionAwardDto;
 use Grimorio\Dto\WeeklyCycleDto;
 use Grimorio\Exceptions\ClanGovernanceException;
@@ -485,6 +486,104 @@ final class WeeklyDominionService
         }
 
         return $this->closeWeeklyCycle($instant);
+    }
+
+    // ── Salón del Dominio: lectura del Endpoint 11 (Tarea 3.3) ──────────
+
+    /**
+     * El Salón del Dominio íntegro (plan 2.2, Endpoint 11): la clasificación
+     * viva, el prestigio perpetuo, el Clan Regente vigente y el Libro Mayor.
+     *
+     * Antes de leer la contienda se consuma la salvaguarda perezosa (plan 5,
+     * Decisión 1): si el cron dominical sufrió un retraso, la semana vencida se
+     * corona AQUÍ, de modo que su gloria jamás contamine la contienda en curso
+     * ni el podio exhiba una clasificación que ya debería estar liquidada. La
+     * operación es idempotente: una semana ya proclamada no se pliega dos veces.
+     *
+     * @param DateTimeImmutable|null $now       «Ahora» inyectable (RNF-01).
+     * @param int                    $fameLimit Cortes del Libro Mayor a exhibir; 0 = todos.
+     */
+    public function hallOfDominion(?DateTimeImmutable $now = null, int $fameLimit = 0): DominionHall
+    {
+        $this->ensureCycleIsCurrent($now);
+
+        return new DominionHall(
+            weeklyRanking: $this->weeklyRanking(),
+            historicalRanking: $this->historicalRanking(),
+            currentRegentClan: $this->currentRegentClan(),
+            hallOfFameWeeks: $this->hallOfFameWeeks($fameLimit),
+        );
+    }
+
+    /**
+     * La contienda en curso: casas activas por PDA semanal descendente
+     * (RF-06.1). El censo de adeptos viaja con cada estandarte.
+     *
+     * @return list<ClanDto>
+     */
+    public function weeklyRanking(): array
+    {
+        return array_map(
+            static fn (array $row): ClanDto => ClanDto::fromDatabaseRow($row),
+            $this->clanRepository->findActiveOrderedByWeeklyPointsDesc(),
+        );
+    }
+
+    /**
+     * El prestigio perpetuo: casas activas por gloria histórica descendente
+     * (RF-06.1). Una casa disuelta conserva su gloria, pero solo las activas
+     * figuran en la clasificación.
+     *
+     * @return list<ClanDto>
+     */
+    public function historicalRanking(): array
+    {
+        return array_map(
+            static fn (array $row): ClanDto => ClanDto::fromDatabaseRow($row),
+            $this->clanRepository->findActiveOrderedByHistoricalPointsDesc(),
+        );
+    }
+
+    /**
+     * El Clan Regente vigente: quien ciñó la corona en el último corte
+     * dominical inscrito (RF-04.5), o null si el santuario aún no ha
+     * proclamado semana alguna.
+     */
+    public function currentRegentClan(): ?ClanDto
+    {
+        $cycle = $this->cycleRepository->findCurrentRegentCycle();
+        if ($cycle === null) {
+            return null;
+        }
+
+        $regentRow = $this->clanRepository->findById((string) $cycle['regent_clan_id']);
+        if ($regentRow === null) {
+            return null;
+        }
+
+        // El censo no viaja en la lectura simple: se resuelve aquí para que el
+        // estandarte del Regente exhiba su ocupación como cualquier otro.
+        $regentRow['member_count'] = $this->memberRepository->countActiveMembers((string) $regentRow['id']);
+
+        return ClanDto::fromDatabaseRow($regentRow);
+    }
+
+    /**
+     * El Libro Mayor de Campeones (RF-04.4): los cortes dominicales ya
+     * proclamados, del más reciente al más antiguo.
+     *
+     * @param int $limit Cortes a exhibir; 0 = la memoria íntegra del santuario.
+     *
+     * @return list<WeeklyCycleDto>
+     */
+    public function hallOfFameWeeks(int $limit = 0): array
+    {
+        $cycles = [];
+        foreach ($this->cycleRepository->findCycleHistory($limit) as $row) {
+            $cycles[] = $this->toCycleDto($row);
+        }
+
+        return $cycles;
     }
 
     // ── Cómputo interno del corte ────────────────────────────────────────

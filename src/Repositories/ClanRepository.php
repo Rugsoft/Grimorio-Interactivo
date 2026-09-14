@@ -72,6 +72,17 @@ final class ClanRepository
         . 'coat_of_arms, lineage_type, admission_mode, status, patriarch_id, '
         . 'weekly_points, historical_points, last_activity_at, updated_at';
 
+    /**
+     * Censo de adeptos ACTIVOS de cada casa (RF-01.4), resuelto en la MISMA
+     * lectura que la fila: el estandarte del Salón de Linajes exhibe la
+     * ocupación «X/30» sin una segunda consulta por hermandad.
+     *
+     * `left_at IS NULL` señala la afiliación vigente; las filas cerradas son
+     * historial ético (Artículo III) y NO ocupan cupo.
+     */
+    private const ACTIVE_MEMBER_COUNT = '(SELECT COUNT(*) FROM clan_members active_members '
+        . 'WHERE active_members.clan_id = clans.id AND active_members.left_at IS NULL)';
+
     /** Conexión PDO del santuario (Singleton del front controller). */
     private PDO $pdo;
 
@@ -467,6 +478,107 @@ final class ClanRepository
     }
 
     /**
+     * Catálogo público filtrado de hermandades (plan 2.2, Endpoint 2).
+     *
+     * Ambos filtros son opcionales y llegan YA validados por el controlador
+     * contra el canon (linaje de los ocho, estado `active`/`archived`). Viajan
+     * SIEMPRE vinculados como parámetros —jamás interpolados—, de modo que la
+     * sentencia permanece íntegramente preparada (AGENTS.md 6.1) y un filtro
+     * nulo se traduce en «sin restricción» en el propio motor.
+     *
+     * El orden es determinista (RNF-01): gloria semanal descendente, gloria
+     * perpetua como desempate, fundación más antigua y, en última instancia,
+     * el identificador textual, para que dos lecturas idénticas devuelvan
+     * idéntica página.
+     *
+     * @param string|null $lineageType Linaje rector exigido, o null para todos.
+     * @param string|null $status      Estado exigido, o null para todos.
+     * @param int         $limit       Filas de la página (> 0).
+     * @param int         $offset      Filas omitidas (>= 0).
+     *
+     * @return list<array{
+     *   id: string, slug: string, name: string, motto: string,
+     *   coat_of_arms: string, lineage_type: string, admission_mode: string,
+     *   status: string, patriarch_id: string|null,
+     *   weekly_points: int, historical_points: int,
+     *   last_activity_at: string, created_at: string, updated_at: string,
+     *   member_count: int
+     * }>
+     *
+     * @throws InvalidArgumentException Si la página solicitada no tiene sentido físico.
+     */
+    public function searchClans(?string $lineageType, ?string $status, int $limit, int $offset): array
+    {
+        if ($limit < 1 || $offset < 0) {
+            throw new InvalidArgumentException(
+                'El catálogo exige un límite positivo y un desplazamiento no negativo.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT ' . self::CLAN_COLUMNS . ', '
+            . self::ACTIVE_MEMBER_COUNT . ' AS member_count'
+            . '
+               FROM clans
+              WHERE (:lineageType IS NULL OR lineage_type = :lineageType)
+                AND (:status IS NULL OR status = :status)
+              ORDER BY weekly_points DESC, historical_points DESC, created_at ASC, id ASC
+              LIMIT :limit OFFSET :offset'
+        );
+
+        $statement->bindValue(
+            ':lineageType',
+            $lineageType,
+            $lineageType === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(
+            ':status',
+            $status,
+            $status === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $statement->execute();
+
+        $clans = [];
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $clans[] = $this->hydrate($row);
+        }
+
+        return $clans;
+    }
+
+    /**
+     * Censo total de hermandades que satisfacen el filtro del catálogo.
+     *
+     * Es el metadato `totalItems` de la paginación: se cuenta con EXACTAMENTE
+     * los mismos predicados que `searchClans()`, de modo que página y total
+     * jamás puedan divergir.
+     */
+    public function countClans(?string $lineageType, ?string $status): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM clans
+              WHERE (:lineageType IS NULL OR lineage_type = :lineageType)
+                AND (:status IS NULL OR status = :status)'
+        );
+
+        $statement->bindValue(
+            ':lineageType',
+            $lineageType,
+            $lineageType === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(
+            ':status',
+            $status,
+            $status === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->execute();
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
      * Ejecuta la clasificación de hermandades activas por el contador dado.
      *
      * El nombre de la columna NO llega del exterior: solo se admite una de
@@ -488,8 +600,12 @@ final class ClanRepository
             throw new InvalidArgumentException('Contador de Dominio no canónico para la clasificación.');
         }
 
+        // El censo de adeptos viaja con la fila: el Salón de los Linajes lo
+        // exhibe en cada estandarte de la clasificación (RF-06.1).
         $statement = $this->pdo->prepare(
-            'SELECT ' . self::CLAN_COLUMNS . '
+            'SELECT ' . self::CLAN_COLUMNS . ', '
+            . self::ACTIVE_MEMBER_COUNT . ' AS member_count'
+            . '
                FROM clans
               WHERE status = :status
               ORDER BY ' . $counterColumn . ' DESC, historical_points DESC, created_at ASC, id ASC'
@@ -523,7 +639,7 @@ final class ClanRepository
      */
     private function hydrate(array $row): array
     {
-        return [
+        $hydrated = [
             'id'                => (string) $row['id'],
             'slug'              => (string) $row['slug'],
             'name'              => (string) $row['name'],
@@ -539,6 +655,15 @@ final class ClanRepository
             'created_at'        => (string) $row['created_at'],
             'updated_at'        => (string) $row['updated_at'],
         ];
+
+        // El censo de adeptos solo aparece cuando la lectura lo resolvió
+        // (catálogo paginado, Endpoint 2); las lecturas simples lo omiten y
+        // el servicio lo completa por su cuenta (Endpoints 3, 6 y 9).
+        if (array_key_exists('member_count', $row)) {
+            $hydrated['member_count'] = (int) $row['member_count'];
+        }
+
+        return $hydrated;
     }
 
     /**

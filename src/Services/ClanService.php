@@ -53,6 +53,12 @@ final class ClanService
     /** Días de silencio que abren el velatorio dinástico (RF-01.9). */
     public const PATRIARCH_INACTIVITY_DAYS = 45;
 
+    /** Tamaño de página por defecto del catálogo de hermandades (Endpoint 2). */
+    public const DEFAULT_CATALOG_PER_PAGE = 20;
+
+    /** Techo de página del catálogo: nadie abarca el santuario entero de una vez. */
+    public const MAX_CATALOG_PER_PAGE = 50;
+
     /** Identidad del santuario cuando el acto lo dicta el canon, no una pluma. */
     private const SYSTEM_ACTOR_ID = 'sys_santuario';
     private const SYSTEM_ACTOR_ALIAS = 'El Santuario';
@@ -654,6 +660,118 @@ final class ClanService
         );
 
         return PatriarchSuccessionResult::transferred($patriarchId, $successorId, $inactivityDays);
+    }
+
+    // ── Lectura pública del catálogo y de la ficha (Tarea 3.2) ──────────
+
+    /**
+     * Catálogo filtrado y paginado de hermandades (plan 2.2, Endpoint 2).
+     *
+     * Ni el linaje ni el estado llegan aquí sin canon: el controlador valida
+     * el linaje contra los ocho canónicos y el estado contra `active` y
+     * `archived` antes de invocar; esta firma se limita a componer la página
+     * con su censo de adeptos y sus metadatos.
+     *
+     * La página y el tamaño solicitados se acotan SIEMPRE (RNF-02: un cliente
+     * no puede pedir el santuario entero de una vez), de modo que el catálogo
+     * responde en tiempo constante.
+     *
+     * @param string|null $lineageType Linaje rector exigido, o null para todos.
+     * @param string|null $status      Estado exigido, o null para todos.
+     * @param int         $page        Página deseada (>= 1).
+     * @param int         $perPage     Tamaño de página solicitado (1 a 50).
+     */
+    public function browseClans(
+        ?string $lineageType = null,
+        ?string $status = null,
+        int $page = 1,
+        int $perPage = self::DEFAULT_CATALOG_PER_PAGE,
+    ): ClanCatalogPage {
+        $safePage = max(1, $page);
+        $safePerPage = min(max(1, $perPage), self::MAX_CATALOG_PER_PAGE);
+        $offset = ($safePage - 1) * $safePerPage;
+
+        $rows = $this->clanRepository->searchClans($lineageType, $status, $safePerPage, $offset);
+        $totalItems = $this->clanRepository->countClans($lineageType, $status);
+
+        $items = [];
+        foreach ($rows as $row) {
+            $items[] = $this->toClanDto($row);
+        }
+
+        return new ClanCatalogPage(
+            items: $items,
+            pagination: [
+                'page'       => $safePage,
+                'limit'      => $safePerPage,
+                'totalItems' => $totalItems,
+                'totalPages' => max(1, (int) ceil($totalItems / $safePerPage)),
+            ],
+        );
+    }
+
+    /**
+     * ¿Pertenece el linaje dado al canon de los ocho Linajes Mágicos? (RF-02.1)
+     *
+     * Proyección de la autoridad del catálogo (LineageSynergyService, Tarea
+     * 2.2): el controlador la usa para responder 400 ante un filtro ajeno al
+     * canon en lugar de devolver un catálogo vacío que oculte la errata.
+     */
+    public function hasCanonicalLineage(string $lineageType): bool
+    {
+        return $this->lineageService->hasLineage(trim($lineageType));
+    }
+
+    /**
+     * El censo de adeptos ACTIVOS de una hermandad, con su alias público y su
+     * rol nobiliario, para la ficha detallada (plan 2.2, Endpoint 3).
+     *
+     * El Patriarca encabeza siempre la lista; el resto por antigüedad de
+     * ingreso, como manda el orden del canon (RF-01.3).
+     *
+     * @return list<ClanMemberDto>
+     *
+     * @throws ClanGovernanceException Si la hermandad no existe.
+     */
+    public function listClanMembers(string $clanId): array
+    {
+        $this->requireClan($clanId);
+
+        $members = [];
+        foreach ($this->memberRepository->findMembersByClan($clanId) as $row) {
+            $members[] = $this->toMemberDto($row);
+        }
+
+        return $members;
+    }
+
+    /**
+     * Las postulaciones PENDIENTES de una casa, reservadas a la deliberación
+     * del Patriarca (Endpoints 5 y 6).
+     *
+     * Quien no ciñe la corona recibe una lista vacía en lugar de un rechazo:
+     * la ficha pública del clan no debe delatar quién corteja a quién, y el
+     * contrato permanece estable para todo lector. El Patriarca solo necesita
+     * conocer el identificador que el Endpoint 6 exige para dictar veredicto.
+     *
+     * @return list<ClanApplicationDto>
+     *
+     * @throws ClanGovernanceException Si la hermandad no existe.
+     */
+    public function listPendingApplications(User $requester, string $clanId): array
+    {
+        $clan = $this->requireClan($clanId);
+
+        if ($clan->patriarchId === null || $clan->patriarchId !== $requester->getId()) {
+            return [];
+        }
+
+        $applications = [];
+        foreach ($this->applicationRepository->findApplicationsByClan($clanId, ClanApplicationDto::STATUS_PENDING) as $row) {
+            $applications[] = $this->toApplicationDto($row);
+        }
+
+        return $applications;
     }
 
     // ── Gobierno interno ─────────────────────────────────────────────────

@@ -67,12 +67,12 @@
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RNF-03`, `RNF-05`, `Artículo V`
   * **Hecho cuando:** La petición `GET /api/v1/lineages` responde con HTTP 200 y una lista JSON de exactamente 8 linajes canónicos.
 
-- [ ] **Tarea 3.2: Controlador de Clanes, Gobernanza y Postulaciones (`ClanController.php`)**
+- [x] **Tarea 3.2: Controlador de Clanes, Gobernanza y Postulaciones (`ClanController.php`)**
   * **Alcance:** Implementar `src/Controllers/ClanController.php` gestionando los endpoints REST: `POST /api/v1/clans` (fundación), `GET /api/v1/clans` (catálogo y filtros), `GET /api/v1/clans/{id}` (detalle), `PATCH /api/v1/clans/{id}` (lema, blasón, régimen), `POST /api/v1/clans/{id}/applications` (postulación), `POST /api/v1/clans/{id}/applications/{appId}/resolve` (aprobar/rechazar), `POST /api/v1/clans/{id}/leave` (renuncia), `POST /api/v1/clans/{id}/expel/{userId}` (expulsión) y `POST /api/v1/clans/{id}/transfer-leadership` (corona).
   * **Cubre:** `RF-01.1` a `RF-01.7`, `RF-05.3`, `RF-05.4`, `RNF-01`, `RNF-04`
   * **Hecho cuando:** Todos los endpoints responden con los códigos de estado HTTP estipulados en el plan (200, 201, 400, 403, 404, 409, 422) y aplican las validaciones de permisos y convalecencia.
 
-- [ ] **Tarea 3.3: Controlador de Dominio Semanal y Clasificaciones (`DominionController.php`)**
+- [x] **Tarea 3.3: Controlador de Dominio Semanal y Clasificaciones (`DominionController.php`)**
   * **Alcance:** Implementar `src/Controllers/DominionController.php` para `GET /api/v1/dominion/leaderboard` (clasificación en vivo, acumulado histórico, Clan Regente y registro cronológico) y `POST /api/v1/dominion/cron-cycle-close` (cierre determinista protegido por cabecera secreta).
   * **Cubre:** `RF-04.1` a `RF-04.4`, `RF-06.1`, `RF-06.2`, `RNF-01`
   * **Hecho cuando:** La ruta del leaderboard devuelve el podio semanal ordenado descendentemente por PDA y la ruta de cierre dominical ejecuta la proclamación y reseteo sin errores.

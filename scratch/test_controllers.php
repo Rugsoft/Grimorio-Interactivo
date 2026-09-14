@@ -29,6 +29,9 @@ require_once __DIR__ . '/../src/Services/SpellDiscoveryService.php';
 require_once __DIR__ . '/../src/Controllers/PortalController.php';
 require_once __DIR__ . '/../src/Controllers/SpellController.php';
 require_once __DIR__ . '/../src/Controllers/ClanController.php';
+// Autoload nativo del proyecto: el gobierno de hermandades (Tarea 3.2 de
+// TASKS-07) arrastra repositorios y servicios propios que no se enumeran aquí.
+require_once __DIR__ . '/../public/index.php';
 
 use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\PortalController;
@@ -37,6 +40,7 @@ use Grimorio\Core\Request;
 use Grimorio\Core\Response;
 use Grimorio\Core\Router;
 use Grimorio\Database\Connection;
+use Grimorio\Services\ClanService;
 use Grimorio\Services\SpellDiscoveryService;
 
 $assertsPassed = 0;
@@ -99,7 +103,10 @@ $pdo->prepare(
 $discoveryService = new SpellDiscoveryService(Connection::getInstance());
 $portalController = new PortalController($discoveryService);
 $spellController  = new SpellController($discoveryService);
-$clanController   = new ClanController(Connection::getInstance());
+$clanController   = new ClanController(
+    Connection::getInstance(),
+    new ClanService(Connection::getInstance()->getPdo()),
+);
 
 echo "== VERIFICACION TAREA 1.5: Controladores REST y Front Controller ==\n\n";
 

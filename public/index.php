@@ -42,9 +42,11 @@ spl_autoload_register(static function (string $className): void {
 use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\GrimoireController;
 use Grimorio\Controllers\LineageController;
+use Grimorio\Controllers\DominionController;
 use Grimorio\Controllers\ElementalMatrixController;
 use Grimorio\Services\ElementalMatrixService;
 use Grimorio\Services\LineageSynergyService;
+use Grimorio\Services\WeeklyDominionService;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
@@ -56,6 +58,8 @@ use Grimorio\Core\Router;
 use Grimorio\Core\SessionManager;
 use Grimorio\Middleware\AuthMiddleware;
 use Grimorio\Database\Connection;
+use Grimorio\Services\AuditService;
+use Grimorio\Services\ClanService;
 use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\SpellDiscoveryService;
 use Grimorio\Services\SpellManagementService;
@@ -72,7 +76,13 @@ function buildRouter(): Router
     $discoveryService = new SpellDiscoveryService($connection);
     $portalController = new PortalController($discoveryService);
     $spellController  = new SpellController($discoveryService);
-    $clanController   = new ClanController($connection);
+    // Gobierno de hermandades (SPEC-07, Tareas 2.4 y 3.2): el servicio se
+    // cablea con la Bitácora pública para que fundaciones, expulsiones,
+    // renuncias y disoluciones queden inscritas (RNF-04).
+    $clanController   = new ClanController(
+        $connection,
+        new ClanService($connection->getPdo(), new AuditService($connection->getPdo()), new LineageSynergyService()),
+    );
 
     // Pila de autenticación (SPEC-03): gestor de sesiones y rate limiter
     // alineados sobre el PDO del front controller (Connection::getPdo()).
@@ -95,6 +105,17 @@ function buildRouter(): Router
     // en memoria del servicio (Tarea 2.2), de lectura pública y sin estado.
     $lineageController = new LineageController(new LineageSynergyService());
 
+    // Dominio Semanal (SPEC-07, Tareas 2.5 y 3.3): el Salón del Dominio y el
+    // corte dominical. La clave del cron vive en GRIMORIO_CRON_SECRET (el
+    // controlador la lee del entorno); sin ella, el cierre falla cerrado.
+    $dominionController = new DominionController(
+        new WeeklyDominionService(
+            $connection->getPdo(),
+            new AuditService($connection->getPdo()),
+            new LineageSynergyService(),
+        ),
+    );
+
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
@@ -105,8 +126,29 @@ function buildRouter(): Router
     $router->addRoute('GET', '/api/v1/spells/{slug}', fn (Request $request, array $routeParams): Response => $spellController->show($request, $routeParams));
     $router->addRoute('GET', '/api/v1/clans/preview', fn (Request $request): Response => $clanController->preview($request));
 
+    // --- Rutas del gobierno de hermandades (SPEC-07, plan Endpoints 1-9) ---
+    // IMPORTANTE: las rutas literales (`/clans`, `/clans/preview`) se registran
+    // ANTES que los patrones con parámetro; los subcaminos (`/applications`,
+    // `/leave`, `/expel/{userId}`, `/transfer-leadership`) no colisionan con
+    // `/clans/{id}` porque su grupo nombrado excluye la barra.
+    $router->addRoute('GET', '/api/v1/clans', fn (Request $request): Response => $clanController->index($request));
+    $router->addRoute('POST', '/api/v1/clans', fn (Request $request): Response => $clanController->store($request));
+    $router->addRoute('GET', '/api/v1/clans/{id}', fn (Request $request, array $routeParams): Response => $clanController->show($request, $routeParams));
+    $router->addRoute('PATCH', '/api/v1/clans/{id}', fn (Request $request, array $routeParams): Response => $clanController->update($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/clans/{id}/applications', fn (Request $request, array $routeParams): Response => $clanController->apply($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/clans/{id}/applications/{appId}/resolve', fn (Request $request, array $routeParams): Response => $clanController->resolveApplication($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/clans/{id}/leave', fn (Request $request, array $routeParams): Response => $clanController->leave($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/clans/{id}/expel/{userId}', fn (Request $request, array $routeParams): Response => $clanController->expel($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/clans/{id}/transfer-leadership', fn (Request $request, array $routeParams): Response => $clanController->transferLeadership($request, $routeParams));
+
     // --- Rutas del Salón de los Linajes (SPEC-07, plan Endpoint 10) ---
     $router->addRoute('GET', '/api/v1/lineages', fn (Request $request): Response => $lineageController->index($request));
+
+    // --- Rutas del Dominio Semanal (SPEC-07, plan Endpoints 11-12) ---
+    // El Salón es de lectura pública; el corte dominical exige el sello del
+    // custodio en la cabecera X-Arcane-Cron-Secret.
+    $router->addRoute('GET', '/api/v1/dominion/leaderboard', fn (Request $request): Response => $dominionController->leaderboard($request));
+    $router->addRoute('POST', '/api/v1/dominion/cron-cycle-close', fn (Request $request): Response => $dominionController->closeCycle($request));
 
     // --- Rutas del Simulador de Grimorio (SPEC-05, plan Endpoints 1-2) ---
     $router->addRoute('GET', '/api/v1/grimoire/spells', fn (Request $request): Response => $grimoireController->listSpells($request));
