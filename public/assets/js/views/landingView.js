@@ -21,6 +21,7 @@
  */
 
 import { createSpellCardComponent } from '../components/spellCardComponent.js';
+import { createClanBannerComponent } from '../components/clanBannerComponent.js';
 
 /** Acción reservada que emite el CTA de consagración (contrato del orquestador). */
 export const CONSECRATION_ACTION = 'joinClan';
@@ -31,19 +32,28 @@ export const CONSECRATION_ACTION = 'joinClan';
  * @param {HTMLElement} mountRoot Punto de montaje (`<main id="app">`).
  * @param {Object} options
  * @param {Object} options.spellClient Cliente HTTP (Tarea 3.3; necesita fetchFeatured).
+ * @param {Object} [options.dominionClient] Cliente del Dominio (Tarea 5.1; necesita
+ *        fetchLeaderboard). Con él, la cabecera del portal exhibe el blasón del
+ *        Clan Regente (SPEC-07, Tarea 5.2); sin él, el portal no cambia.
  * @param {(action: string) => void} options.onReservedAction Notifica acciones reservadas
  *        (el orquestador abrirá «Cruzar el Umbral» con la intención retenida).
  * @param {(slug: string) => void} options.onSpellSelect Notifica la selección de un destacado.
+ * @param {(clanId: string) => void} [options.onRegentSelect] Notifica la selección del linaje reinante.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica inyectable (tests).
  * @returns {Object} API: { render, destroy }.
  */
 export function createLandingView(mountRoot, options) {
   const {
     spellClient,
+    dominionClient = null,
     onReservedAction,
     onSpellSelect,
+    onRegentSelect,
     elementFactory = (tagName) => document.createElement(tagName),
   } = options;
+
+  /** Blasón del Clan Regente montado en la cabecera, si procede (Tarea 5.2). */
+  let regentBanner = null;
 
   /** Nodos vivos de la vista, para limpieza determinista en destroy(). */
   const mountedNodes = [];
@@ -70,6 +80,28 @@ export function createLandingView(mountRoot, options) {
       activationEvent.preventDefault?.();
     }
     onReservedAction?.(CONSECRATION_ACTION);
+  }
+
+  /**
+   * Monta el blasón del Clan Regente en la CABECERA del Gran Portal
+   * (SPEC-07, Tarea 5.2). Solo se monta si el orquestador inyectó el cliente
+   * del Dominio: sin él, el portal se renderiza exactamente como antes.
+   *
+   * @param {HTMLElement} view Raíz de la portada.
+   */
+  async function mountRegentBanner(view) {
+    if (dominionClient === null) return;
+
+    const bannerSlot = track(elementFactory('div'));
+    bannerSlot.className = 'landing-view__regent';
+    view.appendChild(bannerSlot);
+
+    regentBanner = createClanBannerComponent(bannerSlot, {
+      dominionClient,
+      onRegentSelect,
+      elementFactory,
+    });
+    await regentBanner.render();
   }
 
   /**
@@ -156,6 +188,13 @@ export function createLandingView(mountRoot, options) {
     view.className = 'landing-view grimoire-tomo-container';
     mountRoot.appendChild(view);
 
+    // Cabecera del portal: el blasón del Clan Regente abre la portada
+    // (Tarea 5.2). Sin cliente del Dominio NO se cede el turno: la portada
+    // de SPEC-01 conserva su sincronía original (lo verifica su arnés).
+    if (dominionClient !== null) {
+      await mountRegentBanner(view);
+    }
+
     view.appendChild(buildHero());
 
     const featuredSection = buildFeaturedSection();
@@ -209,6 +248,9 @@ export function createLandingView(mountRoot, options) {
    *        false para limpiar la renderización previa antes de volver a montar.
    */
   function destroy(removeFromRoot = true) {
+    // El blasón primero: cancela cualquier consulta suya en vuelo (Tarea 5.2).
+    regentBanner?.destroy?.();
+    regentBanner = null;
     for (const node of mountedNodes.splice(0)) {
       node.remove?.();
     }

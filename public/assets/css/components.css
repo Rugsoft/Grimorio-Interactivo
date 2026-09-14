@@ -603,3 +603,224 @@
   animation: arcane-pulse 1.6s ease-in-out infinite;
   color: var(--color-text-light-muted);
 }
+
+/* ---------------------------------------------------------------------
+   7. Blasón del Clan Regente (SPEC-07, Tarea 5.2 — RF-04.4, RF-02.2)
+
+   Contraste WCAG 2.1 sobre la superficie de obsidiana elevada (#1b1922):
+     · título dorado   (#d4a94e) = 7.93:1
+     · nombre del clan (#f3cf58) = 11.48:1
+     · lema            (#c9bfaf) = 9.56:1
+     · proclamación    (#9e9382) = 5.75:1
+   El escudo viste tinta sobre pergamino (#2b2118 / #f0e6d2) = 12.71:1.
+   Paleta 100% de tokens: cero literales de color (Artículo I / RNF-05).
+   ----------------------------------------------------------------- */
+
+.clan-banner {
+  display: grid;
+  gap: var(--space-ink-2);
+  margin-bottom: var(--space-ink-4);
+  padding: var(--space-ink-4);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.clan-banner__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.clan-banner__proclamation {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.clan-banner__regent {
+  display: grid;
+  gap: var(--space-ink-1);
+  justify-items: center;
+  padding: var(--space-ink-3);
+  border-top: var(--border-ink);
+  border-bottom: var(--border-ink);
+}
+
+/* Escudo heráldico: el tinte del estandarte llega por --banner-tint
+   (glifo del linaje rector) y jamás sustituye al emblema textual. */
+.clan-banner__shield {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-4);
+  border: 2px solid var(--banner-tint, var(--color-gold-arcane));
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* Corona dorada ceremonial del Dominio (RF-04.4). Los filamentos ornan el
+   emblema con un ciclo compositable (transform + opacity) para no abandonar
+   el eje de 60 fps del plan 5.1. */
+.clan-banner__crown {
+  font-size: var(--font-size-ink-large);
+  line-height: 1;
+}
+
+.clan-banner__crown--golden {
+  color: var(--color-gold-bright);
+  text-shadow: 0 0 12px var(--color-gold-arcane);
+  animation: regentFilaments 4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes regentFilaments {
+  0%   { transform: translateY(0) scale(1); opacity: 0.9; }
+  50%  { transform: translateY(-2px) scale(1.04); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 0.9; }
+}
+
+.clan-banner__clan-name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-bright);
+}
+
+.clan-banner__motto {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.clan-banner__lineage,
+.clan-banner__reign {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.clan-banner__element-glyph {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-large);
+  color: var(--banner-tint, var(--color-gold-arcane));
+}
+
+/* Trono vacío: el santuario aún no ha coronado a nadie (no es un error). */
+.clan-banner__empty {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-secondary);
+}
+
+/* Corte de maná: el mensaje viste tinta de alto contraste (15.30:1) y la
+   brasa de ember queda como marca gráfica del recuadro (3.83:1 > 3:1, el
+   umbral de los componentes de interfaz). */
+.clan-banner__error {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: center;
+  padding: var(--space-ink-3);
+  border: 1px solid var(--color-ember-red);
+  border-radius: var(--radius-scroll);
+}
+
+.clan-banner__error-message {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-primary);
+}
+
+/* Respeto por la preferencia de menos movimiento (accesibilidad, RNF-03): */
+@media (prefers-reduced-motion: reduce) {
+  .clan-banner__crown--golden {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   8. Aviso de Convalecencia Arcana (SPEC-07, Tarea 5.3 — RF-01.6, RF-01.7)
+
+   Franja del perfil del mago que purga sus catorce días de meditación:
+   contador de días restantes, barra decreciente y leyenda del veto de
+   afiliación. Paleta 100% de tokens: cero literales de color (Artículo I).
+   La barra vive del oro arcano sobre la obsidiana elevada, holgadamente
+   por encima del umbral de 3:1 de los componentes de interfaz.
+   ----------------------------------------------------------------- */
+
+.arcane-notice-slot:empty {
+  display: none;
+}
+
+.convalescence-banner {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: center;
+  padding: var(--space-ink-3) var(--space-ink-4);
+  border-top: 1px solid var(--color-gold-arcane-dim);
+  border-bottom: 1px solid var(--color-gold-arcane-dim);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.convalescence-banner__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.convalescence-banner__legend {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  color: var(--color-text-primary);
+}
+
+.convalescence-banner__penitent,
+.convalescence-banner__veto {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+/* Barra decreciente de los catorce días: el ancho llega por la Custom
+   Property --convalescence-progress que fija el componente. */
+.convalescence-banner__progress {
+  position: relative;
+  width: min(100%, 32rem);
+  height: var(--space-ink-2);
+  overflow: hidden;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-deep);
+}
+
+.convalescence-banner__progress-fill {
+  display: block;
+  width: var(--convalescence-progress, 0%);
+  height: 100%;
+  background-color: var(--color-gold-arcane);
+  transition: width 600ms ease-out;
+}
+
+/* La franja del aviso respeta el menos movimiento (accesibilidad, RNF-03). */
+@media (prefers-reduced-motion: reduce) {
+  .convalescence-banner__progress-fill {
+    transition: none;
+  }
+}

@@ -100,17 +100,17 @@
 
 ## Fase 5: Clientes de API y Componentes UI Vanilla ES Modules
 
-- [ ] **Tarea 5.1: Clientes nativos de API (`clanClient.js` y `dominionClient.js`)**
+- [x] **Tarea 5.1: Clientes nativos de API (`clanClient.js` y `dominionClient.js`)**
   * **Alcance:** Desarrollar `public/assets/js/api/clanClient.js` y `public/assets/js/api/dominionClient.js` utilizando `fetch` nativo sin librerías, con manejo de excepciones y traducción a mensajes ceremoniales en castellano.
   * **Cubre:** `RF-01.1` a `RF-01.6`, `RF-04.1`, `RF-06.1`, `RNF-03`, `RNF-05`, `Artículo I`
   * **Hecho cuando:** Los clientes realizan las llamadas asíncronas a los endpoints backend gestionando tokens Bearer y propagando respuestas estructuradas.
 
-- [ ] **Tarea 5.2: Componente del Clan Regente en Portal (`clanBannerComponent.js`)**
+- [x] **Tarea 5.2: Componente del Clan Regente en Portal (`clanBannerComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/clanBannerComponent.js` para renderizar en el Gran Portal (SPEC-01) el blasón del Clan Regente semanal, lema heráldico, linaje elemental y corona dorada ceremonial.
   * **Cubre:** `RF-04.4`, `RF-02.2`, `RNF-03`
   * **Hecho cuando:** La cabecera del portal muestra de forma destacada el escudo y lema del Clan Soberano de la semana actual con atributos ARIA accesibles.
 
-- [ ] **Tarea 5.3: Componente de aviso de Convalecencia Arcana (`convalescenceBannerComponent.js`)**
+- [x] **Tarea 5.3: Componente de aviso de Convalecencia Arcana (`convalescenceBannerComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/convalescenceBannerComponent.js` para incrustar en el perfil del mago el indicador de descanso obligatorio (*«En Convalecencia Arcana: restan X días de meditación»*), deshabilitando los botones de ingreso o fundación mientras esté activo.
   * **Cubre:** `RF-01.6`, `RF-01.7`, `RNF-03`
   * **Hecho cuando:** Un usuario en convalecencia ve en su perfil el contador de días restantes y las opciones de afiliación a nuevos clanes aparecen deshabilitadas con la leyenda ceremonial.

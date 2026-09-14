@@ -40,6 +40,7 @@ import { createErrorView } from './views/errorView.js';
 import { createSpellCreatorView } from './views/spellCreatorView.js';
 import { createGrimoireSimulatorView } from './views/grimoireSimulatorView.js';
 import { createGrimoireClient } from './api/grimoireClient.js';
+import { createDominionClient } from './api/dominionClient.js';
 import {
   listDrafts as apiListDrafts,
   saveDraft as apiSaveDraft,
@@ -57,6 +58,7 @@ import {
   dissolveAll as apiDissolveAll,
 } from './api/authClient.js';
 import { createMemoryBadgeRoot } from './components/userProfileBadge.js';
+import { createConvalescenceBannerComponent } from './components/convalescenceBannerComponent.js';
 
 /**
  * Crea la aplicación orquestada.
@@ -69,7 +71,11 @@ import { createMemoryBadgeRoot } from './components/userProfileBadge.js';
  * @param {Object} [options.spellClient] Cliente HTTP (inyectable en pruebas).
  * @param {Object} [options.authClient] Cliente de autenticación SPEC-03 (inyectable en pruebas).
  * @param {Object} [options.grimoireClient] Cliente del grimorio SPEC-05 (inyectable en pruebas).
+ * @param {Object} [options.dominionClient] Cliente del Dominio SPEC-07, para el
+ *        blasón del Clan Regente del Gran Portal (Tarea 5.2; inyectable en pruebas).
  * @param {HTMLElement} [options.badgeRoot] Contenedor del distintivo de sesión de la cabecera.
+ * @param {HTMLElement} [options.arcaneNoticeRoot] Franja del perfil del mago
+ *        donde se despliega el aviso de Convalecencia Arcana (Tarea 5.3).
  * @param {Window} [options.windowRef] Ventana (inyectable en pruebas).
  * @param {Document} [options.documentRef] Documento (inyectable en pruebas).
  * @returns {Object} API: { boot, store, navigate, openSpellDetailBySlug, destroy }.
@@ -87,6 +93,7 @@ export function createGrimoireApp(options = {}) {
       fetchClansPreview: apiFetchClansPreview,
     },
     badgeRoot = globalThis.document?.getElementById?.('navSessionSlot'),
+    arcaneNoticeRoot = globalThis.document?.getElementById?.('arcaneNoticeSlot'),
     authClient = {
       checkSession: apiCheckSession,
       bind: apiBind,
@@ -95,6 +102,7 @@ export function createGrimoireApp(options = {}) {
       dissolveAll: apiDissolveAll,
     },
     grimoireClient = createGrimoireClient(),
+    dominionClient = createDominionClient(),
     windowRef = globalThis.window,
     documentRef = globalThis.document,
   } = options;
@@ -121,6 +129,7 @@ export function createGrimoireApp(options = {}) {
   let detailModal = null;
   let accessModal = null;
   let sessionBadge = null;
+  let convalescenceNotice = null;
   let historyManager = null;
   let errorView = null;
   let isDestroyed = false;
@@ -164,6 +173,8 @@ export function createGrimoireApp(options = {}) {
     if (viewName === 'landing') {
       const landingView = createLandingView(appRoot, {
         spellClient,
+        // Blasón del Clan Regente en la cabecera del portal (SPEC-07, Tarea 5.2).
+        dominionClient,
         onReservedAction: handleReservedAction,
         onSpellSelect: (slug, originElement) => openSpellDetailBySlug(slug, { originElement }),
         elementFactory,
@@ -359,6 +370,9 @@ export function createGrimoireApp(options = {}) {
     if (user !== null && typeof user === 'object') {
       store.setSession(user);
       sessionBadge?.setUser(user);
+      // El perfil llega con el sobre de sesión: si porta la marca de
+      // convalecencia (RF-01.7), el aviso se despliega y el veto se aplica.
+      convalescenceNotice?.setConvalescence(user);
     }
     const retainedIntent = store.getState().pendingIntent;
     store.clearPendingIntent();
@@ -395,6 +409,7 @@ export function createGrimoireApp(options = {}) {
     if (envelope?.success === true && envelope?.data?.authenticated === true && sessionUser !== null) {
       store.setSession(sessionUser);
       sessionBadge?.setUser(sessionUser);
+      convalescenceNotice?.setConvalescence(sessionUser);
     }
   }
 
@@ -497,6 +512,7 @@ export function createGrimoireApp(options = {}) {
     if (envelope.success === true) {
       store.clearSession();
       sessionBadge?.clearUser();
+      convalescenceNotice?.clear();
     } else {
       accessModal.reportError(envelope);
     }
@@ -531,6 +547,16 @@ export function createGrimoireApp(options = {}) {
           onDissolve: () => handleDissolve('dissolve'),
           onDissolveAll: () => handleDissolve('dissolveAll'),
           documentRef,
+        })
+      : null;
+
+    // Aviso de Convalecencia Arcana en el perfil del mago (Tarea 5.3,
+    // RF-01.6/RF-01.7). Sin franja en el shell el aviso simplemente no se
+    // monta: degradación elegante (el veto sigue viviendo en el backend).
+    convalescenceNotice = arcaneNoticeRoot !== null && arcaneNoticeRoot !== undefined
+      ? createConvalescenceBannerComponent(arcaneNoticeRoot, {
+          bus: windowRef,
+          elementFactory,
         })
       : null;
 
@@ -587,6 +613,7 @@ export function createGrimoireApp(options = {}) {
     detailModal?.destroy?.();
     accessModal?.destroy?.();
     historyManager?.destroy?.();
+    convalescenceNotice?.destroy?.();
   }
 
   return {
