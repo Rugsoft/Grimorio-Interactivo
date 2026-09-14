@@ -81,7 +81,7 @@
 
 ## Fase 4: Suite de Pruebas Automatizadas Backend CLI
 
-- [ ] **Tarea 4.1: Suite automatizada de pruebas CLI (`scratch/test_clans_dominion.php`)**
+- [x] **Tarea 4.1: Suite automatizada de pruebas CLI (`scratch/test_clans_dominion.php`)**
   * **Alcance:** Crear `scratch/test_clans_dominion.php` ejecutando en SQLite en memoria:
     1. Cálculo de PDA por Círculo ($100 + C \times 20$).
     2. Sinergia del $+25\%$ con redondeo aritmético `round()` (casos 6.25 $\rightarrow$ 6 y 12.5 $\rightarrow$ 13).
