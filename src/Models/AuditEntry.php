@@ -40,6 +40,18 @@ final class AuditEntry
         'PROMOTE_MASTER',
         'DEMOTE_MASTER',
         'CLAN_MODIFY',
+        // Actos de gobierno de hermandades (TASKS-07, RNF-04): fundación,
+        // partida, expulsión, traspaso de la corona, sucesión dinástica por
+        // inactividad y disolución (por su Patriarca o por orfandad).
+        'CLAN_FOUNDED',
+        'CLAN_MEMBER_LEFT',
+        'CLAN_MEMBER_EXPELLED',
+        'PATRIARCH_TRANSFERRED',
+        'PATRIARCH_INACTIVITY_SUCCESSION',
+        'CLAN_ARCHIVED_BY_PATRIARCH',
+        'CLAN_ARCHIVED_EMPTY_SUCCESSION',
+        // Coronación del Dominio Semanal (TASKS-07, RF-04.2, RNF-04).
+        'DOMINION_WEEK_CONCLUDED',
         'ACC_LINK_RENOUNCED',
         'RESET_SIGNATURES_MATH_CHANGE',
         'UPDATE_DESCRIPTION_INTACT_SIGNATURES',
