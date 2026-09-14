@@ -56,7 +56,10 @@ const MOBILE_BREAKPOINT_PX = 768;
  *   getSelectedElement, destroy.
  */
 export function createElementalWheelComponent(options = {}) {
-  const document = options.document ?? document;
+  // Fallback al documento global vía globalThis: una const local con el
+  // mismo nombre no puede referenciarse a sí misma (TDZ), ni siquiera con
+  // typeof, así que el respaldo se lee del objeto global.
+  const document = options.document ?? globalThis.document;
   const catalog = options.catalog;
   if (!catalog || !Array.isArray(catalog.elements)) {
     throw new TypeError('La Rueda Rúnica exige el catálogo del Códice ({elements, reactions}).');

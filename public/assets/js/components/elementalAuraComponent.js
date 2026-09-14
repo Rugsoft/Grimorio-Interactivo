@@ -58,7 +58,10 @@ const FRAME_INTERVAL_MS = 16;
  *   isAuraActive, getActiveElement, getRemainingMs, destroy.
  */
 export function createElementalAuraComponent(options = {}) {
-  const document = options.document ?? document;
+  // Fallback al documento global vía globalThis: una const local con el
+  // mismo nombre no puede referenciarse a sí misma (TDZ), ni siquiera con
+  // typeof, así que el respaldo se lee del objeto global.
+  const document = options.document ?? globalThis.document;
   const now = options.now ?? (() => Date.now());
   const scheduleFrame = options.scheduleFrame
     ?? ((callback) => {
