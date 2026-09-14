@@ -182,8 +182,8 @@ echo "\n[5] Sondas de inserción: dominio aceptado y rechazado\n";
 
 $now = '2026-09-13T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}')"
 );
 $pdo->exec(
     "INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)

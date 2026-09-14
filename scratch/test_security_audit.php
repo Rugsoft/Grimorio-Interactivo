@@ -134,7 +134,7 @@ $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec(file_get_contents(__DIR__ . '/../database/schema.sql'));
 $now = '2026-09-12T12:00:00Z';
-$pdo->exec("INSERT INTO clans (id, slug, name, motto, domain_points, created_at) VALUES ('c1','s','N','M',0,'{$now}')");
+$pdo->exec("INSERT INTO clans (id, slug, name, motto, created_at) VALUES ('c1','s','N','M','{$now}')");
 $pdo->exec("INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at) VALUES ('u1','a','a@b.c','" . str_repeat('x', 60) . "','editor','c1','{$now}','{$now}')");
 $sm = new SessionManager($pdo, '127.0.0.1', 'probe/1.0');
 $sm->createSession('u1');
@@ -204,9 +204,9 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-12T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}'), 
-            ('cln_ember', 'ember-wardens', 'Guardianes de Ascuas', 'Fuego', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}'), 
+            ('cln_ember', 'ember-wardens', 'Guardianes de Ascuas', 'Fuego', '{$now}')"
 );
 
 $sessionManager = new SessionManager($pdo, '127.0.0.1', 'Auditoría/1.0');

@@ -104,7 +104,7 @@ const fakeElementFactory = (tagName) => createFakeElement(tagName);
 /**
  * Linajes que el backend retorna (contrato de ClanController, Tarea 1.5):
  * el neutro 'cln_primordial' (Art. III) y dos clanes competitivos ya
- * ordenados por Dominio descendente (ORDER BY domain_points DESC).
+ * ordenados por Dominio descendente (ORDER BY weekly_points DESC).
  */
 const clansPreview = [
   { id: 'cln_astral_scholars', slug: 'eruditos-astrales', name: 'Eruditos Astrales', motto: 'El saber es la única estrella fija.', domainPoints: 240 },

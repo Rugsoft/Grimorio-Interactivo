@@ -105,8 +105,8 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-12T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_ctrl', 'ctrl-lineage', 'Linaje del Arnés', 'Ensayo', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_ctrl', 'ctrl-lineage', 'Linaje del Arnés', 'Ensayo', '{$now}')"
 );
 
 $sessionManager = new SessionManager($pdo, '127.0.0.1', 'Arnés AuthController/1.0');

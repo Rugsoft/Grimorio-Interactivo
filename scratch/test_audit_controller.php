@@ -90,9 +90,9 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-12T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}'),
-            ('cln_ember', 'ember-wardens', 'Guardianes de Ascuas', 'Fuego', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}'),
+            ('cln_ember', 'ember-wardens', 'Guardianes de Ascuas', 'Fuego', '{$now}')"
 );
 
 $auditService = new AuditService($pdo);

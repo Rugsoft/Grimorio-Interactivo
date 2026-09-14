@@ -84,8 +84,8 @@ $now = '2026-09-12T12:00:00Z';
 
 // Clan de prueba (la FK de users exige un linaje existente).
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_test', 'test-lineage', 'Linaje de Prueba', 'Ensayo', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_test', 'test-lineage', 'Linaje de Prueba', 'Ensayo', '{$now}')"
 );
 $insertUser = $pdo->prepare(
     "INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
@@ -166,7 +166,7 @@ $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $pdo->exec(file_get_contents(__DIR__ . '/../database/schema.sql'));
 $now = '2026-09-12T12:00:00Z';
-$pdo->exec("INSERT INTO clans (id, slug, name, motto, domain_points, created_at) VALUES ('c1','s','N','M',0,'{$now}')");
+$pdo->exec("INSERT INTO clans (id, slug, name, motto, created_at) VALUES ('c1','s','N','M','{$now}')");
 $pdo->exec("INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at) VALUES ('u1','a','a@b.c','" . str_repeat('x', 60) . "','editor','c1','{$now}','{$now}')");
 $sm = new SessionManager($pdo, '127.0.0.1', 'probe/1.0');
 $sm->createSession('u1');

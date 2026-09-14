@@ -104,8 +104,8 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-13T12:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}')"
 );
 $pdo->exec(
     "INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
@@ -177,15 +177,15 @@ $discoveryPdo = $discoveryConnection->getPdo();
 $discoveryPdo->exec('PRAGMA foreign_keys = ON');
 $discoveryPdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 $discoveryPdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}')"
 );
 $discoveryPdo->exec(
     "INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
      VALUES ('usr_autor', 'AutorDelBorrador', 'autor@sanctuario.arc', 'x', 'editor', 'cln_astral', '{$now}', '{$now}')"
 );
-$discoveryPdo->exec("INSERT OR IGNORE INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', 0, '{$now}')");
+$discoveryPdo->exec("INSERT OR IGNORE INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_astral', 'astral-scholars', 'Eruditos Astrales', 'Saber', '{$now}')");
 $discoveryPdo->exec("INSERT OR IGNORE INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
      VALUES ('usr_autor', 'AutorDelBorrador', 'autor@sanctuario.arc', 'x', 'editor', 'cln_astral', '{$now}', '{$now}')");
 $discoveryPdo->exec("INSERT OR IGNORE INTO magic_schools (slug, name) VALUES ('evocation', 'Evocación')");

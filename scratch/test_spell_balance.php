@@ -284,8 +284,8 @@ $pdoLifecycle->exec((string) file_get_contents($projectRoot . '/database/schema.
 
 $lifecycleNow = '2026-09-13T18:00:00Z';
 $pdoLifecycle->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_suiteb', 'suite-b-scholars', 'Eruditos de la Suite B', 'Verificar', 0, '{$lifecycleNow}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_suiteb', 'suite-b-scholars', 'Eruditos de la Suite B', 'Verificar', '{$lifecycleNow}')"
 );
 $pdoLifecycle->exec(
     "INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)

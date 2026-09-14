@@ -199,8 +199,8 @@ echo "\n[5] Integridad referencial y semántica de datos\n";
 // Semilla mínima de clan para las pruebas de vinculación.
 $now = gmdate('Y-m-d H:i:s');
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_test', 'test-lineage', 'Linaje de Prueba', 'Ensayo', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_test', 'test-lineage', 'Linaje de Prueba', 'Ensayo', '{$now}')"
 );
 
 // 5a. Insert válido en users con rol canónico.

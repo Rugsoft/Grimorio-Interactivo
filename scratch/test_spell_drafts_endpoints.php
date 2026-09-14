@@ -143,8 +143,8 @@ $pdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 
 $now = '2026-09-13T19:00:00Z';
 $pdo->exec(
-    "INSERT INTO clans (id, slug, name, motto, domain_points, created_at)
-     VALUES ('cln_forja', 'forja-scholars', 'Eruditos de la Forja', 'Forjar', 0, '{$now}')"
+    "INSERT INTO clans (id, slug, name, motto, created_at)
+     VALUES ('cln_forja', 'forja-scholars', 'Eruditos de la Forja', 'Forjar', '{$now}')"
 );
 $pdo->exec(
     "INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)

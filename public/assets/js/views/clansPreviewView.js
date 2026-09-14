@@ -12,7 +12,11 @@
  *
  * Contrato de datos: `GET /clans/preview` vía fetchClansPreview (Tarea 3.3).
  * Cada ClanDto porta { id, slug, name, motto, domainPoints } — el backend
- * ya ordena por Dominio descendente (ORDER BY domain_points DESC, Tarea 1.5).
+ * ya ordena por Dominio descendente (ORDER BY weekly_points DESC).
+ *
+ * Un solo contador de gloria (Tarea 2.6): `domainPoints` conserva su nombre
+ * canónico de SPEC-01, pero su valor procede del contador semanal de SPEC-07
+ * (`clans.weekly_points`), único contador de la contienda en curso.
  *
  * Constitución:
  *   - Artículo I: ES Modules nativos; tabla semántica estándar.

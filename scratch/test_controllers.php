@@ -188,6 +188,12 @@ assertCondition(
 
 // --- FASE 4: GET /api/v1/clans/preview (RF-02.2) ---
 echo "\nFASE 4: ClanController::preview()\n";
+
+// Un solo contador de gloria (Tarea 2.6, TASKS-07): `domainPoints` se sirve
+// del contador semanal canónico de SPEC-07. Se acredita gloria real para
+// comprobar que el contrato transporta VALORES, no meras claves.
+$pdo->exec("UPDATE clans SET weekly_points = 240 WHERE id = 'cln_primordial'");
+
 $clansResponse = $clanController->preview(new Request('GET', '/api/v1/clans/preview'));
 [$clansPayload, $clansIsJson] = decodeResponse($clansResponse);
 
@@ -197,6 +203,10 @@ $firstClan = $clansPayload['data'][0] ?? [];
 assertCondition(
     isset($firstClan['id'], $firstClan['slug'], $firstClan['name'], $firstClan['domainPoints']),
     "Cada linaje porta { id, slug, name, domainPoints } en camelCase (Salón de Linajes)"
+);
+assertCondition(
+    ($firstClan['domainPoints'] ?? null) === 240,
+    "domainPoints transporta el valor del contador semanal canónico (240 PDA)"
 );
 
 // --- FASE 5: Front Controller — registro y despacho de las 4 rutas ---
