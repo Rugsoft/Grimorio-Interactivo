@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verificación visual — Matriz Elemental (SPEC-06)</title>
+<style>
+  /* Página de verificación interna (scratch/): Dogma Vanilla, cero frameworks. */
+  :root {
+    --bg: #14100e;
+    --panel: #221b16;
+    --ink: #efe6d8;
+    --gold: #d4a94e;
+    --ok: #7fb069;
+    --bad: #d1495b;
+    --muted: #9c8f7f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Georgia, 'EB Garamond', serif; padding: 24px; }
+  h1 { color: var(--gold); font-size: 1.4rem; margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+  section { background: var(--panel); border: 1px solid #3a2f24; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+  h2 { font-size: 1rem; color: var(--gold); margin: 0 0 10px; }
+  .status { display: inline-block; font-weight: bold; padding: 2px 10px; border-radius: 6px; font-size: 0.85rem; }
+  .status.ok { background: #22331c; color: var(--ok); }
+  .status.bad { background: #3a1d22; color: var(--bad); }
+  .endpoint { color: var(--muted); font-size: 0.78rem; margin: 2px 0 10px; }
+  pre { background: #171310; border: 1px solid #3a2f24; border-radius: 6px; padding: 10px; font-size: 0.75rem; overflow: auto; max-height: 260px; color: #cfc4b3; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #3a2f24; }
+  th { color: var(--gold); font-weight: normal; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .verdict { font-weight: bold; }
+  .verdict.ok { color: var(--ok); }
+  .verdict.bad { color: var(--bad); }
+  .fail { color: var(--bad); }
+</style>
+</head>
+<body>
+<h1>Verificación visual — Matriz Elemental (SPEC-06)</h1>
+<p class="subtitle">Los tres endpoints del plan 2.1 consumidos en vivo desde el front controller real (mismo origen).</p>
+
+<section>
+  <h2>Endpoint 1 · <span id="matrix-status" class="status">…</span></h2>
+  <p class="endpoint">GET /api/v1/elements/matrix</p>
+  <div id="matrix-checks" class="subtitle">Cargando…</div>
+  <table id="matrix-table"></table>
+</section>
+
+<section>
+  <h2>Endpoint 2 · <span id="reactions-status" class="status">…</span></h2>
+  <p class="endpoint">GET /api/v1/elements/reactions/{element}</p>
+  <div id="reactions-controls"></div>
+  <table id="reactions-table"></table>
+</section>
+
+<section>
+  <h2>Endpoint 3 · <span id="combo-status" class="status">…</span></h2>
+  <p class="endpoint">POST /api/v1/elements/resolve-combo</p>
+  <div id="combo-controls"></div>
+  <table id="combo-table"></table>
+</section>
+
+<script type="module">
+  // Sonda visual: consume la API real y pinta el resultado sin frameworks.
+  const results = [];
+
+  function setStatus(id, code, ok) {
+    const el = document.getElementById(id);
+    el.textContent = `HTTP ${code}`;
+    el.className = `status ${ok ? 'ok' : 'bad'}`;
+  }
+
+  function renderChecks(id, checks) {
+    const host = document.getElementById(id);
+    host.innerHTML = '';
+    for (const { label, ok } of checks) {
+      const span = document.createElement('span');
+      span.textContent = `${ok ? '✔' : '✘'} ${label}  `;
+      span.className = ok ? '' : 'fail';
+      host.appendChild(span);
+    }
+  }
+
+  function renderTable(tableId, headers, rows) {
+    const table = document.getElementById(tableId);
+    table.innerHTML = '';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    for (const h of headers) {
+      const th = document.createElement('th');
+      th.textContent = h;
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for (const row of rows) {
+      const tr = document.createElement('tbody') && document.createElement('tr');
+      for (const cell of row) {
+        const td = document.createElement('td');
+        if (cell && typeof cell === 'object' && 'color' in cell) {
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          dot.style.background = cell.color;
+          td.appendChild(dot);
+          td.appendChild(document.createTextNode(cell.text));
+        } else {
+          td.textContent = String(cell);
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+  }
+
+  function track(label, ok) { results.push({ label, ok }); }
+
+  // ------------------------------------------------------------------
+  // Endpoint 1: GET /api/v1/elements/matrix
+  // ------------------------------------------------------------------
+  const matrixRes = await fetch('/api/v1/elements/matrix');
+  const matrixOk = matrixRes.ok;
+  setStatus('matrix-status', matrixRes.status, matrixOk);
+  const matrixJson = await matrixRes.json();
+  const elements = matrixJson?.data?.elements ?? [];
+  const reactions = matrixJson?.data?.reactions ?? [];
+
+  const matrixChecks = [
+    { label: 'success: true', ok: matrixJson?.success === true },
+    { label: '8 elementos canónicos', ok: elements.length === 8 },
+    { label: '8 aristas reactivas (7 duales + catalizador)', ok: reactions.length === 8 },
+    { label: 'Fuego porta heráldica (#ff4500, rune-ignis)', ok: elements[0]?.color === '#ff4500' && elements[0]?.glyph === 'rune-ignis' },
+    { label: 'Vaporización con factor ×1.5', ok: reactions.some((r) => r.id === 'arcaneVaporization' && r.damageMultiplier === 1.5) },
+    { label: 'Catalizador ×1.25 / +1 s', ok: reactions.some((r) => r.id === 'pureArcaneResonance' && r.amplificationFactor === 1.25 && r.ccExtensionMs === 1000) },
+  ];
+  renderChecks('matrix-checks', matrixChecks);
+  for (const c of matrixChecks) track(`E1: ${c.label}`, c.ok);
+
+  renderTable('matrix-table', ['Elemento', 'Color', 'Glifo', 'Aristas reactivas'], elements.map((el) => {
+    const edges = reactions.filter((r) => r.elements.includes(el.id) && !r.isCatalyst).length;
+    return [
+      { color: el.color, text: `${el.name} (${el.id})` },
+      el.color,
+      el.glyph,
+      edges > 0 ? `${edges} reacción(es)` : 'catalizador unario',
+    ];
+  }));
+
+  // ------------------------------------------------------------------
+  // Endpoint 2: GET /api/v1/elements/reactions/{element}
+  // ------------------------------------------------------------------
+  const ELEMENT_NAMES = Object.fromEntries(elements.map((e) => [e.id, e.name]));
+  const selector = document.createElement('select');
+  selector.style.cssText = 'background:#171310;color:var(--ink);border:1px solid #3a2f24;border-radius:6px;padding:6px 10px;margin-bottom:10px;font-family:inherit;';
+  for (const el of elements) {
+    const opt = document.createElement('option');
+    opt.value = el.id;
+    opt.textContent = `${el.name} (${el.id})`;
+    selector.appendChild(opt);
+  }
+  document.getElementById('reactions-controls').appendChild(selector);
+
+  async function loadReactions(elementId) {
+    const res = await fetch(`/api/v1/elements/reactions/${elementId}`);
+    setStatus('reactions-status', res.status, res.ok || res.status === 404);
+    const json = await res.json();
+    const rows = [];
+    if (res.ok) {
+      for (const r of json?.data ?? []) {
+        rows.push([r.name, r.id, `×${r.damageMultiplier}`, r.tacticalEffect, `${r.effectDurationMs} ms`]);
+      }
+    } else {
+      rows.push([`Error controlado: ${json?.error?.code}`, '', '', '', '']);
+    }
+    renderTable('reactions-table', ['Reacción', 'id técnico', 'Factor', 'Efecto táctico', 'Duración'], rows);
+  }
+  selector.addEventListener('change', () => loadReactions(selector.value));
+  await loadReactions(selector.value);
+
+  // Sonda de frontera del Endpoint 2: elemento ajeno → 404 controlado.
+  const unknownRes = await fetch('/api/v1/elements/reactions/steam');
+  const unknownJson = await unknownRes.json();
+  track('E2: elemento ajeno responde 404 ELEMENT_NOT_FOUND', unknownRes.status === 404 && unknownJson?.error?.code === 'ELEMENT_NOT_FOUND');
+
+  // ------------------------------------------------------------------
+  // Endpoint 3: POST /api/v1/elements/resolve-combo
+  // ------------------------------------------------------------------
+  const auraSelector = selector.cloneNode(true);
+  const spellSelector = selector.cloneNode(true);
+  const castButton = document.createElement('button');
+  castButton.textContent = 'Resolver impacto';
+  castButton.style.cssText = 'background:var(--gold);color:#1c1916;border:none;border-radius:6px;padding:8px 16px;font-family:inherit;font-weight:bold;cursor:pointer;margin-right:10px;';
+  const immuneLabel = document.createElement('label');
+  immuneLabel.style.cssText = 'color:var(--muted);font-size:0.8rem;';
+  const immuneCheck = document.createElement('input');
+  immuneCheck.type = 'checkbox';
+  immuneLabel.appendChild(immuneCheck);
+  immuneLabel.appendChild(document.createTextNode(' blanco con inmunidad anti-stunlock'));
+  document.getElementById('combo-controls').append(auraSelector, spellSelector, castButton, immuneLabel);
+
+  async function resolveCombo() {
+    const payload = {
+      activeAura: auraSelector.value,
+      incomingSpell: { id: 'spl_probe_visual', element: spellSelector.value, baseDamage: 40, baseHealing: 0, baseBarrier: 0, crowdControlType: 'none' },
+      stunlockImmune: immuneCheck.checked,
+    };
+    const res = await fetch('/api/v1/elements/resolve-combo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    setStatus('combo-status', res.status, res.ok);
+    const json = await res.json();
+    const d = json?.data ?? {};
+    const rows = [
+      ['Veredicto', d.isReaction ? `REACTION: ${d.reactionName}` : 'Sin reacción'],
+      ['Daño efectivo', d.isReaction && d.effectiveDamage === 60 ? '60 = ceil(40 × 1.5)' : String(d.effectiveDamage)],
+      ['Factor aplicado', `×${d.damageMultiplierApplied}`],
+      ['Efecto táctico', d.tacticalEffectApplied ?? '—'],
+      ['Duración', `${d.effectDurationMs} ms`],
+      ['Aura', d.clearedAura ? 'consumida (neutral puro)' : `vigente: ${d.resultingAura ?? 'ninguna'}`],
+      ['Anti-stunlock', d.stunlockTriggered ? 'Hard CC suprimido por inmunidad' : d.grantStunlockImmunity ? 'inmunidad de 3 s concedida' : 'no aplicable'],
+    ];
+    renderTable('combo-table', ['Campo', 'Valor'], rows);
+  }
+  castButton.addEventListener('click', resolveCombo);
+  await resolveCombo();
+
+  // Sonda de frontera del Endpoint 3: payload corrupto → 400 controlado.
+  const corruptRes = await fetch('/api/v1/elements/resolve-combo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: '{corrupto',
+  });
+  const corruptJson = await corruptRes.json();
+  track('E3: payload corrupto responde 400 INVALID_REQUEST_BODY', corruptRes.status === 400 && corruptJson?.error?.code === 'INVALID_REQUEST_BODY');
+
+  // ------------------------------------------------------------------
+  // Veredicto
+  // ------------------------------------------------------------------
+  const failed = results.filter((r) => !r.ok);
+  const verdict = document.createElement('p');
+  verdict.className = `verdict ${failed.length === 0 ? 'ok' : 'bad'}`;
+  verdict.textContent = failed.length === 0
+    ? `VEREDICTO: LOS ${results.length} CONTROLES EN VIVO PASAN — la Matriz Elemental sirve su Códice y su veredicto según el contrato.`
+    : `VEREDICTO: ${failed.length} de ${results.length} controles FALLAN.`;
+  document.body.appendChild(verdict);
+  window.__matrixProbe = { results, failed };
+</script>
+</body>
+</html>

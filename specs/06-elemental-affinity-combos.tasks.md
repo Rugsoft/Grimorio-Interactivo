@@ -38,17 +38,17 @@
 
 ## Fase 2: Utilidades de Combos y Salvaguarda Anti-Stunlock (Vanilla JS Utils)
 
-- [ ] **Tarea 2.1: Gestor de salvaguarda Anti-Stunlock (`stunlockManager.js`)**
+- [x] **Tarea 2.1: Gestor de salvaguarda Anti-Stunlock (`stunlockManager.js`)**
   * **Alcance:** Desarrollar `public/assets/js/utils/stunlockManager.js` gestionando el ciclo de inmunidad de 3 segundos (`stunlockImmunityDurationMs = 3000`), discriminando entre *Hard CC* (`hardStun`, `freezeParalysis`) que se bloquea durante la inmunidad (reemplazado por onda de choque) y *Soft CC* (`blindnessMist`, `rootAndSlow`) que sí se aplica.
   * **Cubre:** `RF-05.2`, `RF-05.3`, `RNF-01`
   * **Hecho cuando:** Tras expirar un Hard CC, invocar `isImmuneToHardCc()` devuelve true durante 3000 ms, permitiendo la aplicación de Soft CC y emitiendo los eventos correspondientes.
 
-- [ ] **Tarea 2.2: Motor de resolución de combos en cliente (`comboResolver.js`)**
+- [x] **Tarea 2.2: Motor de resolución de combos en cliente (`comboResolver.js`)**
   * **Alcance:** Desarrollar `public/assets/js/utils/comboResolver.js` con el algoritmo de resolución en cliente idéntico al backend: detección de coincidencia simétrica, aplicación de factor 1.5, inyección de efectos tácticos de barrera/niebla/CC y consumo total del aura activa dejando estado neutral limpio.
   * **Cubre:** `RF-03.1` a `03.4`, `RF-04.1`, `RF-04.2`, `RNF-01`, `RNF-02`
   * **Hecho cuando:** La resolución en cliente arroja idénticos resultados de daño y efectos que el backend en menos de 5 ms sin consultas de red.
 
-- [ ] **Tarea 2.3: Cola determinista secuencial FIFO para ráfagas simultáneas (`comboResolver.js - Queue`)**
+- [x] **Tarea 2.3: Cola determinista secuencial FIFO para ráfagas simultáneas (`comboResolver.js - Queue`)**
   * **Alcance:** Implementar en `comboResolver.js` la clase `SpellImpactQueue` para encolar impactos que lleguen con menos de 100 ms de separación, despachándolos atómicamente por FIFO mediante `requestAnimationFrame` para garantizar que el primer impacto aplique aura y el segundo detone el combo sin condiciones de carrera.
   * **Cubre:** `RF-05.4`, `RNF-01`
   * **Hecho cuando:** Al recibir dos impactos con 20 ms de diferencia, ambos se resuelven secuencialmente en orden sin perderse ni colisionar.
