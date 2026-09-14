@@ -57,22 +57,22 @@
 
 ## Fase 3: Componentes Visuales del Aura y la Rueda Rúnica (Vanilla JS)
 
-- [ ] **Tarea 3.1: Componente visual del halo de aura elemental (`elementalAuraComponent.js`)**
+- [x] **Tarea 3.1: Componente visual del halo de aura elemental (`elementalAuraComponent.js`)**
   * **Alcance:** Crear `public/assets/js/components/elementalAuraComponent.js` para renderizar en el maniquí el halo luminoso pulsante con el color del elemento activo y el anillo rúnico circular que decrece durante los 5 segundos de la ventana de resonancia, con soporte de disipación y refresco homogéneo.
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RF-02.4`, `RF-02.5`, `RNF-03`
   * **Hecho cuando:** Al aplicar un elemento, el maniquí muestra el halo y la barra circular decreciente durante 5 s, refrescándose si vuelve a impactar el mismo elemento y disolviéndose suavemente al expirar.
 
-- [ ] **Tarea 3.2: Rueda Rúnica interactiva octogonal para escritorio (`elementalWheelComponent.js - Desktop`)**
+- [x] **Tarea 3.2: Rueda Rúnica interactiva octogonal para escritorio (`elementalWheelComponent.js - Desktop`)**
   * **Alcance:** Desarrollar `public/assets/js/components/elementalWheelComponent.js` maquetando el diagrama octogonal en SVG nativo con los 8 glifos elementales, animando filamentos rúnicos de conexión al posar el cursor o pulsar un elemento y desplegando la lámina con el nombre litúrgico y efectos de las reacciones compatibles.
   * **Cubre:** `RF-01.1`, `RF-01.2`, `RNF-03`, `RNF-04`
   * **Hecho cuando:** Al hacer clic en un glifo elemental, se encienden sus filamentos de conexión hacia los elementos reactivos y se expone la descripción en noble castellano.
 
-- [ ] **Tarea 3.3: Adaptabilidad móvil del Códice Rúnico (`elementalWheelComponent.js - Mobile`)**
+- [x] **Tarea 3.3: Adaptabilidad móvil del Códice Rúnico (`elementalWheelComponent.js - Mobile`)**
   * **Alcance:** Implementar en `elementalWheelComponent.js` la vista adaptativa para pantallas móviles ($< 768\text{ px}$): transformar el octógono en un selector radial táctil compacto asistido por una lámina de acordeón ceremonial rúnico desplegable por elemento.
   * **Cubre:** `RF-01.1`, `Caso Límite 5`, `RNF-03`
   * **Hecho cuando:** En pantallas reducidas la interfaz conmuta al formato de acordeón táctil sin solapamientos ni desbordamientos horizontales.
 
-- [ ] **Tarea 3.4: Estilos del Códice, Rueda y Auras Cromáticas (`elemental-codex.css`)**
+- [x] **Tarea 3.4: Estilos del Códice, Rueda y Auras Cromáticas (`elemental-codex.css`)**
   * **Alcance:** Crear `public/assets/css/components/elemental-codex.css` definiendo los colores heráldicos de los 8 elementos, animaciones de filamentos SVG, pulsaciones del aura circular del maniquí y tipografías monumentales en oro rúnico para los textos de combo.
   * **Cubre:** `RF-01.1`, `RF-02.2`, `RF-06.2`, `RNF-04`
   * **Hecho cuando:** Todos los elementos visuales del códice y del simulador aplican las variables del sistema de diseño con contraste accesible WCAG 2.1 AA.
