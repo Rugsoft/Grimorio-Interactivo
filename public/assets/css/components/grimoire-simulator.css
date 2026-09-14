@@ -87,6 +87,35 @@
   color: var(--color-parchment);
   opacity: 0.92;
 }
+/* Acceso directo rúnico al Códice (SPEC-06, Tarea 4.4, RF-01.3):
+   glifo heráldico en oro junto a la afinidad de la ficha, con área
+   táctil canónica y foco visible (RNF-03/RNF-04). */
+.grimoire-book__spell-element-rune {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.45rem;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0.15rem 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--color-gold-arcane) 45%, transparent);
+  border-radius: 0.35rem;
+  background: transparent;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-seal);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.grimoire-book__spell-element-rune:hover {
+  color: var(--color-gold-bright);
+  border-color: var(--color-gold-arcane);
+}
+.grimoire-book__spell-element-rune:focus-visible {
+  outline: 2px solid var(--color-gold-bright);
+  outline-offset: 2px;
+}
 .grimoire-book__spell-casting-time,
 .grimoire-book__spell-mana {
   margin: 0;

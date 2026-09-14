@@ -114,12 +114,17 @@ export function createElementalAuraComponent(options = {}) {
     }
 
     const svgNamespace = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(svgNamespace, 'svg');
+    // Degradación grácil: los entornos sin soporte SVG (arneses sin DOM
+    // real) fabrican los nodos por la vía plana; el navegador siempre
+    // dispone de createElementNS y preserva el espacio de nombres.
+    const svgFactory = document.createElementNS?.bind(document)
+      ?? document.createElement.bind(document);
+    const svg = svgFactory(svgNamespace, 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('class', 'elemental-aura__svg');
 
     // Anillo de fondo (surco rúnico sobre el que decrece el progreso).
-    const ringTrack = document.createElementNS(svgNamespace, 'circle');
+    const ringTrack = svgFactory(svgNamespace, 'circle');
     ringTrack.setAttribute('cx', '50');
     ringTrack.setAttribute('cy', '50');
     ringTrack.setAttribute('r', String(RING_RADIUS));
@@ -127,7 +132,7 @@ export function createElementalAuraComponent(options = {}) {
     svg.appendChild(ringTrack);
 
     // Anillo de progreso: decrece consumiendo su trazo (RF-02.2).
-    const ringProgress = document.createElementNS(svgNamespace, 'circle');
+    const ringProgress = svgFactory(svgNamespace, 'circle');
     ringProgress.setAttribute('cx', '50');
     ringProgress.setAttribute('cy', '50');
     ringProgress.setAttribute('r', String(RING_RADIUS));
@@ -137,7 +142,7 @@ export function createElementalAuraComponent(options = {}) {
     svg.appendChild(ringProgress);
 
     // Halo pulsante (disco interior).
-    const halo = document.createElementNS(svgNamespace, 'circle');
+    const halo = svgFactory(svgNamespace, 'circle');
     halo.setAttribute('cx', '50');
     halo.setAttribute('cy', '50');
     halo.setAttribute('r', '38');
@@ -164,9 +169,14 @@ export function createElementalAuraComponent(options = {}) {
 
     const remainingMs = getRemainingMs();
     const progress = Math.max(0, Math.min(1, remainingMs / AURA_RESONANCE_DURATION_MS));
-    const ringProgress = auraRoot.querySelector('.elemental-aura__ring-progress');
-    if (ringProgress !== null) {
-      ringProgress.setAttribute('stroke-dashoffset', String(RING_CIRCUMFERENCE * (1 - progress)));
+    // Degradación grácil: entornos sin búsqueda por selectores (arneses sin
+    // DOM real) pierden solo el repintado del anillo; el estado elemental
+    // jamás depende de él.
+    if (typeof auraRoot.querySelector === 'function') {
+      const ringProgress = auraRoot.querySelector('.elemental-aura__ring-progress');
+      if (ringProgress !== null) {
+        ringProgress.setAttribute('stroke-dashoffset', String(RING_CIRCUMFERENCE * (1 - progress)));
+      }
     }
 
     if (activeElement !== null && remainingMs > 0) {

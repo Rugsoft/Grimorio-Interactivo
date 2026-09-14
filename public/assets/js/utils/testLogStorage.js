@@ -96,16 +96,24 @@ export function createTestLogStorage(options = {}) {
     return schema.sessionId;
   }
 
-  /**
-   * Registra un impacto contra el maniquí (RF-05.3). La entrada más
-   * reciente encabeza la lista; al superar el máximo, la más antigua se
-   * descarta.
-   *
-   * @param {object} impact - { spellName, elementalAffinity, circle,
-   *   manaCost, damageDealt, barrierAbsorbed, healingApplied,
-   *   crowdControlApplied, dummyRemainingHealth }.
-   * @returns {object[]} entradas tras el registro.
-   */
+/**
+ * Registra un impacto contra el maniquí (RF-05.3). La entrada más
+ * reciente encabeza la lista; al superar el máximo, la más antigua se
+ * descarta.
+ *
+ * Campos de combo (SPEC-06, Tarea 4.3, RF-06.3) — optativos: solo la
+ * detonación de una reacción los porta (espejo del veredicto del
+ * resolutor):
+ *   - comboTag: etiqueta distintiva (ej. «[Combo: Electrocución Fluida]»).
+ *   - comboElements: elementos intervinientes { activeAura, incoming }.
+ *   - comboDamageDealt: daño total asestado por la reacción.
+ *
+ * @param {object} impact - { spellName, elementalAffinity, circle,
+ *   manaCost, damageDealt, barrierAbsorbed, healingApplied,
+ *   crowdControlApplied, dummyRemainingHealth, comboTag?, comboElements?,
+ *   comboDamageDealt? }.
+ * @returns {object[]} entradas tras el registro.
+ */
   function recordImpact(impact) {
     const schema = readSchema();
     ensureSessionId(schema);
@@ -121,6 +129,12 @@ export function createTestLogStorage(options = {}) {
       healingApplied: Number(impact?.healingApplied ?? 0) || 0,
       crowdControlApplied: impact?.crowdControlApplied ?? 'none',
       dummyRemainingHealth: Number(impact?.dummyRemainingHealth ?? 0) || 0,
+      // Campos de combo (RF-06.3): presentes solo si el veredicto detona
+      // una reacción; la imbuición, el refresco y la sobreescritura no
+      // llevan etiqueta alguna.
+      ...(impact?.comboTag !== undefined ? { comboTag: String(impact.comboTag) } : {}),
+      ...(impact?.comboElements !== undefined ? { comboElements: impact.comboElements } : {}),
+      ...(impact?.comboDamageDealt !== undefined ? { comboDamageDealt: Number(impact.comboDamageDealt) || 0 } : {}),
     };
 
     schema.logs.unshift(entry);

@@ -30,6 +30,10 @@
  */
 
 import { createGrimoireBookComponent, ROMAN_CIRCLES } from '../components/grimoireBookComponent.js';
+import { createElementalAuraComponent } from '../components/elementalAuraComponent.js';
+import { createComboResolver, createSpellImpactQueue } from '../utils/comboResolver.js';
+import { createStunlockManager } from '../utils/stunlockManager.js';
+import { ParticlePool } from '../utils/particleEngine.js';
 import { createArcaneCanvasComponent } from '../components/arcaneCanvasComponent.js';
 import { createCombatDummyComponent, DUMMY_MAX_HEALTH } from '../components/combatDummyComponent.js';
 import { createFloatingCombatTextComponent } from '../components/floatingCombatTextComponent.js';
@@ -57,6 +61,38 @@ export const IMPACT_TREMOR_MS = 240;
 
 /** Conjuros solicitados por hoja del catálogo. */
 export const CATALOG_PAGE_LIMIT = 10;
+
+/**
+ * Traducción de efectos tácticos del Códice (SPEC-06) a ataduras del
+ * maniquí (SPEC-05): la neblina y el enraizamiento son controles blandos
+ * que el banco de pruebas representa como ralentización; el Hard CC de la
+ * reacción (hardStun) ata directamente (RF-05.1).
+ */
+const CODEX_EFFECT_TO_CC = Object.freeze({
+  blindnessMist: 'slow',
+  rootAndSlow: 'slow',
+  hardStun: 'stun',
+});
+
+/** Trituración de barrera canónica de la Fractura Basáltica (RF-04.2). */
+const CODEX_BARRIER_SHATTER = 50;
+
+/**
+ * PRNG determinista mulberry32 para las deflagraciones de combo (RNF-01):
+ * la semilla fija garantiza que dos detonaciones de la misma reacción
+ * con los mismos parámetros pinten idéntica coreografía de estelas.
+ * @param {number} seed Semilla entera.
+ * @returns {() => number} Generador en [0, 1).
+ */
+function createDeterministicComboRandom(seed) {
+  let state = seed | 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /** Anclaje y proporciones de la Cámara de Conjuración (RF-02.1). */
 const CAST_ORIGIN_RATIO = Object.freeze({ x: 0.12, y: 0.78 });
@@ -103,6 +139,11 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   const defaultWindow = typeof window !== 'undefined' ? window : null;
   const raf = options.raf ?? ((callback) => defaultWindow?.requestAnimationFrame?.(callback) ?? 0);
   const caf = options.caf ?? ((id) => defaultWindow?.cancelAnimationFrame?.(id));
+  /** Envoltura de cuadros para planificadores inyectables ((callback) => cancel). */
+  const rafWrapper = (callback) => {
+    const frameId = raf(() => callback());
+    return () => caf(frameId);
+  };
   const clock = options.clock ?? {
     now: () => (typeof performance !== 'undefined' ? performance.now() : Date.now()),
   };
@@ -232,13 +273,79 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   root.appendChild(announcer);
 
   // ---------------------------------------------------------------------
-  // Componentes de la Cámara (Tareas 3.1 a 3.3).
+  // Componentes de la Cámara (Tareas 3.1 a 3.3) y Códice Elemental
+  // (SPEC-06, Tarea 4.1): el maniquí conserva su estado entre páginas
+  // (RF-02.3), y el halo del aura vive en su mismo contenedor para viajar
+  // con la Cámara al hojear.
   // ---------------------------------------------------------------------
   const dummy = createCombatDummyComponent({
     host: dummyHost,
     clock,
     createElement: elementFactory,
   });
+
+  /** Bus de combos: el propio shell de la vista (o el doble del arnés). */
+  const comboEventTarget = options.comboEventTarget ?? root;
+
+  /** Salvaguarda Anti-Stunlock (RF-05.2/05.3) gobernada por el reloj de la vista. */
+  const stunlockManager = createStunlockManager({
+    now,
+    eventTarget: comboEventTarget,
+  });
+
+  /** Motor de combos en cliente: espejo del Códice, paridad con el backend. */
+  const comboResolver = createComboResolver({
+    now,
+    eventTarget: comboEventTarget,
+    stunlockManager,
+  });
+
+  /**
+   * Estado elemental vigente del blanco (TargetAuraState, plan 2.2):
+   * residencia del aura entre páginas — jamás se purga al hojear (RF-02.3).
+   */
+  let activeAuraElement = null;
+
+  /** Cola determinista FIFO de impactos (plan 3.3): un impacto por cuadro. */
+  const impactQueue = createSpellImpactQueue({
+    resolveImpact: (impact) => {
+      const verdict = comboResolver.resolveImpact(impact);
+      // El estado del aura sigue al veredicto: la única fuente de verdad.
+      activeAuraElement = verdict.resultingAura ?? null;
+      // Elementos intervinientes (RF-06.3): capturados del impacto encolado
+      // — el aura previa y el elemento entrante — sin alterar el contrato
+      // de once claves del veredicto (paridad byte a byte con el backend).
+      applyComboVerdict(verdict, impact.meta, {
+        activeAura: impact.activeAura ?? null,
+        incoming: impact.incomingSpell?.element ?? null,
+      });
+    },
+    now,
+    scheduleFrame: rafWrapper,
+  });
+
+  /** Halo de aura montado sobre el contenedor del maniquí. */
+  const elementalAura = createElementalAuraComponent({
+    document: doc,
+    now,
+    eventTarget: comboEventTarget,
+    prefersReducedMotion: () => Boolean(motionQuery?.matches),
+  });
+  elementalAura.mount(dummyHost);
+
+  /**
+   * Pool dedicado a las deflagraciones de combo (SPEC-06, Tarea 4.2):
+   * independiente del pool del lienzo para no disputar su cupo a los
+   * proyectiles; se integra en el mismo contexto 2D. Con ctx ausente
+   * (arneses sin lienzo) queda en null y la deflagración se omite.
+   */
+  let comboDetonationPool = null;
+  if (ctx) {
+    comboDetonationPool = new ParticlePool(60);
+    comboDetonationPool.renderWithContext = ctx; // integración en el bucle de escena
+  }
+  /** PRNG determinista de las deflagraciones (RNF-01): semilla fija. */
+  const comboDetonationRandom = createDeterministicComboRandom(20260914);
   const floatingTexts = createFloatingCombatTextComponent({ ctx, clock });
   const arcane = createArcaneCanvasComponent({
     ctx,
@@ -439,12 +546,74 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   }
 
   /**
-   * Resuelve el impacto del conjuro sobre el maniquí (RF-05.1/05.2/05.3).
-   * @param {{spell: object, targetCoordinates: {x: number, y: number}}} detail
+   * Aplica un veredicto del Códice al banco de pruebas: traduce el contrato
+   * de once claves al del maniquí (SPEC-05) y despacha los registros
+   * visuales, de bitácora y accesibles (RF-05.2, RF-06.4).
+   *
+   * @param {object} verdict Veredicto del resolutor (única fuente de verdad).
+   * @param {{spell: object, targetCoordinates: {x: number, y: number}}} meta
+   * @param {{activeAura: string|null, incoming: string|null}|null} [comboElements]
+   *   Elementos intervinientes capturados del impacto encolado (RF-06.3).
    */
-  function handleImpact({ spell, targetCoordinates }) {
+  function applyComboVerdict(verdict, { spell, targetCoordinates }, comboElements = null) {
     const effects = spell?.effects ?? {};
-    const result = dummy.applySpellImpact(spell);
+
+    // Traducción del veredicto al contrato del maniquí: el daño efectivo ya
+    // viaja ampliado; el CC duro se suprime con la onda de choque de la
+    // salvaguarda; la trituración del Códice anula la barrera sin excedente
+    // (RF-04.2) y la duración de las ataduras la gobierna el Códice.
+    const isHardCcSuppressed = verdict.stunlockTriggered === true;
+    const tacticalEffect = verdict.tacticalEffectApplied;
+    const codexEffect = CODEX_EFFECT_TO_CC[tacticalEffect];
+    // La duración de toda atadura derivada del Códice viaja en el veredicto
+    // (hardStun 1.5 s, neblina/enraizamiento 3 s); null para las ajenas.
+    const codexDurationMs = codexEffect !== undefined ? verdict.effectDurationMs : null;
+    const crowdControlType = isHardCcSuppressed
+      ? null
+      : (codexEffect ?? effects.crowdControlType);
+    const crowdControlDurationMs = (codexEffect !== undefined && !isHardCcSuppressed)
+      ? codexDurationMs
+      : null;
+    const barrierShatter = verdict.reactionId === 'basalticFracture' ? CODEX_BARRIER_SHATTER : 0;
+
+    const result = dummy.applySpellImpact({
+      name: spell?.name,
+      effects: {
+        damage: verdict.effectiveDamage,
+        healing: Number(effects.healing ?? 0) || 0,
+        barrier: Number(effects.barrier ?? 0) || 0,
+        crowdControlType: crowdControlType ?? 'none',
+        ...(crowdControlDurationMs !== null ? { crowdControlDurationMs } : {}),
+        ...(barrierShatter > 0 ? { barrierShatter } : {}),
+      },
+    });
+
+    // Deflagración bicromática y Texto Flotante Monumental (SPEC-06,
+    // Tarea 4.2, RF-06.1/06.2): solo la detonación de una reacción fusiona
+    // las estelas de ambos elementos y corona el rótulo ceremonial.
+    if (verdict.isReaction === true) {
+      const comboTarget = {
+        x: Number(targetCoordinates?.x ?? 0),
+        y: Number(targetCoordinates?.y ?? 0),
+      };
+      if (!prefersReducedMotion() && comboDetonationPool !== null) {
+        comboDetonationPool.emitComboDetonation(comboTarget, {
+          colorA: verdict.colorA,
+          colorB: verdict.colorB,
+          random: comboDetonationRandom,
+        });
+      }
+      floatingTexts.spawnMonumentalText({
+        reactionName: verdict.reactionName ?? '',
+        damage: result.damageApplied > 0 ? result.damageApplied : 0,
+      }, comboTarget);
+    }
+
+    // El veredicto es la única fuente de verdad: si la reacción consumió
+    // el aura, el halo se disipa sin esperar su expiración (RF-03.4).
+    if (verdict.clearedAura === true) {
+      elementalAura.dissipate();
+    }
 
     // Textos flotantes escalonados sobre el torso del maniquí (RF-05.2).
     floatingTexts.spawnImpactTexts({
@@ -452,7 +621,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
       damage: result.damageApplied,
       healing: Number(effects.healing ?? 0) || 0,
       barrier: Number(effects.barrier ?? 0) || 0,
-      crowdControlType: effects.crowdControlType,
+      crowdControlType: result.crowdControlApplied,
       fullHealthLegend: result.fullHealthLegend,
     }, {
       x: Number(targetCoordinates?.x ?? 0),
@@ -460,6 +629,10 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     });
 
     // Bitácora persistente del banco de pruebas (RF-05.3, plan 2.2).
+    // La detonación añade los campos de combo del Códice (RF-06.3,
+    // Tarea 4.3): etiqueta distintiva, elementos intervinientes y daño
+    // total asestado — todos espejo del veredicto, única fuente de verdad.
+    const comboTag = composeComboTag(verdict);
     testLog.recordImpact({
       spellName: spell?.name ?? 'Conjuro sin nombre',
       elementalAffinity: spell?.elementalAffinity ?? 'pureArcane',
@@ -470,6 +643,14 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
       healingApplied: Number(effects.healing ?? 0) || 0,
       crowdControlApplied: result.crowdControlApplied ?? 'none',
       dummyRemainingHealth: result.remainingHealth,
+      ...(comboTag !== null ? {
+        comboTag,
+        comboElements: {
+          activeAura: comboElements?.activeAura ?? null,
+          incoming: comboElements?.incoming ?? null,
+        },
+        comboDamageDealt: result.damageApplied,
+      } : {}),
     });
     refreshLogbook();
 
@@ -477,11 +658,44 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
       spell,
       targetCoordinates: { x: Number(targetCoordinates?.x ?? 0), y: Number(targetCoordinates?.y ?? 0) },
     });
-    announce(composeImpactAnnouncement(spell, result));
+    announce(composeImpactAnnouncement(spell, result, verdict));
+    // Anuncio accesible canónico de la detonación (RF-06.4, Tarea 4.3):
+    // se emite tras el anuncio del impacto para que los lectores de
+    // pantalla prioricen la reacción recién desatada.
+    if (verdict?.isReaction === true) {
+      announce(composeReactionAnnouncement(verdict, result));
+    }
+  }
+
+  /**
+   * Resuelve el impacto del conjuro sobre el maniquí (RF-05.1/05.2/05.3)
+   * y detona el Códice Elemental (SPEC-06, Tarea 4.1).
+   *
+   * Flujo: la cola FIFO (plan 3.3) resuelve un impacto por cuadro en
+   * estricto orden de llegada; cada resolución actualiza el estado del
+   * aura — única fuente de verdad — y aplica su veredicto al banco.
+   *
+   * @param {{spell: object, targetCoordinates: {x: number, y: number}}} detail
+   */
+  function handleImpact({ spell, targetCoordinates }) {
+    const effects = spell?.effects ?? {};
+    impactQueue.enqueue({
+      activeAura: activeAuraElement ?? '',
+      incomingSpell: {
+        id: spell?.id ?? null,
+        element: spell?.elementalAffinity ?? 'pureArcane',
+        baseDamage: Number(effects.damage ?? 0) || 0,
+        baseHealing: Number(effects.healing ?? 0) || 0,
+        baseBarrier: Number(effects.barrier ?? 0) || 0,
+        crowdControlType: effects.crowdControlType ?? 'none',
+      },
+      stunlockImmune: stunlockManager.isImmuneToHardCc(),
+      meta: { spell, targetCoordinates },
+    });
   }
 
   /** Compone el anuncio accesible del impacto (RF-06.4). */
-  function composeImpactAnnouncement(spell, result) {
+  function composeImpactAnnouncement(spell, result, verdict = null) {
     const effects = spell?.effects ?? {};
     const fragments = [];
     if (result.damageApplied > 0) {
@@ -496,18 +710,55 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     if (result.crowdControlApplied) {
       fragments.push(`lo deja ${CROWD_CONTROL_LABELS[result.crowdControlApplied] ?? 'atado por el conjuro'}`);
     }
+    // La detonación del Códice encabeza el anuncio con el nombre solemne
+    // de la reacción (la etiqueta completa de la bitácora es Tarea 4.3).
+    if (verdict?.isReaction === true && verdict.reactionName) {
+      return `¡${verdict.reactionName}! Lanzado ${spell?.name ?? 'conjuro desconocido'}: ${fragments.join(', ') || 'no altera al maniquí'}`;
+    }
     const summary = fragments.length > 0 ? fragments.join(', ') : 'no altera al maniquí';
     return `Lanzado ${spell?.name ?? 'conjuro desconocido'}: ${summary} al maniquí de pruebas`;
   }
 
-  /** Repinta el panel de la Bitácora de Pruebas (RF-05.3). */
+  /**
+   * Etiqueta distintiva del combo para la Bitácora (RF-06.3, Tarea 4.3):
+   * «[Combo: <nombre solemne>]» solo cuando el veredicto detona una
+   * reacción; null en imbuición, refresco o sobreescritura.
+   */
+  function composeComboTag(verdict) {
+    if (verdict?.isReaction !== true || !verdict.reactionName) {
+      return null;
+    }
+    return `[Combo: ${verdict.reactionName}]`;
+  }
+
+  /**
+   * Anuncio accesible de la detonación (RF-06.4, Tarea 4.3): fórmula
+   * canónica «Reacción desatada: <nombre> inflige <daño> puntos de daño
+   * al maniquí de pruebas», distinta del Texto Flotante Monumental —
+   * la región viva narra, el lienzo exclama.
+   */
+  function composeReactionAnnouncement(verdict, result) {
+    const reactionName = verdict.reactionName ?? 'reacción arcana';
+    const damageDealt = Number(result?.damageApplied ?? 0);
+    if (damageDealt > 0) {
+      return `Reacción desatada: ${reactionName} inflige ${damageDealt} puntos de daño al maniquí de pruebas`;
+    }
+    return `Reacción desatada: ${reactionName} no altera la salud del maniquí de pruebas`;
+  }
+
+  /** Repinta el panel de la Bitácora de Pruebas (RF-05.3). Las filas de
+   *  detonación encabezan con la etiqueta distintiva del combo (RF-06.3,
+   *  Tarea 4.3). */
   function refreshLogbook() {
     const entries = testLog.getEntries();
     const rows = entries.map((entry) => {
       const row = elementFactory('li');
       row.className = 'grimoire-simulator__logbook-entry';
       const hour = String(entry.timestamp ?? '').slice(11, 16);
-      row.textContent = `${hour} — ${entry.spellName}: ${entry.damageDealt} de daño`
+      const comboLabel = typeof entry.comboTag === 'string' && entry.comboTag.length > 0
+        ? `${entry.comboTag} `
+        : '';
+      row.textContent = `${hour} — ${comboLabel}${entry.spellName}: ${entry.damageDealt} de daño`
         + ` · maná ${entry.manaCost}`
         + ` · maniquí ${entry.dummyRemainingHealth}/${DUMMY_MAX_HEALTH} PV`;
       return row;
@@ -515,10 +766,16 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     logbookList.replaceChildren(...rows);
   }
 
-  /** Restablece el maniquí y la bitácora (RF-02.6). */
+  /** Restablece el maniquí y la bitácora (RF-02.6). El aura y la
+   *  inmunidad anti-stunlock se disipan con él (SPEC-06). */
   function restoreDummy() {
     dummy.restore();
+    elementalAura.clear();
+    activeAuraElement = null;
+    stunlockManager.reset();
+    impactQueue.clear();
     floatingTexts.clear();
+    comboDetonationPool?.reset();
     testLog.clear();
     refreshLogbook();
     dispatchBus('grimoire:dummy-reset', { reason: 'user' });
@@ -638,6 +895,10 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     syncCanvasSize();
     dummy.tick();
     floatingTexts.updateAndRender(dt);
+    // Las deflagraciones de combo viven en el mismo bucle de escena.
+    if (comboDetonationPool !== null) {
+      comboDetonationPool.updateAndRender(ctx, dt);
+    }
 
     if (state.tremorUntil && instant >= state.tremorUntil) {
       state.tremorUntil = 0;
@@ -718,7 +979,27 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     restoreSeal.addEventListener('click', () => { restoreDummy(); });
     tomeHost.addEventListener('touchstart', handleTouchStart);
     tomeHost.addEventListener('touchend', handleTouchEnd);
+    // Enlaces rúnicos de la ficha (SPEC-06, Tarea 4.4, RF-01.3): el glifo
+    // de afinidad del Tomo enfoca el Códice en su elemento — los
+    // filamentos del elemento quedan iluminados por highlightElement.
+    tomeHost.addEventListener('grimoire:codex-focus', handleCodexFocus);
     doc?.addEventListener?.('visibilitychange', handleVisibilityChange);
+  }
+
+  /**
+   * Enfoca el Códice en el elemento solicitado por un enlace rúnico de
+   * la ficha (RF-01.3, Tarea 4.4). Si la vista recibió una instancia
+   * viva de la Rueda Rúnica (inyectable en arneses y futura vista
+   * ceremonial del Códice — Tarea 5.2), la preselecciona con sus
+   * enlaces iluminados; el evento burbujeante queda además a
+   * disposición del orquestador del portal.
+   *
+   * @param {{detail?: {elementId?: string}}} event
+   */
+  function handleCodexFocus(event) {
+    const elementId = String(event?.detail?.elementId ?? '');
+    if (elementId === '') return;
+    options.elementalWheel?.highlightElement?.(elementId);
   }
 
   /**
@@ -739,6 +1020,8 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   function destroy() {
     stopScene();
     arcane.stop();
+    elementalAura.destroy();
+    comboDetonationPool = null;
     speechService.stopAll?.();
     doc?.removeEventListener?.('visibilitychange', handleVisibilityChange);
     tomeHost.removeEventListener?.('touchstart', handleTouchStart);
@@ -770,6 +1053,14 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
         activeCC: dummyState.activeCC,
         state: dummyState.state,
       },
+      // TargetAuraState del plan 2.2: el aura elemental y su cuenta atrás
+      // (RF-02.3) — la persistencia entre páginas es la ausencia de purga.
+      elementalAura: {
+        element: elementalAura.getActiveElement(),
+        active: elementalAura.isAuraActive(),
+        remainingMs: elementalAura.getRemainingMs(),
+      },
+      stunlockImmunity: stunlockManager.isImmuneToHardCc(),
       logEntries: entries,
       logbookEntries: logbookList.children.length,
       floatingTexts: floatingTexts.getActiveCount() + floatingTexts.getPendingCount(),

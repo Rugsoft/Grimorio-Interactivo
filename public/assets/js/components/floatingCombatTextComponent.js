@@ -53,6 +53,20 @@ const TEXT_LIFETIME_MS = 1600;
 const FLOAT_SPEED_PX_PER_S = 55;
 
 /**
+ * Escala monumental del texto de combo (SPEC-06, RF-06.2): ×1.3 respecto
+ * a los impactos convencionales de 18 px — el plan 4.2 la fija como
+ * canon (23 px redondeados).
+ */
+export const MONUMENTAL_SCALE = 1.3;
+export const MONUMENTAL_FONT_PX = Math.round(18 * MONUMENTAL_SCALE); // 23 px
+/** Corona del monumental: cúspide del blanco, por encima del CC (−55). */
+const MONUMENTAL_OFFSET_Y = -78;
+/** Retardo propio del monumental: brota antes que el CC escalonado (ms). */
+export const MONUMENTAL_DELAY_MS = 60;
+/** Vida más solemne que la de un rótulo convencional (ms). */
+const MONUMENTAL_LIFETIME_MS = 2200;
+
+/**
  * Crea el componente de textos flotantes.
  *
  * @param {object} options
@@ -140,6 +154,37 @@ export function createFloatingCombatTextComponent(options = {}) {
   }
 
   /**
+   * Programa el Texto Flotante Monumental de una detonación de combo
+   * (SPEC-06, Tarea 4.2, RF-06.2): rótulo ceremonial en oro rúnico con
+   * el nombre solemne de la reacción y el balance de daño amplificado
+   * (ej. «¡VAPORIZACIÓN ARCANA! −90 PV»), a escala ×1.3 sobre la cúspide
+   * del blanco (RNF-04: noble castellano).
+   *
+   * @param {object} detonation - { reactionName, damage }.
+   * @param {{x: number, y: number}} torso - centro del torso (X₀, Y₀).
+   * @returns {number} rótulos programados (1).
+   */
+  function spawnMonumentalText(detonation, torso) {
+    const name = String(detonation?.reactionName ?? '').trim();
+    if (name === '') {
+      return 0;
+    }
+    const damage = Number(detonation?.damage ?? 0) || 0;
+    const instant = now();
+    pending.push({
+      text: damage > 0
+        ? `¡${name.toUpperCase()}! −${damage} PV`
+        : `¡${name.toUpperCase()}!`,
+      x: torso.x,
+      y: torso.y + MONUMENTAL_OFFSET_Y,
+      color: TEXT_COLORS.crowdControl, // oro rúnico canónico
+      bornAt: instant + MONUMENTAL_DELAY_MS,
+      monumental: true,
+    });
+    return 1;
+  }
+
+  /**
    * Promueve los rótulos cuyo retardo escalonado ha vencido, integra la
    * flotación (ascenso ΔY = −60 px aprox. a lo largo de la vida) y dibuja
    * los activos con disolución suave (alfa lineal → 0).
@@ -158,9 +203,11 @@ export function createFloatingCombatTextComponent(options = {}) {
             y: item.y,
             color: item.color,
             bornAt: item.bornAt,
+            monumental: Boolean(item.monumental),
             // La vida cuenta desde su nacimiento PROGRAMADO: un rótulo
-            // promovido tarde (cuadro congelado) nace ya disuelto.
-            expiresAt: item.bornAt + TEXT_LIFETIME_MS,
+            // promovido tarde (cuadro congelado) nace ya disuelto. El
+            // monumental vive más: su lectura exige más tiempo en escena.
+            expiresAt: item.bornAt + (item.monumental ? MONUMENTAL_LIFETIME_MS : TEXT_LIFETIME_MS),
           });
         } else {
           stillWaiting.push(item);
@@ -181,8 +228,16 @@ export function createFloatingCombatTextComponent(options = {}) {
         continue; // Expirado: purga silenciosa.
       }
       item.y -= FLOAT_SPEED_PX_PER_S * dt; // flotación hacia arriba
-      const lifeRatio = (item.expiresAt - instant) / TEXT_LIFETIME_MS;
+      const lifetime = item.monumental ? MONUMENTAL_LIFETIME_MS : TEXT_LIFETIME_MS;
+      const lifeRatio = (item.expiresAt - instant) / lifetime;
       if (ctx) {
+        // El monumental interrumpe el estilo convencional: tipografía
+        // ceremonial a 23 px (×1.3). Cada rótulo restaura el suyo.
+        if (item.monumental) {
+          ctx.font = `bold ${MONUMENTAL_FONT_PX}px MedievalArcaneTitle, Cinzel, Georgia, serif`;
+        } else {
+          ctx.font = 'bold 18px Georgia, serif';
+        }
         ctx.globalAlpha = Math.max(0, Math.min(1, lifeRatio * 1.4)); // disolución suave
         ctx.fillStyle = item.color;
         ctx.fillText(item.text, item.x, item.y);
@@ -212,5 +267,5 @@ export function createFloatingCombatTextComponent(options = {}) {
     return pending.length;
   }
 
-  return { spawnImpactTexts, updateAndRender, clear, getActiveCount, getPendingCount };
+  return { spawnImpactTexts, spawnMonumentalText, updateAndRender, clear, getActiveCount, getPendingCount };
 }

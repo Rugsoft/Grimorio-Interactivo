@@ -81,22 +81,22 @@
 
 ## Fase 4: Integración con la Cámara de Conjuración y el Tomo (SPEC-05)
 
-- [ ] **Tarea 4.1: Persistencia de auras al hojear entre páginas del Grimorio**
+- [x] **Tarea 4.1: Persistencia de auras al hojear entre páginas del Grimorio**
   * **Alcance:** Integrar `elementalAuraComponent.js` y `comboResolver.js` con el ciclo de vida del simulador en `grimoireSimulatorView.js`, asegurando que el estado del aura activa (`TargetAuraState`) y su cuenta atrás de 5 s se mantengan inalterados cuando el usuario pase de página en el libro.
   * **Cubre:** `RF-02.3`, `RNF-01`
   * **Hecho cuando:** Un usuario lanza un conjuro de Agua en la página 1, hojea el tomo a la página 3 antes de 5 segundos, dispara Rayo y comprueba que se detona *Electrocución Fluida*.
 
-- [ ] **Tarea 4.2: Deflagración de partículas fusionadas y Texto Flotante Monumental**
+- [x] **Tarea 4.2: Deflagración de partículas fusionadas y Texto Flotante Monumental**
   * **Alcance:** Conectar la detonación del combo con `arcaneCanvasComponent.js` y `floatingCombatTextComponent.js` de SPEC-05, generando una explosión radial bicromática en el lienzo Canvas 2D y proyectando el texto monumental en oro rúnico (ej. `¡VAPORIZACIÓN ARCANA! -68 PV`).
   * **Cubre:** `RF-06.1`, `RF-06.2`, `RNF-04`
   * **Hecho cuando:** La detonación genera la deflagración combinada de partículas en el lienzo y hace brotar el texto ceremonial de combo destacado.
 
-- [ ] **Tarea 4.3: Registro de combos en Bitácora y Anuncios Accesibles ARIA**
+- [x] **Tarea 4.3: Registro de combos en Bitácora y Anuncios Accesibles ARIA**
   * **Alcance:** Actualizar el panel de la bitácora de pruebas para registrar la etiqueta distintiva del combo (ej. `[Combo: Electrocución Fluida]`) con elementos intervinientes y daño total en `localStorage`, y emitir el mensaje accesible en la región viva `aria-live="polite"`.
   * **Cubre:** `RF-06.3`, `RF-06.4`, `RNF-03`
   * **Hecho cuando:** La bitácora inscribe el registro de la reacción y los lectores de pantalla anuncian la detonación del combo.
 
-- [ ] **Tarea 4.4: Enlaces rúnicos de afinidad en las fichas de conjuro del libro**
+- [x] **Tarea 4.4: Enlaces rúnicos de afinidad en las fichas de conjuro del libro**
   * **Alcance:** Modificar `grimoireBookComponent.js` para añadir un acceso directo rúnico junto a la afinidad de cada conjuro, abriendo el Códice de Afinidades centrado en el elemento correspondiente.
   * **Cubre:** `RF-01.3`, `RNF-04`
   * **Hecho cuando:** Pulsar el glifo elemental de una ficha abre el Códice con dicho elemento preseleccionado y sus enlaces iluminados.

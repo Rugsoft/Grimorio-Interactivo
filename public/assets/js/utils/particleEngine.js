@@ -442,6 +442,52 @@ export class ParticlePool {
   }
 
   /**
+   * Deflagración bicromática de combo (SPEC-06, Tarea 4.2, RF-06.1):
+   * explosión radial omnidireccional centrada en el blanco que fusiona
+   * las estelas de ambos elementos alternando sus dos colores heráldicos.
+   *
+   * @param {{x: number, y: number}} center - corazón del blanco.
+   * @param {object} [options] - `colorA`/`colorB` (heráldica del Códice),
+   *   `count` (base 24), `speed`, `size`, `life` (s) y `random` (PRNG
+   *   inyectable para el determinismo de los arneses, RNF-01).
+   * @returns {number} partículas emitidas en esta invocación.
+   */
+  emitComboDetonation(center, options = {}) {
+    const settings = {
+      count: 24,
+      speed: 170,
+      size: 3.2,
+      life: 1.2,
+      colorA: '#d4af37',
+      colorB: '#d4af37',
+      random: createDefaultRandom(),
+      ...options,
+    };
+    const random = settings.random;
+    let emittedCount = 0;
+    for (let i = 0; i < settings.count; i++) {
+      const angle = random() * Math.PI * 2; // θ ∈ [0, 2π) omnidireccional
+      const speed = settings.speed * (0.7 + random() * 0.6);
+      // Alternancia estricta: las estelas bicromáticas conviven a partes
+      // iguales desde el primer instante de la deflagración.
+      const color = i % 2 === 0 ? settings.colorA : settings.colorB;
+      this.emit(
+        center.x,
+        center.y,
+        Math.cos(angle) * speed,
+        Math.sin(angle) * speed,
+        color,
+        settings.size * (0.8 + random() * 0.5),
+        settings.life * (0.8 + random() * 0.4),
+        Math.cos(angle) * settings.speed * 0.7, // aceleración exterior
+        Math.sin(angle) * settings.speed * 0.7,
+      );
+      emittedCount++;
+    }
+    return emittedCount;
+  }
+
+  /**
    * Desata la dispersión geométrica de un conjuro (RF-03.2, Tarea 2.2)
    * modulada por afinidad elemental y Círculo Arcano (RF-03.1/03.3, Tarea 2.3).
    *

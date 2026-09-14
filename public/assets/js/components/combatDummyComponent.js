@@ -7,6 +7,11 @@
  * ataduras de control de masas con disipación a 4 s, persistencia de
  * estado entre páginas y regeneración automática a 2 s tras disolverse.
  *
+ * Tarea 4.1 (TASKS-06): extensión elemental del contrato de impactos —
+ * `crowdControlDurationMs` (la duración de la atadura la gobierna el
+ * Códice) y `barrierShatter` (trituración de barrera sin excedente a
+ * salud, RF-04.2). Ambas claves son opcionales: SPEC-05 sigue intacta.
+ *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): ES Modules nativos; DOM vía
  *     createElement/textContent — el componente jamás usa innerHTML.
@@ -146,6 +151,14 @@ export function createCombatDummyComponent(options = {}) {
       return { damageApplied: 0, barrierAbsorbed: 0, remainingHealth: 0, fullHealthLegend: false, crowdControlApplied: null };
     }
 
+    // 0. Trituración de barrera (Códice, SPEC-06): anula el escudo antes
+    //    de la absorción, de modo que el daño amplificado de la reacción
+    //    jamás genere excedente contra la salud (RF-04.2).
+    const barrierShatter = Number(effects.barrierShatter ?? 0) || 0;
+    if (barrierShatter > 0) {
+      state.barrier = Math.max(0, state.barrier - barrierShatter);
+    }
+
     // 1. Absorción de barrera (prioritaria sobre la salud).
     let damageToApply = damage;
     let barrierAbsorbed = 0;
@@ -180,11 +193,14 @@ export function createCombatDummyComponent(options = {}) {
       state.barrier = Math.max(state.barrier, barrier);
     }
 
-    // 5. Control de masas por 4 segundos.
+    // 5. Control de masas: la duración la gobierna el Códice cuando el
+    //    impacto la porta (SPEC-06, ej. Hard CC de 1.5 s); en su defecto
+    //    rige la vigencia canónica de 4 s.
     let crowdControlApplied = null;
     if (ccType) {
       state.activeCC = ccType;
-      state.ccExpiresAt = now() + CC_DURATION_MS;
+      const crowdControlDurationMs = Number(effects.crowdControlDurationMs ?? CC_DURATION_MS) || CC_DURATION_MS;
+      state.ccExpiresAt = now() + crowdControlDurationMs;
       crowdControlApplied = ccType;
     }
 

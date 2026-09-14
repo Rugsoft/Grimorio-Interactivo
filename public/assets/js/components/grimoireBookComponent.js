@@ -103,6 +103,20 @@ export function createGrimoireBookComponent(options = {}) {
   spellCircle.className = 'grimoire-book__spell-circle';
   const spellElement = createNode('p');
   spellElement.className = 'grimoire-book__spell-element';
+  // Acceso directo rúnico al Códice (SPEC-06, Tarea 4.4, RF-01.3): el
+  // glifo viaja junto a la afinidad de la ficha y al pulsarlo enfoca el
+  // Códice en el elemento del conjuro con sus enlaces iluminados.
+  const spellElementRune = createNode('button');
+  spellElementRune.className = 'grimoire-book__spell-element-rune';
+  spellElementRune.type = 'button';
+  spellElementRune.addEventListener('click', () => {
+    const elementId = spellElementRune.getAttribute('data-element');
+    if (!elementId) return;
+    const event = typeof CustomEvent === 'function'
+      ? new CustomEvent('grimoire:codex-focus', { detail: { elementId, source: 'bookRune' }, bubbles: true })
+      : { type: 'grimoire:codex-focus', detail: { elementId, source: 'bookRune' }, bubbles: true };
+    spellElementRune.dispatchEvent(event);
+  });
   const spellCastingTime = createNode('p');
   spellCastingTime.className = 'grimoire-book__spell-casting-time';
   const spellMana = createNode('p');
@@ -115,6 +129,7 @@ export function createGrimoireBookComponent(options = {}) {
   pageFace.appendChild(spellName);
   pageFace.appendChild(spellCircle);
   pageFace.appendChild(spellElement);
+  pageFace.appendChild(spellElementRune);
   pageFace.appendChild(spellCastingTime);
   pageFace.appendChild(spellMana);
   pageFace.appendChild(spellFormula);
@@ -231,6 +246,12 @@ export function createGrimoireBookComponent(options = {}) {
     spellName.textContent = spell.name ?? 'Conjuro sin nombre';
     spellCircle.textContent = `Círculo ${ROMAN_CIRCLES[spell.circle] ?? '?'}`;
     spellElement.textContent = ELEMENT_NAMES[spell.elementalAffinity] ?? spell.elementalAffinity ?? '';
+    // El glifo rúnico viaja con la ficha: repinta su elemento destino
+    // (Tarea 4.4) y mantiene el aria-label al día (RNF-03).
+    spellElementRune.setAttribute('data-element', spell.elementalAffinity ?? '');
+    spellElementRune.textContent = '⌘';
+    spellElementRune.setAttribute('aria-label',
+      `Consultar el Códice de Afinidades del elemento ${ELEMENT_NAMES[spell.elementalAffinity] ?? spell.elementalAffinity ?? 'arcano'}`);
     spellCastingTime.textContent = `Tiempo de lanzamiento: ${CASTING_TIME_NAMES[spell.castingTime] ?? spell.castingTime ?? '—'}`;
     spellMana.textContent = `${spell.manaCost ?? 0} puntos de maná`;
     spellFormula.textContent = spell.incantationFormula ?? '';

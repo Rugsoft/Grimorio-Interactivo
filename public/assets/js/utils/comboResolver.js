@@ -172,7 +172,8 @@ export function createComboResolver(options = {}) {
    * @param {object} detail
    */
   function emit(type, detail) {
-    eventTarget.dispatchEvent(new CustomEvent(type, { detail }));
+    // El burbujeo permite que el bus trepe hasta el shell de la SPA.
+    eventTarget.dispatchEvent(new CustomEvent(type, { detail, bubbles: true }));
   }
 
   /**
