@@ -35,7 +35,14 @@ import { createSpellDetailModalComponent } from './components/spellDetailModalCo
 import { createAccessModalComponent } from './components/accessModalComponent.js';
 import { createLandingView } from './views/landingView.js';
 import { createLibraryView } from './views/libraryView.js';
-import { createClansPreviewView } from './views/clansPreviewView.js';
+// SPEC-01 (Tarea 5.6) legó la vista provisional de lectura pública de
+// linajes (`clansPreviewView.js`); desde SPEC-07 (Tarea 6.3) la ruta del
+// Salón la sirve `lineageHallView.js`, que la SUPERA con el pabellón del
+// Dominio. El módulo legado permanece íntegro y verificado por su propio
+// arnés, pero ya no se monta en la SPA.
+import { createLineageHallView } from './views/lineageHallView.js';
+import { createClanView } from './views/clanView.js';
+import { createClanClient } from './api/clanClient.js';
 import { createErrorView } from './views/errorView.js';
 import { createSpellCreatorView } from './views/spellCreatorView.js';
 import { createGrimoireSimulatorView } from './views/grimoireSimulatorView.js';
@@ -103,6 +110,7 @@ export function createGrimoireApp(options = {}) {
     },
     grimoireClient = createGrimoireClient(),
     dominionClient = createDominionClient(),
+    clanClient = createClanClient(),
     windowRef = globalThis.window,
     documentRef = globalThis.document,
   } = options;
@@ -197,13 +205,43 @@ export function createGrimoireApp(options = {}) {
     }
 
     if (viewName === 'clans') {
-      const clansView = createClansPreviewView(appRoot, {
+      // Salón de los Linajes (SPEC-07, Tarea 6.3): pabellón del Dominio con
+      // su clasificación semanal en vivo, su prestigio perpetuo y su Libro
+      // Mayor de Campeones. Contemplación pública: ningún control exige
+      // vínculo. La vista consulta los Endpoints 10 y 11 por su cuenta.
+      const hallView = createLineageHallView(appRoot, {
+        dominionClient,
         store,
-        spellClient,
+        // Pulsar una casa del podio abre su ficha (Tarea 6.4).
+        onClanSelect: (clanId) => {
+          void navigate('clan', { clanId });
+        },
         elementFactory,
       });
-      currentView = { name: viewName, instance: clansView };
-      await clansView.render();
+      currentView = { name: viewName, instance: hallView };
+      await hallView.render();
+      return;
+    }
+
+    if (viewName === 'clan') {
+      // Ficha de la hermandad y su legado ancestral (SPEC-07, Tarea 6.4).
+      // Contemplación pública: el visitante anónimo ve la casa entera y, si
+      // quiere postular, el gesto conduce al umbral de acceso.
+      const clanView = createClanView(appRoot, {
+        clanClient,
+        clanId: String(navigateOptions.clanId ?? ''),
+        store,
+        dominionClient,
+        onReservedAction: handleReservedAction,
+        onSpellSelect: (slug, originElement) => openSpellDetailBySlug(slug, { originElement }),
+        onMembershipChanged: () => {
+          // El vínculo del mago mudó: la cabecera y el aviso se resincronizan.
+          void apiCheckSessionWrapper();
+        },
+        elementFactory,
+      });
+      currentView = { name: viewName, instance: clanView };
+      await clanView.render();
       return;
     }
 
@@ -383,6 +421,10 @@ export function createGrimoireApp(options = {}) {
       // «Ver mi libro personal» retenido en el umbral: ahora con vínculo,
       // el Simulador abre directamente el tomo privado (RF-01.2).
       void navigate('simulator', { catalogMode: 'essays' });
+    } else if (retainedIntent?.action === 'joinClan' && typeof retainedIntent.targetSlug === 'string' && retainedIntent.targetSlug !== '') {
+      // Postulación retenida en el umbral (RF-01.5): ya con vínculo, la ficha
+      // de la casa vuelve a montarse con su gesto de ingreso disponible.
+      void navigate('clan', { clanId: retainedIntent.targetSlug });
     }
   }
 

@@ -82,6 +82,7 @@ function buildRouter(): Router
     $clanController   = new ClanController(
         $connection,
         new ClanService($connection->getPdo(), new AuditService($connection->getPdo()), new LineageSynergyService()),
+        $discoveryService,
     );
 
     // Pila de autenticación (SPEC-03): gestor de sesiones y rate limiter
@@ -134,6 +135,10 @@ function buildRouter(): Router
     $router->addRoute('GET', '/api/v1/clans', fn (Request $request): Response => $clanController->index($request));
     $router->addRoute('POST', '/api/v1/clans', fn (Request $request): Response => $clanController->store($request));
     $router->addRoute('GET', '/api/v1/clans/{id}', fn (Request $request, array $routeParams): Response => $clanController->show($request, $routeParams));
+    // Legado Ancestral de la casa (Tarea 6.4, plan Endpoint 13): conjuros
+    // ratificados que pertenecen perpetuamente a su clan de origen, incluso
+    // si la casa yace disuelta. Lectura pública.
+    $router->addRoute('GET', '/api/v1/clans/{id}/spells', fn (Request $request, array $routeParams): Response => $clanController->spells($request, $routeParams));
     $router->addRoute('PATCH', '/api/v1/clans/{id}', fn (Request $request, array $routeParams): Response => $clanController->update($request, $routeParams));
     $router->addRoute('POST', '/api/v1/clans/{id}/applications', fn (Request $request, array $routeParams): Response => $clanController->apply($request, $routeParams));
     $router->addRoute('POST', '/api/v1/clans/{id}/applications/{appId}/resolve', fn (Request $request, array $routeParams): Response => $clanController->resolveApplication($request, $routeParams));

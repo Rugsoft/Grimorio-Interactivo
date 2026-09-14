@@ -16,6 +16,7 @@
  *   Endpoint 8 · expelMember(clanId, userId)          POST /api/v1/clans/{id}/expel/{userId}
  *   Endpoint 9 · transferLeadership(clanId, newPatriarchId)
  *                                       POST /api/v1/clans/{id}/transfer-leadership
+ *   Endpoint 13 · fetchClanSpells(clanId)  GET  /api/v1/clans/{id}/spells
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): fetch nativo; cero axios ni librerías HTTP.
@@ -293,6 +294,22 @@ export function createClanClient(options = {}) {
      */
     fetchClan(clanId) {
       return requestJson(`${apiBase}/clans/${path(clanId)}`, { method: 'GET' });
+    },
+
+    /**
+     * Endpoint 13 (RF-05.1, RF-05.3): legado sellado de la casa.
+     *
+     * Lectura pública. Devuelve los conjuros RATIFICADOS concebidos bajo el
+     * estandarte del clan —no los de sus autores vigentes—, de modo que el
+     * patrimonio sobrevive intacto a la partida de un adepto y una casa
+     * disuelta conserva su «Herencia Ancestral».
+     *
+     * @param {string} clanId Identificador de la casa (cln_*).
+     * @returns {Promise<object>} 200 con `{clan, spells, count}` o 404
+     *   CLAN_NOT_FOUND.
+     */
+    fetchClanSpells(clanId) {
+      return requestJson(`${apiBase}/clans/${path(clanId)}/spells`, { method: 'GET' });
     },
 
     /**

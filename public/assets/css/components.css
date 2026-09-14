@@ -824,3 +824,273 @@
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------
+   9. Panel de Gobierno del Patriarca (SPEC-07, Tarea 6.2 — RF-01.3/01.4/01.5)
+
+   Cupo a la vista (x/30), conmutador de régimen, muda heráldica, cola de
+   solicitudes y censo nominal con sus gestos solemnes. Contraste WCAG 2.1
+   sobre la superficie de obsidiana elevada (#1b1922):
+     · títulos de sección y cupo (oro arcano #d4a94e) = 7.93:1
+     · leyendas y proclamas (marfil #f5f0e6)     = 16.4:1
+     · notas al margen (#9e9382)                 = 5.75:1
+   Las fichas del censo visten tinta sobre pergamino (#2b2118 / #f0e6d2)
+   = 12.71:1. Paleta 100% de tokens (cero literales de color).
+   ----------------------------------------------------------------- */
+
+.clan-management {
+  display: grid;
+  gap: var(--space-ink-3);
+  padding: var(--space-ink-4);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+}
+
+.clan-management__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.clan-management__sealed,
+.clan-management__status {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-secondary);
+}
+
+.clan-management__alert {
+  margin: 0;
+  padding: var(--space-ink-2);
+  border: 1px solid var(--color-ember-red);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-primary);
+}
+
+.clan-management__alert:empty,
+.clan-management__status:empty {
+  display: none;
+}
+
+.clan-management__section-title {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.clan-management__quota {
+  margin: 0 0 var(--space-ink-1);
+  font-family: var(--font-arcane-title);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+  color: var(--color-gold-bright);
+}
+
+.clan-management__quota-bar {
+  width: min(100%, 24rem);
+  height: var(--space-ink-2);
+  overflow: hidden;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-deep);
+}
+
+.clan-management__quota-fill {
+  display: block;
+  width: var(--quota-fill, 0%);
+  height: 100%;
+  background-color: var(--color-gold-arcane);
+}
+
+.clan-management__quota-full {
+  margin: var(--space-ink-1) 0 0;
+  font-family: var(--font-arcane-seal);
+  color: var(--color-unstable-seal);
+}
+
+.clan-management__admission-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+}
+
+.clan-management__admission-option {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-seal);
+  cursor: pointer;
+  transition: border-color var(--transition-arcane), color var(--transition-arcane);
+}
+
+.clan-management__admission-option[aria-pressed='true'] {
+  border-color: var(--color-gold-arcane);
+  color: var(--color-gold-bright);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.clan-management__admission-option:focus-visible,
+.clan-management__decision:focus-visible,
+.clan-management__expel:focus-visible,
+.clan-management__transfer:focus-visible,
+.clan-management__submit:focus-visible,
+.clan-management__confirmation-accept:focus-visible,
+.clan-management__confirmation-cancel:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.clan-management__admission-legend {
+  margin: var(--space-ink-2) 0 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-muted);
+}
+
+.clan-management__heraldry-form {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: start;
+}
+
+.clan-management__field-label {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-light-muted);
+}
+
+.clan-management__input {
+  width: min(100%, 24rem);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink);
+  font-family: var(--font-arcane-body);
+}
+
+.clan-management__input:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.clan-management__journal,
+.clan-management__members {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-ink-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clan-management__application,
+.clan-management__member {
+  display: grid;
+  gap: var(--space-ink-1);
+  justify-items: start;
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+}
+
+.clan-management__member--patriarch {
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.clan-management__applicant,
+.clan-management__member-alias {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-base);
+}
+
+.clan-management__application-date,
+.clan-management__member-joined,
+.clan-management__member-role {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.clan-management__crown {
+  color: var(--color-gold-arcane);
+  font-size: var(--font-size-ink-large);
+  line-height: 1;
+}
+
+.clan-management__decision,
+.clan-management__expel,
+.clan-management__transfer,
+.clan-management__submit {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border-radius: var(--radius-seal);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  cursor: pointer;
+}
+
+/* Diálogo solemne de confirmación: velo de obsidiana y sello central. */
+.clan-management__confirmation {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-ink-3);
+  background-color: var(--color-bg-obsidian-deep);
+  z-index: var(--z-modal-access);
+}
+
+.clan-management__confirmation-panel {
+  display: grid;
+  gap: var(--space-ink-3);
+  justify-items: center;
+  max-width: 32rem;
+  padding: var(--space-ink-4);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.clan-management__confirmation-title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  color: var(--color-gold-arcane);
+}
+
+.clan-management__confirmation-message {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-secondary);
+}
+
+/* Adaptación a móvil: el panel y sus rejillas pasan a una sola columna. */
+@media (max-width: 767.9px) {
+  .clan-management {
+    padding: var(--space-ink-3);
+  }
+
+  .clan-management__journal,
+  .clan-management__members {
+    grid-template-columns: 1fr;
+  }
+
+  .clan-management__confirmation-panel {
+    padding: var(--space-ink-3);
+  }
+}

@@ -39,6 +39,7 @@ use Grimorio\Dto\ClanDto;
 use Grimorio\Exceptions\ClanGovernanceException;
 use Grimorio\Models\User;
 use Grimorio\Services\ClanService;
+use Grimorio\Services\SpellDiscoveryService;
 
 /**
  * Controlador REST de clanes, gobernanza y postulaciones.
@@ -51,10 +52,20 @@ final class ClanController
     /** Autoridad del gobierno de hermandades (RF-01). */
     private ClanService $clanService;
 
-    public function __construct(Connection $connection, ClanService $clanService)
-    {
+    /**
+     * Descubrimiento arcano del catálogo: sirve el legado sellado de las
+     * hermandades (Endpoint 13, RF-05.1/RF-05.3).
+     */
+    private SpellDiscoveryService $spellDiscoveryService;
+
+    public function __construct(
+        Connection $connection,
+        ClanService $clanService,
+        SpellDiscoveryService $spellDiscoveryService,
+    ) {
         $this->connection = $connection;
         $this->clanService = $clanService;
+        $this->spellDiscoveryService = $spellDiscoveryService;
     }
 
     /**
@@ -254,6 +265,43 @@ final class ClanController
                 'patriarch'    => $patriarch,
                 'members'      => $members,
                 'applications' => $applications,
+            ],
+        ], 200);
+    }
+
+    // -----------------------------------------------------------------
+    // Endpoint 13 — Legado Ancestral de un Clan (RF-05.1, RF-05.3)
+    // -----------------------------------------------------------------
+
+    /**
+     * GET /api/v1/clans/{id}/spells — Conjuros sellados bajo el estandarte.
+     *
+     * Lectura pública: el patrimonio de una casa se contempla sin vínculo
+     * arcano, incluso cuando yace disuelta como «Herencia Ancestral»
+     * (RF-05.3). Las obras se resuelven por el clan de origen del conjuro, no
+     * por la afiliación vigente de su autor, de modo que la partida de un
+     * adepto jamás resta piezas al legado (RF-05.1).
+     *
+     * Respuestas: 200 OK con `{clan, spells, count}` y 404 CLAN_NOT_FOUND.
+     */
+    public function spells(Request $request, array $routeParams): Response
+    {
+        // El parámetro $request queda reservado para futuras cabeceras.
+        $clanId = $this->readRouteValue($routeParams, 'id');
+
+        $clan = $this->clanService->findClanById($clanId);
+        if ($clan === null) {
+            return $this->rejection(ClanGovernanceException::clanNotFound($clanId));
+        }
+
+        $spells = $this->spellDiscoveryService->getValidatedSpellsByClan($clanId);
+
+        return Response::json([
+            'success' => true,
+            'data'    => [
+                'clan'   => $clan,
+                'spells' => $spells,
+                'count'  => count($spells),
             ],
         ], 200);
     }

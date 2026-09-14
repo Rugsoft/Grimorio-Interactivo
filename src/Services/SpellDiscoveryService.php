@@ -29,6 +29,7 @@ declare(strict_types=1);
 namespace Grimorio\Services;
 
 use Grimorio\Database\Connection;
+use Grimorio\Dto\ClanLegacySpellDto;
 use Grimorio\Models\Spell;
 use PDO;
 
@@ -276,6 +277,51 @@ final class SpellDiscoveryService
         $row = $detailStatement->fetch();
 
         return $row === false ? null : Spell::fromDatabaseRow($row);
+    }
+
+    /**
+     * El legado sellado de una hermandad (RF-05.1, RF-05.3, Endpoint 13).
+     *
+     * Devuelve los conjuros RATIFICADOS concebidos bajo el estandarte del clan,
+     * del más reciente al más antiguo. La consulta filtra por `s.clan_id`, no
+     * por la autoría: por eso el patrimonio sobrevive intacto aunque su autor
+     * haya partido o sido expulsado (RF-05.1), y por eso una casa disuelta
+     * conserva su «Herencia Ancestral» (RF-05.3). El alias del autor viaja
+     * como crédito perpetuo, resuelto por JOIN con `users`.
+     *
+     * Se incluyen los Pergaminos Primordiales de génesis cuando pertenecen al
+     * linaje consultado: son obras ratificadas de pleno derecho.
+     *
+     * @param string $clanId Clave canónica de la hermandad (cln_*).
+     * @return list<ClanLegacySpellDto> Legado ordenado por ratificación descendente.
+     */
+    public function getValidatedSpellsByClan(string $clanId): array
+    {
+        $pdo = $this->connection->getPdo();
+
+        $legacyStatement = $pdo->prepare(
+            'SELECT s.*, c.name AS clan_name, u.alias AS author_alias
+             FROM spells s
+             INNER JOIN clans c ON c.id = s.clan_id
+             INNER JOIN users u ON u.id = s.author_id
+             WHERE s.clan_id = :clanId
+               AND s.status = :statusValidated
+             ORDER BY s.validated_at DESC, s.slug ASC'
+        );
+        $legacyStatement->bindValue(':clanId', $clanId, PDO::PARAM_STR);
+        $legacyStatement->bindValue(':statusValidated', 'validated', PDO::PARAM_STR);
+        $legacyStatement->execute();
+
+        $rows = $legacyStatement->fetchAll();
+
+        return array_map(
+            static fn (array $row): ClanLegacySpellDto => ClanLegacySpellDto::fromSpell(
+                Spell::fromDatabaseRow($row),
+                (int) ($row['circle'] ?? 0),
+                (string) ($row['author_alias'] ?? ''),
+            ),
+            $rows,
+        );
     }
 
     /**

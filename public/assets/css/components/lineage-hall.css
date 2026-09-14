@@ -1,0 +1,537 @@
+/**
+ * lineage-hall.css — Salón de los Linajes: podio ceremonial, filtros
+ * elementales y Libro Mayor de Campeones (SPEC-07, Tarea 6.1).
+ *
+ * RF-06.1/RF-06.2: pabellón del Salón con su clasificación en vivo, su
+ *   prestigio histórico perpetuo y su libro de campeones pasados.
+ * RF-02.2: la barra de filtros viste los glifos de los Ocho Linajes Canónicos
+ *   con el color de estandarte de cada elemento rector.
+ * RF-04.4: el clan reinante se corona en el podio con el oro del Dominio.
+ * RNF-03: contraste WCAG 2.1 AA, zona táctil mínima, foco visible y respeto
+ *   por el movimiento reducido.
+ *
+ * Constitución:
+ *   - Artículo I (Dogma Vanilla): CSS3 puro; sin @import ni recurso externo.
+ *   - Artículo II: esta hoja viste cifras de gloria; JAMÁS las calcula ni las
+ *     altera (el cómputo vive en el servicio del Dominio).
+ *   - Artículo IV/V: clases kebab-case, comentarios en castellano.
+ *
+ * Pureza de tokens: CERO literales de color. Los tintes de linaje llegan de
+ * las variables `--heraldry-*` que declara clan-heraldry.css (fuente única de
+ * la fase) con respaldo en la matriz elemental del sistema de diseño, de modo
+ * que el Salón se pinta aun si su hermana no se cargara.
+ *
+ * Pares de contraste auditados (WCAG 2.1 AA, umbral 4.5:1):
+ *   .lineage-hall__title   · oro arcano sobre obsidiana profunda
+ *   .lineage-hall__hint    · texto atenuado sobre obsidiana profunda
+ *   .lineage-tab           · tinta sobre pergamino viejo
+ *   .lineage-tab--active   · tinta sobre pergamino
+ *   .lineage-filter        · texto atenuado sobre obsidiana de superficie
+ *   .podium-rank           · tinta sobre pergamino
+ *   .podium-rank--regent   · oro radiante sobre obsidiana elevada
+ *   .historical-row        · texto secundario sobre obsidiana de superficie
+ *   .fame-entry            · tinta sobre pergamino viejo
+ *   .lineage-hall__error   · texto principal sobre obsidiana elevada
+ */
+
+/* =======================================================================
+   1. El pabellón del Salón
+   ======================================================================= */
+
+.lineage-hall {
+  display: grid;
+  gap: var(--space-ink-4);
+  max-width: var(--container-tomo-max);
+  margin-inline: auto;
+  padding: var(--space-ink-4);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-deep);
+  color: var(--color-text-primary);
+}
+
+.lineage-hall__header {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: center;
+  text-align: center;
+}
+
+.lineage-hall__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.lineage-hall__hint {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-muted);
+}
+
+/* =======================================================================
+   2. Pestañas ceremoniales (clasificación viva · prestigio · libro mayor)
+   ======================================================================= */
+
+.lineage-hall__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+  justify-content: center;
+}
+
+.lineage-tab {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane), border-color var(--transition-arcane);
+}
+
+.lineage-tab:hover {
+  background-color: var(--color-parchment);
+}
+
+.lineage-tab:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Pestaña activa: pergamino limpio y filo dorado, marcada por clase y por
+   el estado ARIA que publica el componente. */
+.lineage-tab--active,
+.lineage-tab[aria-selected='true'] {
+  border-color: var(--color-gold-arcane);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+/* =======================================================================
+   3. Barra de filtros elementales (RF-02.2)
+   ======================================================================= */
+
+.lineage-hall__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+  justify-content: center;
+}
+
+.lineage-filter {
+  --lineage-tint: var(--heraldry-regent-gold, var(--color-gold-arcane));
+
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-1);
+  border: 2px solid var(--lineage-tint);
+  border-radius: 50%;
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: transform var(--transition-arcane), box-shadow var(--transition-arcane);
+}
+
+.lineage-filter__glyph {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-base);
+}
+
+.lineage-filter:hover {
+  transform: translateY(-2px);
+}
+
+.lineage-filter:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.lineage-filter--active,
+.lineage-filter[aria-pressed='true'] {
+  color: var(--color-gold-bright);
+  box-shadow: 0 0 12px var(--lineage-tint);
+}
+
+/* Un tinte por cada clave canónica del linaje (RF-02.1/RF-02.2). */
+.lineage-filter[data-lineage='primordialFlame'],
+.lineage-filter--primordial-flame {
+  --lineage-tint: var(--heraldry-primordial-flame, var(--color-affinity-fire));
+}
+
+.lineage-filter[data-lineage='celestialTides'],
+.lineage-filter--celestial-tides {
+  --lineage-tint: var(--heraldry-celestial-tides, var(--color-affinity-water));
+}
+
+.lineage-filter[data-lineage='eternalTempest'],
+.lineage-filter--eternal-tempest {
+  --lineage-tint: var(--heraldry-eternal-tempest, var(--color-affinity-lightning));
+}
+
+.lineage-filter[data-lineage='worldRoots'],
+.lineage-filter--world-roots {
+  --lineage-tint: var(--heraldry-world-roots, var(--color-affinity-earth));
+}
+
+.lineage-filter[data-lineage='dawnWinds'],
+.lineage-filter--dawn-winds {
+  --lineage-tint: var(--heraldry-dawn-winds, var(--color-affinity-wind));
+}
+
+.lineage-filter[data-lineage='solarCrown'],
+.lineage-filter--solar-crown {
+  --lineage-tint: var(--heraldry-solar-crown, var(--color-affinity-light));
+}
+
+.lineage-filter[data-lineage='abyssalShadows'],
+.lineage-filter--abyssal-shadows {
+  --lineage-tint: var(--heraldry-abyssal-shadows, var(--color-affinity-darkness));
+}
+
+.lineage-filter[data-lineage='aetherWeavers'],
+.lineage-filter--aether-weavers {
+  --lineage-tint: var(--heraldry-aether-weavers, var(--color-affinity-arcane));
+}
+
+/* =======================================================================
+   4. El podio ceremonial de la contienda viva (RF-06.1, RF-04.4)
+   ======================================================================= */
+
+.lineage-hall__podium {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-ink-3);
+  align-items: stretch;
+}
+
+.podium-rank {
+  display: grid;
+  gap: var(--space-ink-1);
+  justify-items: center;
+  padding: var(--space-ink-3);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.podium-rank__position {
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+}
+
+.podium-rank__clan-name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+}
+
+.podium-rank__motto {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-style: italic;
+}
+
+.podium-rank__lineage {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.podium-rank__points {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+  font-size: var(--font-size-title-spell);
+}
+
+/* El clan que ciñe la corona del Dominio: obsidiana elevada y oro radiante. */
+.podium-rank--regent {
+  border-color: var(--heraldry-regent-bright, var(--color-gold-bright));
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-gold-bright);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.podium-rank__crown {
+  font-size: var(--font-size-ink-large);
+  line-height: 1;
+  color: var(--heraldry-regent-bright, var(--color-gold-bright));
+}
+
+/* =======================================================================
+   5. Prestigio histórico perpetuo (RF-06.2)
+   ======================================================================= */
+
+.lineage-hall__historical {
+  display: grid;
+  gap: var(--space-ink-1);
+}
+
+.historical-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-ink-2);
+  align-items: center;
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-secondary);
+}
+
+.historical-row__rank {
+  font-family: var(--font-arcane-seal);
+  color: var(--color-gold-arcane);
+}
+
+.historical-row__clan {
+  font-family: var(--font-arcane-title);
+}
+
+.historical-row__lineage {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.historical-row__glory {
+  font-variant-numeric: var(--font-variant-mana-numbers);
+  color: var(--color-gold-bright);
+}
+
+/* =======================================================================
+   6. Libro Mayor de Campeones Pasados (RF-06.2)
+   ======================================================================= */
+
+.lineage-hall__hall-of-fame {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-ink-2);
+}
+
+.fame-entry {
+  display: grid;
+  gap: var(--space-ink-1);
+  padding: var(--space-ink-2);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink);
+  text-align: center;
+}
+
+.fame-entry__week {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+.fame-entry__champion {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-base);
+}
+
+.fame-entry__glory {
+  font-variant-numeric: var(--font-variant-mana-numbers);
+}
+
+/* =======================================================================
+   7. Estados del Salón: carga, corte de maná y vacío
+   ======================================================================= */
+
+.lineage-hall__loading {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-light-muted);
+  animation: lineageHallPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes lineageHallPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.lineage-hall__error {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: center;
+  padding: var(--space-ink-3);
+  border: 1px solid var(--color-ember-red);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+}
+
+.lineage-hall__error-retry {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-gold-arcane);
+  cursor: pointer;
+}
+
+.lineage-hall__error-retry:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.lineage-hall__empty {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* =======================================================================
+   8. Adaptación a móvil y escritorio (RNF-03)
+
+   Escritorio (≥ 768 px): pestañas en fila y podio en rejilla ancha.
+   Móvil (≤ 767.9 px): una sola columna, filas apiladas con sus etiquetas y
+   zona táctil mínima garantizada en cada control.
+   ======================================================================= */
+
+@media (min-width: 768px) {
+  .lineage-hall {
+    padding: var(--space-ink-5);
+  }
+
+  .lineage-hall__podium {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+@media (max-width: 767.9px) {
+  .lineage-hall {
+    gap: var(--space-ink-3);
+    padding: var(--space-ink-3);
+  }
+
+  .lineage-hall__tabs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lineage-tab {
+    text-align: center;
+  }
+
+  .lineage-hall__podium {
+    grid-template-columns: 1fr;
+  }
+
+  .historical-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .lineage-hall__hall-of-fame {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =======================================================================
+   9. Ganchos del componente del Salón (Tarea 6.3)
+
+   La hoja viste los nodos que forja lineageHallComponent.js: el panel que
+   hospeda las tres secciones, la proclama cortés del lector de pantalla, el
+   blasón de cada estandarte, la marca del linaje fundacional neutro
+   (Art. III) y el aviso del Libro Mayor. CERO literales de color.
+   ======================================================================= */
+
+.lineage-hall-view {
+  display: block;
+}
+
+.lineage-hall__panel {
+  display: grid;
+  gap: var(--space-ink-3);
+}
+
+.lineage-hall__panel:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 4px;
+}
+
+/* Proclama del lector de pantalla: se enuncia sin competir con el podio. */
+.lineage-hall__announcement {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-text-muted);
+}
+
+/* Blasón rúnico del estandarte: contenido, no adorno. */
+.podium-rank__coat {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-title-spell);
+  line-height: 1;
+  color: var(--color-gold-arcane);
+}
+
+.podium-rank__reign {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+}
+
+/* El linaje fundacional neutro: se contempla, jamás compite (Art. III). */
+.podium-rank--neutral,
+.historical-row--neutral {
+  opacity: 0.7;
+  border: 1px dashed var(--color-text-muted);
+}
+
+.podium-rank__neutral {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+/* Aviso del Libro Mayor: perpetuo e independiente de la semana en curso. */
+.lineage-hall__fame-hint {
+  font-size: var(--font-size-ink-small);
+  font-style: italic;
+}
+
+.lineage-hall__error-message {
+  margin: 0;
+}
+
+/* =======================================================================
+   10. Movimiento reducido (RNF-03)
+   ======================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .lineage-hall__loading {
+    animation: none;
+    opacity: 1;
+  }
+
+  .lineage-filter {
+    transition: none;
+  }
+
+  .lineage-filter:hover {
+    transform: none;
+  }
+}

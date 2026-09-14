@@ -119,22 +119,22 @@
 
 ## Fase 6: Vistas de Inmersión, Panel del Patriarca y Salón de los Linajes
 
-- [ ] **Tarea 6.1: Hojas de estilos ceremoniales CSS3 (`clan-heraldry.css` y `lineage-hall.css`)**
+- [x] **Tarea 6.1: Hojas de estilos ceremoniales CSS3 (`clan-heraldry.css` y `lineage-hall.css`)**
   * **Alcance:** Crear `public/assets/css/components/clan-heraldry.css` y `public/assets/css/components/lineage-hall.css` con variables CSS3, marcos heráldicos para los 8 linajes, animaciones de brillo dorado para el Clan Regente y la clase `.spell-card-regent-border` para el ribete dorado de los conjuros del clan soberano.
   * **Cubre:** `RF-02.2`, `RF-04.4`, `RNF-03`
   * **Hecho cuando:** Los componentes heráldicos se adaptan responsive a móvil y escritorio, y los conjuros del Clan Regente lucen el ribete dorado brillante ceremonial.
 
-- [ ] **Tarea 6.2: Componente del Panel de Gestión del Patriarca (`clanManagementComponent.js`)**
+- [x] **Tarea 6.2: Componente del Panel de Gestión del Patriarca (`clanManagementComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/clanManagementComponent.js` permitiendo al Patriarca: modificar lema y blasón, conmutar régimen de admisión (`open` / `byApplication`), visualizar el indicador de ocupación (x/30), aceptar o rechazar solicitudes pendientes, expulsar adeptos y transferir la corona de liderazgo.
   * **Cubre:** `RF-01.3`, `RF-01.4`, `RF-01.5`, `RF-01.9`
   * **Hecho cuando:** El Patriarca puede alternar el régimen de admisión, admitir una solicitud actualizando el cupo a la vista y transferir el liderazgo con diálogo solemne de confirmación.
 
-- [ ] **Tarea 6.3: Componente y Vista del Salón de los Linajes (`lineageHallComponent.js` y `lineageHallView.js`)**
+- [x] **Tarea 6.3: Componente y Vista del Salón de los Linajes (`lineageHallComponent.js` y `lineageHallView.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/lineageHallComponent.js` y `public/assets/js/views/lineageHallView.js` presentando: podio ceremonial en vivo de la semana en curso, conmutador de filtros por los 8 linajes elementales, tabla del Prestigio Histórico perpetuo y el Libro Mayor de Campeones Pasados.
   * **Cubre:** `RF-04.4`, `RF-06.1`, `RF-06.2`, `RNF-03`
   * **Hecho cuando:** El usuario puede alternar entre clasificación semanal e histórica, y filtrar las hermandades pulsando en el icono rúnico de cualquiera de los 8 linajes.
 
-- [ ] **Tarea 6.4: Vista de Detalle de Clan y Legado Ancestral (`clanView.js`)**
+- [x] **Tarea 6.4: Vista de Detalle de Clan y Legado Ancestral (`clanView.js`)**
   * **Alcance:** Desarrollar `public/assets/js/views/clanView.js` que visualice el blasón del clan, lema, Patriarca, lista de miembros activos, botón de unirse/postularse (sujeto a cupo de 30 y convalecencia), botón de renuncia para adeptos, y catálogo de conjuros sellados bajo su sello (distinguiendo la «Herencia Ancestral» si el clan está archivado).
   * **Cubre:** `RF-01.2`, `RF-01.4`, `RF-01.5`, `RF-05.1`, `RF-05.3`, `RF-05.4`
   * **Hecho cuando:** La vista muestra los conjuros validados del clan independientemente de si los autores siguen en la hermandad, y marca con el sello de «Herencia Ancestral» si el clan está en estado `archived`.

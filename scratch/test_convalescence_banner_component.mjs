@@ -567,13 +567,16 @@ assertCondition(
 );
 
 const stylesSection = stylesSource.slice(stylesSource.indexOf('8. Aviso de Convalecencia Arcana'));
+// La prosa no es código: los literales se auditan sobre la hoja sin comentarios
+// (mismo criterio que `verify_design_tokens.php`, que los descarta al parsear).
+const stylesCode = stylesSection.replace(/\/\*[\s\S]*?\*\//g, '');
 assertCondition(stylesSection.includes('.convalescence-banner'), 'La hoja auditable del sistema viste el aviso');
 assertCondition(
   stylesSection.includes('--convalescence-progress'),
   'La barra decreciente se viste desde la Custom Property que fija el componente',
 );
 assertCondition(
-  (stylesSection.match(/#[0-9a-fA-F]{3,6}\b/g) ?? []).length === 0,
+  (stylesCode.match(/#[0-9a-fA-F]{3,6}\b/g) ?? []).length === 0,
   'Cero literales de color en la vestidura: todo son tokens de diseño (Artículo I)',
 );
 

@@ -106,6 +106,7 @@ $spellController  = new SpellController($discoveryService);
 $clanController   = new ClanController(
     Connection::getInstance(),
     new ClanService(Connection::getInstance()->getPdo()),
+    $discoveryService,
 );
 
 echo "== VERIFICACION TAREA 1.5: Controladores REST y Front Controller ==\n\n";

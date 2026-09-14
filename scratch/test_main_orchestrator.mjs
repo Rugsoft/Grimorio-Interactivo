@@ -306,7 +306,11 @@ assertCondition(shell1.fakeWindow.location.assignCalls.length === 0, 'La navegac
 const clansLink2 = findNavLink(shell1, 'clans');
 clansLink2.dispatch('click');
 await wait(20);
-assertCondition(byClass(shell1.appRoot, 'clans-view') !== null, 'Pulsar «Salón de Linajes» monta su vista (RF-02.2)');
+// SPEC-07 (Tarea 6.3) sirve la ruta del Salón con `lineageHallView.js`, que
+// SUPERA la vista provisional de SPEC-01; la lectura pública de linajes y de
+// la clasificación semanal sigue garantizada, ahora con el pabellón del
+// Dominio. El módulo legado conserva su propio arnés.
+assertCondition(byClass(shell1.appRoot, 'lineage-hall-view') !== null, 'Pulsar «Salón de Linajes» monta su vista (RF-02.2 / RF-06.1)');
 assertCondition(app1.store.getState().currentView === 'clans', 'El store sincroniza currentView=clans');
 
 // Regreso a la biblioteca para las fases siguientes:

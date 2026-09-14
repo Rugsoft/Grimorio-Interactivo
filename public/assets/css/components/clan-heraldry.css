@@ -1,0 +1,761 @@
+/**
+ * clan-heraldry.css — Heráldica de los Ocho Linajes Canónicos y Ribete
+ * Ceremonial del Clan Regente (SPEC-07, Tarea 6.1).
+ *
+ * RF-02.2: cada Linaje Canónico porta un marco heráldico distintivo, su glifo
+ *   rúnico ancestral y su color de estandarte ceremonial acorde al elemento
+ *   rector.
+ * RF-04.4: el Clan Regente de la semana luce el brillo dorado del Dominio, y
+ *   los conjuros cobijados bajo su sello visten el ribete dorado ceremonial.
+ * RNF-03: accesibilidad y respeto por el movimiento reducido — toda animación
+ *   se anula bajo `prefers-reduced-motion`.
+ *
+ * Constitución:
+ *   - Artículo I (Dogma Vanilla): CSS3 puro, sin preprocesadores ni @import;
+ *     el archivo se sirve tal cual y no llama a recurso externo alguno.
+ *   - Artículo II: esta hoja no altera coste de maná ni cifra numérica de la
+ *     forja; solo viste heráldica.
+ *   - Artículo IV (Velo Arcano): pergamino y oro del grimorio.
+ *   - Artículo V: clases semánticas kebab-case; comentarios en castellano.
+ *
+ * Pureza de tokens: CERO literales de color. Los estandartes de los ocho
+ * linajes se leen de la matriz elemental de tokens.css (`--color-affinity-*`),
+ * de modo que un linaje y su elemento jamas puedan divergir: la fuente de
+ * verdad heráldica es el sistema de diseño, no esta hoja.
+ *
+ * Paridad con el canon: la clave de cada marco es EXACTAMENTE el valor
+ * `heraldicFrame` que publica `LineageSynergyService::CANONICAL_LINEAGES`
+ * (phoenixShield, leviathanShield, thunderbirdShield, worldtreeShield,
+ * zephyrShield, sunwheelShield, voidSerpentShield, aetherloomShield). El DOM
+ * la porta verbatim en `data-heraldic-frame`, y cada clave tiene su alias en
+ * kebab-case (`--phoenix-shield`) para comodidad de autoría.
+ */
+
+/* =======================================================================
+   1. Paleta heráldica de los Ocho Linajes (RF-02.2)
+
+   Una sola declaración para las dos hojas de la fase: el Salón de los Linajes
+   (lineage-hall.css) consume estas mismas variables para sus filtros.
+   ======================================================================= */
+
+:root {
+  --heraldry-primordial-flame: var(--color-affinity-fire);
+  --heraldry-celestial-tides: var(--color-affinity-water);
+  --heraldry-eternal-tempest: var(--color-affinity-lightning);
+  --heraldry-world-roots: var(--color-affinity-earth);
+  --heraldry-dawn-winds: var(--color-affinity-wind);
+  --heraldry-solar-crown: var(--color-affinity-light);
+  --heraldry-abyssal-shadows: var(--color-affinity-darkness);
+  --heraldry-aether-weavers: var(--color-affinity-arcane);
+
+  /* Oro ceremonial del Dominio: tintes del brillo del Clan Regente. */
+  --heraldry-regent-gold: var(--color-gold-arcane);
+  --heraldry-regent-bright: var(--color-gold-bright);
+}
+
+/* =======================================================================
+   2. Marco heráldico base
+
+   Sostiene el glifo rúnico del linaje sobre pergamino viejo (tinta oscura:
+   contraste holgado) con un filo del color del estandarte. Cada uno de los
+   ocho marcos añade su motivo distintivo; el marco sin linaje declarado viste
+   el oro arcano del grimorio.
+   ======================================================================= */
+
+.heraldic-frame {
+  --heraldry-color: var(--heraldry-regent-gold);
+
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-3);
+  border: 3px solid var(--heraldry-color);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-parchment-border);
+}
+
+.heraldic-frame__glyph {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* =======================================================================
+   3. Los ocho marcos canónicos (RF-02.2)
+
+   Cada bloque ata su color de estandarte y su motivo propio. El sello
+   distintivo es el borde, la silueta y la profundidad del marco: ocho
+   heráldicas reconocibles de un vistazo, sin una sola imagen externa.
+   ======================================================================= */
+
+/* 3.1 Llama Primordial — phoenixShield: filo doble y resplandor ígneo. */
+.heraldic-frame[data-heraldic-frame='phoenixShield'],
+.heraldic-frame--phoenix-shield {
+  --heraldry-color: var(--heraldry-primordial-flame);
+
+  border-style: double;
+  border-width: 6px;
+  box-shadow: 0 0 18px var(--heraldry-primordial-flame);
+}
+
+/* 3.2 Mareas Celestiales — leviathanShield: silueta ondulada de marea. */
+.heraldic-frame[data-heraldic-frame='leviathanShield'],
+.heraldic-frame--leviathan-shield {
+  --heraldry-color: var(--heraldry-celestial-tides);
+
+  border-width: 3px;
+  border-radius: 46% 54% 52% 48% / 54% 46% 54% 46%;
+  box-shadow: inset 0 0 12px var(--color-parchment-stain);
+}
+
+/* 3.3 Tempestad Eterna — thunderbirdShield: trazo quebrado del fulgor. */
+.heraldic-frame[data-heraldic-frame='thunderbirdShield'],
+.heraldic-frame--thunderbird-shield {
+  --heraldry-color: var(--heraldry-eternal-tempest);
+
+  border-style: dashed;
+  border-width: 4px;
+  border-radius: var(--radius-scroll);
+  box-shadow: 0 0 12px var(--heraldry-eternal-tempest);
+}
+
+/* 3.4 Raíces del Mundo — worldtreeShield: piedra gruesa y cuadrada. */
+.heraldic-frame[data-heraldic-frame='worldtreeShield'],
+.heraldic-frame--worldtree-shield {
+  --heraldry-color: var(--heraldry-world-roots);
+
+  border-width: 8px;
+  border-radius: var(--radius-scroll);
+  box-shadow: inset 0 0 0 2px var(--color-parchment-border);
+}
+
+/* 3.5 Vientos del Alba — zephyrShield: aliento asimétrico y ligero. */
+.heraldic-frame[data-heraldic-frame='zephyrShield'],
+.heraldic-frame--zephyr-shield {
+  --heraldry-color: var(--heraldry-dawn-winds);
+
+  border-width: 1px 5px 1px 5px;
+  border-radius: var(--radius-seal);
+  box-shadow: inset 0 0 10px var(--color-parchment-stain);
+}
+
+/* 3.6 Corona Solar — sunwheelShield: rueda radiante del disco solar. */
+.heraldic-frame[data-heraldic-frame='sunwheelShield'],
+.heraldic-frame--sunwheel-shield {
+  --heraldry-color: var(--heraldry-solar-crown);
+
+  border-width: 4px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--heraldry-solar-crown), 0 0 16px var(--heraldry-solar-crown);
+}
+
+/* 3.7 Sombras Abisales — voidSerpentShield: silueta de serpiente del vacío. */
+.heraldic-frame[data-heraldic-frame='voidSerpentShield'],
+.heraldic-frame--void-serpent-shield {
+  --heraldry-color: var(--heraldry-abyssal-shadows);
+
+  border-width: 4px;
+  border-radius: 50% 10% 50% 10%;
+  box-shadow: inset 0 0 16px var(--heraldry-abyssal-shadows);
+}
+
+/* 3.8 Tejedores del Éter — aetherloomShield: telar punteado del éter. */
+.heraldic-frame[data-heraldic-frame='aetherloomShield'],
+.heraldic-frame--aetherloom-shield {
+  --heraldry-color: var(--heraldry-aether-weavers);
+
+  border-style: dotted;
+  border-width: 5px;
+  border-radius: var(--radius-seal);
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-parchment-stain) 0 2px,
+    transparent 2px 7px
+  );
+}
+
+/* =======================================================================
+   4. Estandarte del linaje y marca del Clan Regente
+
+   El estandarte recibe su tinte por la Custom Property --banner-tint que ya
+   publica clanBannerComponent.js (Tarea 5.2) y, si nadie la inyecta, cae al
+   oro arcano: jamás queda sin color.
+   ======================================================================= */
+
+.clan-standard {
+  --standard-tint: var(--banner-tint, var(--heraldry-regent-gold));
+
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-ink-2) var(--space-ink-3);
+  align-items: center;
+  padding: var(--space-ink-3);
+  border-left: 4px solid var(--standard-tint);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-primary);
+}
+
+.clan-standard__glyph {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  border: 2px solid var(--standard-tint);
+  border-radius: 50%;
+  color: var(--standard-tint);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-large);
+}
+
+.clan-standard__name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-bright);
+}
+
+.clan-standard__motto {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+/* Marca del linaje rector bajo el nombre ceremonial (RF-02.2). */
+.clan-standard__lineage {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+/* =======================================================================
+   5. Brillo dorado del Clan Regente (RF-04.4)
+
+   El halo dorado es CONTENIDO del reinado, no adorno: proclama quién ciñe la
+   corona. Se anima con opacidad y transform (eje compositable de 60 fps) y
+   jamás con medidas que fuercen recálculo de la disposición.
+   ======================================================================= */
+
+.regent-glow {
+  position: relative;
+}
+
+.regent-glow__aura {
+  position: absolute;
+  inset: -6px;
+  border-radius: var(--radius-seal);
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    var(--heraldry-regent-bright) 100%
+  );
+  opacity: 0.35;
+  animation: regentGoldenGlow 3.6s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+@keyframes regentGoldenGlow {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.015);
+  }
+}
+
+/* Marco heráldico del linaje reinante: oro ceremonial sobre su estandarte. */
+.heraldic-frame--regent {
+  border-color: var(--heraldry-regent-bright);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+/* Sello textual del reinado: oro radiante sobre la obsidiana elevada. */
+.clan-mark--regent {
+  display: inline-block;
+  padding: var(--space-ink-1) var(--space-ink-2);
+  border: 1px solid var(--heraldry-regent-gold);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--heraldry-regent-bright);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* =======================================================================
+   6. Ribete dorado de los conjuros del Clan Regente (RF-04.4)
+
+   Se compone con la tarjeta canónica del Tomo (.spell-card, components.css):
+   añade filo y resplandor SINTIENDO la tarjeta del Tomo, sin tocar jamás su
+   tinta ni su fondo de pergamino (el contraste del texto queda intacto).
+   ======================================================================= */
+
+.spell-card-regent-border {
+  border-color: var(--heraldry-regent-gold);
+  box-shadow: var(--shadow-arcane), var(--shadow-gold-glow);
+  /* El filo se dora con la curva del sistema cuando la tarjeta entra o sale
+     del sello regente (la tarjeta base ya transiciona su borde). */
+  transition: border-color var(--transition-arcane), box-shadow var(--transition-arcane);
+}
+
+.spell-card-regent-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--heraldry-regent-bright);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0.6;
+  animation: regentBorderShimmer 3.2s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes regentBorderShimmer {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Marca textual del sello regente dentro de la ficha del conjuro. */
+.spell-card__regent-seal {
+  display: inline-block;
+  padding: var(--space-ink-1) var(--space-ink-2);
+  border: 1px solid var(--heraldry-regent-gold);
+  border-radius: var(--radius-seal);
+  color: var(--heraldry-regent-bright);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* =======================================================================
+   7. Adaptación a móvil y escritorio (RNF-03)
+
+   Escritorio (≥ 768 px): marcos más generosos y podio en rejilla.
+   Móvil (≤ 767.9 px): marcos ceñidos, sin resplandores que desborden y con
+   la zona táctil mínima garantizada.
+   ======================================================================= */
+
+@media (min-width: 768px) {
+  .heraldic-frame {
+    padding: var(--space-ink-4);
+  }
+
+  .clan-standard {
+    grid-template-columns: auto 1fr auto;
+  }
+}
+
+@media (max-width: 767.9px) {
+  .heraldic-frame {
+    padding: var(--space-ink-2);
+    border-width: 2px;
+  }
+
+  .heraldic-frame[data-heraldic-frame='worldtreeShield'],
+  .heraldic-frame--worldtree-shield {
+    border-width: 4px;
+  }
+
+  .heraldic-frame[data-heraldic-frame='sunwheelShield'],
+  .heraldic-frame--sunwheel-shield {
+    box-shadow: 0 0 0 2px var(--heraldry-solar-crown);
+  }
+
+  .clan-standard {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .regent-glow__aura {
+    inset: -3px;
+  }
+}
+
+/* =======================================================================
+   8. Movimiento reducido (RNF-03)
+
+   Ninguna heráldica vibra ni destella si el caminante pidió calma.
+   ======================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .regent-glow__aura,
+  .spell-card-regent-border::after {
+    animation: none;
+  }
+
+  .regent-glow__aura {
+    opacity: 0.5;
+  }
+
+  .spell-card-regent-border::after {
+    opacity: 1;
+  }
+}
+
+/* =======================================================================
+   9. Ficha de la Hermandad y su Legado Ancestral (Tarea 6.4)
+
+   RF-01.2/RF-01.4/RF-01.5: blasón, lema, linaje rector, ocupación X/30,
+     régimen de admisión y gesto de afiliación.
+   RF-05.1: el catálogo de conjuros sellados con el crédito de su autor.
+   RF-05.3/RF-05.4: el sello de «Herencia Ancestral» de las casas disueltas.
+   RNF-03: contraste WCAG 2.1 AA, zona táctil mínima y foco visible.
+
+   Pureza de tokens: CERO literales de color. El tinte del linaje llega del
+   componente como `--clan-tint` (dato de la API, no estilo), con respaldo en
+   el oro arcano del sistema de diseño.
+
+   Pares de contraste auditados (WCAG 2.1 AA, umbral 4.5:1):
+     .clan-view__name          · pergamino sobre obsidiana profunda
+     .clan-view__section-title · oro arcano sobre obsidiana profunda
+     .clan-view__spell         · tinta sobre pergamino viejo
+     .clan-view__roster-item   · texto secundario sobre obsidiana de superficie
+     .clan-view__error         · texto principal sobre obsidiana elevada
+   ======================================================================= */
+
+.clan-view {
+  display: block;
+}
+
+.clan-view__sheet {
+  display: grid;
+  gap: var(--space-ink-4);
+  max-width: var(--container-tomo-max);
+  margin-inline: auto;
+  padding: var(--space-ink-4);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-deep);
+  color: var(--color-text-primary);
+}
+
+/* Una casa disuelta se reconoce de un vistazo: filo y sello propios. */
+.clan-view__sheet--ancestral {
+  border-color: var(--color-gold-arcane-dim, var(--color-gold-arcane));
+}
+
+.clan-view__heritage-seal {
+  margin: 0;
+  justify-self: start;
+  padding: var(--space-ink-1) var(--space-ink-3);
+  border: 1px dashed var(--color-gold-arcane);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-gold-bright);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  text-transform: uppercase;
+}
+
+.clan-view__heritage-legend {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-muted);
+}
+
+.clan-view__banner {
+  --clan-tint: var(--color-gold-arcane);
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-3);
+  align-items: center;
+  padding: var(--space-ink-3);
+  border: 2px solid var(--clan-tint);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+}
+
+.clan-view__shield {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2);
+  border-radius: 50%;
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-base);
+}
+
+.clan-view__identity {
+  display: grid;
+  gap: var(--space-ink-1);
+}
+
+.clan-view__name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-parchment);
+}
+
+.clan-view__motto {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.clan-view__lineage {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-arcane);
+}
+
+.clan-view__facts {
+  display: grid;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-secondary);
+}
+
+.clan-view__occupancy {
+  display: inline-grid;
+  gap: var(--space-ink-1);
+}
+
+.clan-view__occupancy-figure {
+  font-family: var(--font-arcane-title);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-bright);
+}
+
+.clan-view__admission,
+.clan-view__dominion {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.clan-view__section-title {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.clan-view__patriarch,
+.clan-view__members,
+.clan-view__legacy,
+.clan-view__government {
+  display: grid;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+}
+
+.clan-view__patriarch-name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  color: var(--color-parchment);
+}
+
+.clan-view__patriarch-role,
+.clan-view__patriarch-absent,
+.clan-view__members-empty {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.clan-view__roster {
+  display: grid;
+  gap: var(--space-ink-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.clan-view__roster-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+  align-items: center;
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-secondary);
+}
+
+.clan-view__roster-name {
+  font-family: var(--font-arcane-title);
+}
+
+.clan-view__roster-role,
+.clan-view__roster-joined {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.clan-view__affiliation {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: start;
+}
+
+.clan-view__action {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-4);
+  cursor: pointer;
+}
+
+/* El gesto vedado no finge estar disponible: se deshabilita de verdad. */
+.clan-view__action--vetoed {
+  background-color: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+}
+
+.clan-view__affiliation-legend {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.clan-view__legacy[data-heritage='ancestral'] {
+  border: 1px dashed var(--color-gold-arcane);
+}
+
+.clan-view__legacy-heritage {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-bright);
+}
+
+.clan-view__legacy-count,
+.clan-view__legacy-empty {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.clan-view__legacy-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-ink-2);
+}
+
+.clan-view__spell {
+  display: grid;
+  gap: var(--space-ink-1);
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment-old);
+  color: var(--color-ink);
+}
+
+.clan-view__spell[data-action='selectSpell'] {
+  cursor: pointer;
+}
+
+.clan-view__spell-name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-base);
+}
+
+.clan-view__spell-stats,
+.clan-view__spell-author,
+.clan-view__spell-genesis {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.clan-view__spell-genesis {
+  color: var(--color-ink-seal, var(--color-ink));
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+.clan-view__proclamation {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-secondary);
+}
+
+.clan-view__loading {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-light-muted);
+}
+
+.clan-view__error {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: center;
+  padding: var(--space-ink-4);
+  border: 1px solid var(--color-ember-red);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+}
+
+.clan-view__error-message {
+  margin: 0;
+}
+
+.clan-view__error-retry {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  cursor: pointer;
+}
+
+/* Móvil (≤ 767.9 px): una sola columna y controles a lo ancho. */
+@media (max-width: 767.9px) {
+  .clan-view__sheet {
+    gap: var(--space-ink-3);
+    padding: var(--space-ink-3);
+  }
+
+  .clan-view__banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .clan-view__legacy-list {
+    grid-template-columns: 1fr;
+  }
+
+  .clan-view__action {
+    width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .clan-view__sheet {
+    padding: var(--space-ink-4);
+  }
+}
