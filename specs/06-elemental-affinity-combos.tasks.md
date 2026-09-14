@@ -105,17 +105,17 @@
 
 ## Fase 5: Orquestación, Cliente API y Verificación Integral
 
-- [ ] **Tarea 5.1: Cliente HTTP para el Códice Elemental (`elementalMatrixClient.js`)**
+- [x] **Tarea 5.1: Cliente HTTP para el Códice Elemental (`elementalMatrixClient.js`)**
   * **Alcance:** Implementar `public/assets/js/api/elementalMatrixClient.js` con métodos nativos `fetchMatrixGraph()`, `fetchReactionsForElement(element)` y `resolveCombo(data)` utilizando `fetch` y cabeceras JSON.
   * **Cubre:** `RF-01.1`, `RF-01.2`, `RF-04.1`
   * **Hecho cuando:** El cliente consume correctamente los endpoints del servidor y maneja respuestas y posibles errores 404/400.
 
-- [ ] **Tarea 5.2: Vista ceremonial del Códice de Afinidades (`elementalCodexView.js`)**
+- [x] **Tarea 5.2: Vista ceremonial del Códice de Afinidades (`elementalCodexView.js`)**
   * **Alcance:** Implementar `public/assets/js/views/elementalCodexView.js` orquestando la Rueda Rúnica, la consulta de compatibilidades, la vista móvil y la integración con el simulador de grimorio.
   * **Cubre:** `RF-01.1` a `01.3`, `RF-06.1` a `06.4`
   * **Hecho cuando:** El Códice opera de forma autónoma y sincronizada con el resto del portal arcano mediante eventos desacoplados.
 
-- [ ] **Tarea 5.3: Protocolo de verificación frontend y pruebas de estrés**
+- [x] **Tarea 5.3: Protocolo de verificación frontend y pruebas de estrés**
   * **Alcance:** Ejecutar en el navegador la batería de pruebas de SPEC-06 (Sec. 6.2): verificación de persistencia de auras entre páginas, prueba de la salvaguarda Anti-Stunlock de 3 s contra Hard CC, prueba de cola FIFO ante ráfagas de $< 100\text{ ms}$, validación de `prefers-reduced-motion` y adaptabilidad en pantalla móvil.
   * **Cubre:** `RNF-01` a `RNF-05`
   * **Hecho cuando:** Todos los casos de prueba del protocolo frontend pasan satisfactoriamente sin errores en consola ni violaciones del Dogma Vanilla.

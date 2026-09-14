@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protocolo de Verificación Frontend — Códice Elemental (SPEC-06, Tarea 5.3)</title>
+<link rel="stylesheet" href="/public/assets/css/tokens.css">
+<link rel="stylesheet" href="/public/assets/css/layout.css">
+<link rel="stylesheet" href="/public/assets/css/components.css">
+<link rel="stylesheet" href="/public/assets/css/components/grimoire-simulator.css">
+<link rel="stylesheet" href="/public/assets/css/components/elemental-codex.css">
+<style>
+  /* Presentación propia de la página de protocolo (no de producción). */
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px 14px 48px; background-color: var(--color-parchment-base); color: var(--color-parchment); font-family: var(--font-arcane-body, serif); }
+  .protocol { max-width: 1180px; margin: 0 auto; }
+  .protocol__title { font-family: var(--font-arcane-title, serif); color: var(--color-gold-arcane); margin: 0 0 4px; font-size: 1.3rem; }
+  .protocol__hint { margin: 0 0 14px; color: var(--color-text-light-muted); font-size: 0.85rem; }
+  #stage { margin-bottom: 16px; }
+  #stage main { display: block; }
+  .protocol__report { padding: 12px 14px; border: 1px solid var(--color-parchment-border); border-radius: 8px; background-color: var(--color-parchment-surface); font-size: 0.82rem; }
+  .protocol__case { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dotted var(--color-parchment-border); }
+  .protocol__case-title { color: var(--color-gold-arcane); }
+  .protocol__case--complete .protocol__state { color: var(--color-valid-runes); }
+  .protocol__case--failed .protocol__state { color: var(--color-ember-red); }
+  .protocol__evidence { margin: 4px 0 0; padding-left: 16px; color: var(--color-text-light-muted); }
+  .protocol__verdict { margin-top: 12px; padding: 10px 12px; border-radius: 6px; background-color: var(--color-parchment-base); color: var(--color-parchment); }
+</style>
+</head>
+<body>
+  <section class="protocol">
+    <h1 class="protocol__title">Protocolo de Verificación Frontend — Códice Elemental</h1>
+    <p class="protocol__hint">
+      Batería del plan 6.2 de SPEC-06 sobre los módulos de producción, con cuadros reales.
+      Reduce la ventana a 375 px para emular el móvil antes de ejecutar.
+    </p>
+    <div id="stage"></div>
+    <div class="protocol__report" id="report">Ejecutando el protocolo…</div>
+  </section>
+  <script type="module">
+    // La página ejecuta el protocolo real (mismo módulo que el corredor de
+    // terminal) y pinta el informe; el simulador vive en #stage.
+    const stage = document.getElementById('stage');
+    const host = document.createElement('main');
+    stage.appendChild(host);
+    const { runCodexProtocol } = await import('./protocol_elemental_codex.mjs');
+    const report = await runCodexProtocol({ browserHost: host });
+    const reportEl = document.getElementById('report');
+    reportEl.replaceChildren();
+    for (const testCase of report.cases) {
+      const row = document.createElement('div');
+      row.className = 'protocol__case ' + (testCase.passed ? 'protocol__case--complete' : 'protocol__case--failed');
+      const title = document.createElement('span');
+      title.className = 'protocol__case-title';
+      title.textContent = `[${testCase.caseId}] ${testCase.title}`;
+      const state = document.createElement('span');
+      state.className = 'protocol__state';
+      state.textContent = testCase.passed ? ' — SUPERADO' : ' — FALLIDO';
+      row.appendChild(title);
+      row.appendChild(state);
+      const list = document.createElement('ul');
+      list.className = 'protocol__evidence';
+      for (const line of testCase.evidence) {
+        const item = document.createElement('li');
+        item.textContent = line;
+        list.appendChild(item);
+      }
+      row.appendChild(list);
+      reportEl.appendChild(row);
+    }
+    const verdict = document.createElement('div');
+    verdict.className = 'protocol__verdict';
+    verdict.textContent = `VEREDICTO: ${report.verdict}`;
+    reportEl.appendChild(verdict);
+  </script>
+</body>
+</html>
