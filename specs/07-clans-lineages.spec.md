@@ -100,6 +100,10 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
   El sistema DEBERÁ dotar a cada linaje de un marco heráldico distintivo, glifos rúnicos ancestrales y un color de estandarte ceremonial acorde a su elemento rector.
 * **RF-02.3 [Ubicuo]:**  
   En estricto cumplimiento del **Artículo II de la Constitución**, el Linaje Mágico **no introducirá descuentos, sobrecostes ni ventajas numéricas en la forja de conjuros ni en la fórmula universal de maná**; la neutralidad de la forja se preserva inviolable.
+* **RF-02.4 [Ubicuo]:**  
+  El sistema DEBERÁ forjar el blasón de cada hermandad como **Sello Rúnico determinista** (canon de SPEC-02, RF-07): su carga central declara el Linaje Mágico rector según el canon alquímico y las muescas de su anillo codifican el identificador `coat_of_arms` de la casa. El identificador se **codifica, jamás se imprime**: ni como texto de interfaz ni dentro del nombre accesible de ningún elemento.
+  * El **Clan Regente** luce anillo de oro vivo y el sello de cera presionado a las doce; la casa **`archived`** viste bronce y su anillo aparece **roto en su base** (Herencia Ancestral); la casa activa, oro antiguo. El estado se declara por metal **y** forma, nunca por color solo.
+  * La etiqueta accesible del sello nombra en noble castellano la casa, su Linaje Mágico y su honor vigente, y acompaña a la marca del fundador cuando la casa es el linaje fundacional neutro (Art. III).
 
 ---
 
@@ -233,6 +237,7 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
 * [ ] Los clanes disueltos pasan a `archived`, su nombre queda permanentemente reservado y sus conjuros validados se preservan como «Herencia Ancestral».
 * [ ] El Salón de los Linajes permite consultar la clasificación semanal en vivo, la histórica total y el Libro Mayor de Campeones.
 * [ ] Cero dependencias externas y cumplimiento riguroso del Dogma Vanilla, el Velo Arcano y el Dualismo Lingüístico.
+* [ ] El blasón de cada hermandad y el sello de cada linaje se forjan como Sello Rúnico determinista (SPEC-02 RF-07): el identificador `coat_of_arms` jamás se imprime, el estado se declara por metal y forma, y la casa disuelta viste bronce con el anillo roto.
 
 ---
 
@@ -247,4 +252,5 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
 * **[RESUELTO — Ronda QA / Pregunta 1] Capacidad, Admisión y Visibilidad:** Capacidad máxima fijada en 30 miembros por clan. Régimen de admisión configurable por el Patriarca (`open` / `byApplication`, con límite de 3 solicitudes pendientes). Estado de convalecencia visible solemnemente en el perfil público.
 * **[RESUELTO — Ronda QA / Pregunta 2] Precisión Numérica y Atribución en Moderación:** Redondeo aritmético estándar al entero más próximo (`round`) para el $+25\%$ de sinergia de linaje. Los conjuros en deliberación acreditan sus PDA al clan bajo cuyo estandarte fueron forjados aunque el autor haya marchado. Corte de 50 PDA diarios en simulador a las 00:00:00 UTC.
 * **[RESUELTO — Ronda QA / Pregunta 3] Sucesión Dinástica y Memoria Histórica:** Inactividad del Patriarca fijada en 45 días naturales consecutivos para sucesión automática al adepto más antiguo. Nombres de clanes disueltos protegidos e inmortalizados a perpetuidad como «Herencia Ancestral» (nunca reutilizables). Criterios de desempate semanal: 1º Mayor volumen de conjuros validados en la semana; 2º Marca temporal anterior.
+* **[RESUELTO — Ronda de Diseño / Pregunta 1] La Heráldica Forjada:** Ratificado que el blasón de una casa no se imprima como su clave técnica (`RUNE_TIDE_SPIRAL`), sino que se **forje** como Sello Rúnico determinista: la carga declara el linaje, las muescas del anillo codifican el `coat_of_arms` por huella FNV-1a de 32 bits y el metal del anillo declara el estado (oro antiguo, oro vivo con cera para el Regente, bronce con anillo roto para la casa disuelta). Lo que el sello codifica, no lo deletrea.
 * **[RESUELTO — Ronda QA / Pregunta 4] Dualismo Lingüístico (Artículo V):** Ratificados los identificadores canónicos en inglés: linajes (`primordialFlame`, `celestialTides`, `eternalTempest`, `worldRoots`, `dawnWinds`, `solarCrown`, `abyssalShadows`, `aetherWeavers`), roles (`patriarch`, `adept`), estados de clan (`active`, `archived`), estados de mago (`active`, `convalescent`) y métricas (`weeklyPoints`, `historicalPoints`, `dailySimulatorPoints`).

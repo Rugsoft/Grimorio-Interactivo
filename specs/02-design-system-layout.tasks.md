@@ -114,3 +114,27 @@
   * **Alcance:** Ejecutar la auditoría final: verificar ausencia de CDNs en la pestaña de red, ratio de contraste $\ge 4.5:1$, 60 fps en perfil de rendimiento y correcta visualización responsiva a 320 px, 768 px y 1280 px.
   * **Cubre:** `RNF-01 a RNF-05`, `Artículo I`, `Artículo IV`, `Artículo V`
   * **Hecho cuando:** Se verifica que el escaparate pasa todas las pruebas de contraste, rendimiento y responsividad sin ninguna advertencia en la consola del navegador.
+
+---
+
+## Fase 6: El Sello Rúnico Forjado y la Heráldica Determinista (`RF-07`)
+
+- [x] **Tarea 6.1: Materia del sello como tokens de diseño (`tokens.css`)**
+  * **Alcance:** Declarar en `public/assets/css/tokens.css` la materia de la heráldica forjada: `--sigil-disc`, `--sigil-tick`, `--sigil-ring-active`, `--sigil-ring-regent`, `--sigil-ring-archived` y `--sigil-wax`, con los contrastes medidos sobre el disco de tinta anotados en el propio comentario de la sección.
+  * **Cubre:** `RF-07.1`, `RF-07.6`, `RNF-01`
+  * **Hecho cuando:** Las hojas que visten el sello no escriben un solo literal de color: toda su materia viaja por Custom Properties, y los pares declarados superan los umbrales de contraste fijados (muescas > 7:1, carga > 4.5:1, metales > 3:1).
+
+- [x] **Tarea 6.2: Forja determinista del Sello Rúnico (`runeSealComponent.js`)**
+  * **Alcance:** Crear `public/assets/js/components/runeSealComponent.js`: SVG en línea dibujado por aritmética nativa, con la carga central por Linaje Mágico según el canon alquímico, el anillo de ocho muescas codificando el identificador `coat_of_arms` por huella FNV-1a de 32 bits, y el estado declarado por metal **y** forma.
+  * **Cubre:** `RF-07.2`, `RF-07.4`, `RF-07.5`, `Artículo I`, `Artículo V`
+  * **Hecho cuando:** La misma casa forja siempre el mismo sello sin aleatoriedad ni estado oculto, el identificador jamás se imprime como texto ni dentro del nombre accesible, y la casa disuelta se distingue de la viva aun sin color (anillo roto y metal distinto).
+
+- [x] **Tarea 6.3: Sustitución de la heráldica impresa en las tres superficies**
+  * **Alcance:** Retirar la impresión del identificador técnico (`RUNE_TIDE_SPIRAL`, glifos de linaje) en el blasón del Gran Portal (SPEC-01/SPEC-07 Tarea 5.2), el podio y los filtros del Salón de los Linajes (Tarea 6.3) y la ficha de hermandad (Tarea 6.4), montando en su lugar el Sello Rúnico forjado con su etiqueta accesible en castellano; el documento anfitrión viaja como opción inyectable en las tres vistas.
+  * **Cubre:** `RF-07.3`, `RF-07.4`, `RF-07.5`, `Artículo V`
+  * **Hecho cuando:** Ninguna de las tres superficies imprime una clave técnica —ni como texto ni dentro de un nombre accesible—, el sello del Clan Regente se distingue del de una casa activa y el de una casa disuelta se contempla con su sello ancestral.
+
+- [x] **Tarea 6.4: Arnés del Sello Rúnico y auditoría de la batería**
+  * **Alcance:** Escribir `scratch/test_rune_seal.mjs` (superficie del módulo, vectores canónicos de la huella FNV-1a, las ocho cargas, el anillo de muescas, los tres estados por metal y forma, la ausencia del identificador, la accesibilidad y el Dogma Vanilla) y ajustar los asertos de los arneses que fijaban el identificador impreso en las tres superficies.
+  * **Cubre:** `RF-07.1 a RF-07.6`, `RNF-04`, `RNF-05`, `Artículo I`
+  * **Hecho cuando:** El arnés del sello pasa sus asertos y la batería íntegra de especificaciones (Node + PHP) permanece en verde tras la sustitución de la heráldica.

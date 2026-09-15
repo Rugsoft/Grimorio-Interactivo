@@ -348,6 +348,11 @@ Las siluetas de carga reservan exactamente el mismo espacio vertical y horizonta
 * **Alternativa Descartada:** Modulación continua de `filter: drop-shadow()` o `filter: blur()`.
 * **Justificación:** Los filtros gráficos en bucle forzan un repintado continuo (*repaint*) en la CPU. El uso de transformaciones y opacidad se ejecuta en el hilo compositor de la GPU, permitiendo animaciones continuas permanentes con consumo de batería prácticamente nulo.
 
+### Decisión 5: La Heráldica se Forja, No se Imprime
+* **Elección:** El blasón de una casa y la marca de un linaje se dibujan como **Sello Rúnico determinista**: SVG en línea forjado por aritmética nativa (huella FNV-1a de 32 bits sobre el identificador para las ocho muescas del anillo; carga central por afinidad rectora según el canon alquímico; metal y forma para el estado).
+* **Alternativa Descartada:** Imprimir el identificador (`RUNE_TIDE_SPIRAL`) como texto rúnico, o servir ocho iconos por linaje desde `public/assets/img/`.
+* **Justificación:** El identificador impreso no es heráldica: es una clave técnica filtrada a la interfaz (el anillo de foco la convertía además en lo primero que mira el ojo, como atestiguó la auditoría visual del Gran Portal). El dibujo por aritmética hace que el sello **codifique** linaje, casa y estado en vez de decorarlos, y respeta el Artículo I sin añadir un solo byte de imagen: ocho casas distintas forjan ocho sellos distintos sin ocho archivos. Se descartó también el segundo anillo concéntrico y todo resplandor —el santuario ya respira en exceso— y la corona tipográfica de las tablas.
+
 ---
 
 ## 7. Estrategia de Pruebas y Auditoría Visual
@@ -388,6 +393,12 @@ Se creará un script de auditoría en `scratch/verify_design_tokens.php`:
 | **RF-03.2 / 03.3** | Glifo rúnico y respaldo monocromático | `components.css` | `.spell-card__element-glyph` (`🜂`, `🜄`, `🗲`, etc.) | Vista en escala de grises y e-ink |
 | **RF-03.4** | Sello de Inestabilidad Arcana | `components.css` | `.spell-card__badge--experimental` | Inspección de halo ámbar pulsante |
 | **RF-04.1 a 04.3** | Pergaminos Espectrales (*CLS = 0*) | `components.css` | `.spectral-scroll-placeholder` | Medición DevTools CLS = 0.00 |
+| **RF-07.1** | Materia del sello como tokens | `tokens.css` | `--sigil-disc`, `--sigil-tick`, `--sigil-ring-active`, `--sigil-ring-regent`, `--sigil-ring-archived`, `--sigil-wax` | Auditoría de literales de color en las hojas del sello |
+| **RF-07.2** | Forja determinista del sello | `runeSealComponent.js` | `forgeRuneSeal()`; huella FNV-1a; anillo de 8 muescas | `scratch/test_rune_seal.mjs` (misma entrada, mismo sello) |
+| **RF-07.3** | El identificador jamás se imprime | `runeSealComponent.js`, `lineageHallComponent.js`, `clanView.js`, `clanBannerComponent.js` | `textContent` sin `coat_of_arms`; etiqueta sin clave cruda | Aserto de ausencia de la clave en el DOM de las tres superficies |
+| **RF-07.4** | Estado por metal y forma | `runeSealComponent.js` | `state: active \| regent \| archived` (anillo roto + cera) | Arnés del sello con los tres estados |
+| **RF-07.5** | Contenido accesible y Dogma Vanilla | `runeSealComponent.js` | `role="img"` + `aria-label` en castellano; SVG en línea, cero movimiento | Auditoría vanilla y del nombre accesible |
+| **RF-07.6** | Contraste medido de la materia | `tokens.css` | muescas 14.11:1 · carga 4.64:1 (Oscuridad) a 13.11:1 (Luz) · metales 8.89:1 / 12.35:1 / 3.69:1 · cera 4.13:1 | Certificación 4 de `verify_design_tokens.php` sobre los tokens del sello y el disco de tinta |
 | **RF-05.1** | «El Tomo Central» acotado a 1280 px | `layout.css` | `.grimoire-tomo-container { max-width: 1280px; }` | Inspección en monitor ultrawide |
 | **RF-05.2 / 05.3** | 2 columnas en tabletas y 1 en móviles | `layout.css` | `@media (max-width: 1024px)`, `@media (max-width: 767px)` | Pruebas a 800 px y 375 px |
 | **RF-05.4** | Área táctil de 44x44 px | `components.css` | `.spell-card__click-overlay`, `--touch-target-min` | Inspección de hitboxes en DevTools |

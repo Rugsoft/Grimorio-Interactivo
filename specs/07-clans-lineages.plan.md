@@ -537,6 +537,7 @@ ALGORITMO canMasterEvaluateSpell(masterUserId, spellId):
 | **RF-01.8** (Veto de 30 días a Maestros) | `ClanEthicsValidator::canMasterEvaluateSpell` | `testMasterThirtyDaysEthicalVeto()` |
 | **RF-01.9** (Sucesión tras 45 días) | `ClanService::evaluatePatriarchSuccession` | `testPatriarchFortyFiveDaysSuccession()` |
 | **RF-02.1 - RF-02.3** (8 Linajes Canónicos) | `LineageDto`, `LineageController` | `testEightCanonicalLineages()` |
+| **RF-02.4** (Blasón forjado como Sello Rúnico) | `runeSealComponent.js` (SPEC-02 RF-07), `clanBannerComponent.js`, `lineageHallComponent.js`, `clanView.js` | `testRuneSealForgery()` — `scratch/test_rune_seal.mjs`, `scratch/test_clan_banner_component.mjs`, `scratch/test_lineage_hall_component.mjs`, `scratch/test_clan_view.mjs` |
 | **RF-03.1** (PDA por Círculo: $100 + C \times 20$) | `WeeklyDominionService`, `DominionAwardDto` | `testCirclePointsCalculation()` |
 | **RF-03.2** (Tope 50 PDA simulador y reinicio UTC) | `daily_simulator_tracker`, `WeeklyDominionService` | `testSimulatorCapFiftyAndUtcReset()` |
 | **RF-03.3** (Favoritos +5 PDA anti-granja) | `DominionController::favoriteSpell` | `testCommunityFavoritePoints()` |

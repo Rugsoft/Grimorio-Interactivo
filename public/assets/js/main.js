@@ -186,6 +186,8 @@ export function createGrimoireApp(options = {}) {
         onReservedAction: handleReservedAction,
         onSpellSelect: (slug, originElement) => openSpellDetailBySlug(slug, { originElement }),
         elementFactory,
+        // El blasón se forja como SVG en línea (SPEC-02 RF-07): el documento viaja.
+        documentRef,
       });
       currentView = { name: viewName, instance: landingView };
       await landingView.render();
@@ -220,6 +222,8 @@ export function createGrimoireApp(options = {}) {
           void navigate('clan', { clanId });
         },
         elementFactory,
+        // Los sellos del podio se forjan en el documento del orquestador.
+        documentRef,
       });
       currentView = { name: viewName, instance: hallView };
       await hallView.render();
@@ -242,6 +246,8 @@ export function createGrimoireApp(options = {}) {
           void apiCheckSessionWrapper();
         },
         elementFactory,
+        // El sello de la casa se forja en el documento del orquestador.
+        documentRef,
       });
       currentView = { name: viewName, instance: clanView };
       await clanView.render();

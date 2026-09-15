@@ -76,16 +76,18 @@ if (file_exists($auditPath)) {
 echo "\n[3] Detección real de infracciones (sandbox con CSS culpable)\n";
 
 if (file_exists($auditPath)) {
-    // Sandbox A: URL externa + par de texto de contraste insuficiente.
-    mkdir($sandbox . '/assets/css', 0777, true);
-    file_put_contents($sandbox . '/assets/css/tokens.css', <<<'CSS'
+    // Sandbox A: URL externa + par de texto de contraste insuficiente. La
+    // raíz reproduce la del santuario (public/assets/css): es la ruta que la
+    // auditoría lee, de modo que las infracciones sean medidas, no supuestas.
+    mkdir($sandbox . '/public/assets/css', 0777, true);
+    file_put_contents($sandbox . '/public/assets/css/tokens.css', <<<'CSS'
 :root {
-  --color-text-muted: #777777;      /* texto tenue */
+  --color-text-muted: #4a4a4a;      /* texto tenue sobre obsidiana: contraste insuficiente */
   --color-bg-obsidian-deep: #0c0b0e;
   --evil-import: url("https://fonts.googleapis.com/css2?family=Evil");
 }
 CSS);
-    file_put_contents($sandbox . '/index.html', '<link rel="stylesheet" href="http://cdn.evil.com/x.css">');
+    file_put_contents($sandbox . '/public/index.html', '<link rel="stylesheet" href="http://cdn.evil.com/x.css">');
 
     // La auditoría debe aceptar un directorio raíz alternativo (argv[1]).
     exec(
@@ -109,15 +111,33 @@ CSS);
 
     // Sandbox B: CSS limpio → la auditoría debe aprobarlo (exit 0).
     mkdir($sandbox . '/clean/assets/css', 0777, true);
-    file_put_contents($sandbox . '/clean/assets/css/tokens.css', <<<'CSS'
+    // El sandbox limpio declara también la materia del Sello Rúnico y la
+    // paleta de afinidades: sin ellos, la Certificación 4 (RF-07.6) nombra
+    // los tokens ausentes y el árbol deja de estar en regla.
+    mkdir($sandbox . '/clean/public/assets/css', 0777, true);
+    file_put_contents($sandbox . '/clean/public/assets/css/tokens.css', <<<'CSS'
 :root {
   --color-text-primary: #f5f0e6;
   --color-text-secondary: #c9bfaf;
   --color-text-muted: #9e9382;
   --color-bg-obsidian-deep: #0c0b0e;
+  --sigil-disc: #141210;
+  --sigil-tick: #e8dfcc;
+  --sigil-ring-active: #d4af37;
+  --sigil-ring-regent: #f3cf58;
+  --sigil-ring-archived: #8c6747;
+  --sigil-wax: #c0563b;
+  --color-affinity-fire: #e25822;
+  --color-affinity-water: #228be6;
+  --color-affinity-lightning: #9775fa;
+  --color-affinity-earth: #b58900;
+  --color-affinity-wind: #38d9a9;
+  --color-affinity-light: #ffd43b;
+  --color-affinity-darkness: #be4bdb;
+  --color-affinity-arcane: #d4af37;
 }
 CSS);
-    file_put_contents($sandbox . '/clean/index.html', '<link rel="stylesheet" href="assets/css/tokens.css">');
+    file_put_contents($sandbox . '/clean/public/index.html', '<link rel="stylesheet" href="assets/css/tokens.css">');
 
     exec(
         'php ' . escapeshellarg($auditPath) . ' ' . escapeshellarg($sandbox . '/clean') . ' 2>&1',

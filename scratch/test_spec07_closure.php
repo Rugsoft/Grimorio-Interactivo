@@ -74,7 +74,7 @@ $tasksSource = (string) file_get_contents($tasksPath);
 preg_match_all('/^\* \*\*((?:RF-\d{2}\.\d+)|(?:RNF-\d{2}))\b/m', $specSource, $declaredRaw);
 $declared = array_values(array_unique($declaredRaw[1]));
 sort($declared);
-audit(count($declared) === 33, 'La Sección 5 declara 33 requisitos (28 RF + 5 RNF); hallados ' . count($declared));
+audit(count($declared) === 34, 'La Sección 5 declara 34 requisitos (29 RF + 5 RNF); hallados ' . count($declared));
 
 /** Expande citas del tipo «RF-01.1 a RF-01.7» o «RF-02.1 - RF-02.3». */
 function expandRequirements(string $source): array
@@ -139,7 +139,7 @@ audit($phases === 7, "Las 7 fases del plan de tareas están presentes (halladas 
 /* 1.6 · Los criterios de la Sección 8 son 19. */
 preg_match_all('/^\* \[ \] (.+)$/m', $specSource, $criteriaRaw);
 $criteria = array_map('trim', $criteriaRaw[1]);
-audit(count($criteria) === 19, 'La Sección 8 declara 19 criterios de aceptación; hallados ' . count($criteria));
+audit(count($criteria) === 20, 'La Sección 8 declara 20 criterios de aceptación; hallados ' . count($criteria));
 
 /* ═══════════════════════════════════════════════════════════════════════
    FASE 2 · Dogma Vanilla (Artículo I)
@@ -487,6 +487,7 @@ $criteriaEvidence = [
     16 => ['Herencia Ancestral de clanes disueltos', ['test_clan_legacy.php', 'test_clan_repository.php'], 'Ancestral'],
     17 => ['Salón de los Linajes', ['test_lineage_hall_component.mjs', 'test_dominion_controller.php'], 'Salón'],
     18 => ['Dogma Vanilla y Dualismo Lingüístico', ['test_audit.php'], 'Dogma'],
+    19 => ['Sello Rúnico forjado y heráldica determinista', ['test_rune_seal.mjs', 'test_clan_view.mjs'], 'Sello'],
 ];
 
 foreach ($criteria as $index => $criterion) {

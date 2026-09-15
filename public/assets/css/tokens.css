@@ -170,6 +170,41 @@
   --glyph-affinity-arcane: "🜚";
 
   /* -----------------------------------------------------------------
+     1quinquies. Materia del Sello Rúnico forjado (SPEC-02 RF-07)
+     -----------------------------------------------------------------
+     La heráldica de las casas no se imprime: se forja (RF-07.2). Su
+     materia viaja aquí, y las hojas que la consumen jamás escriben un
+     literal de color. Contrastes medidos sobre el disco de tinta
+     (#141210): muescas 14.11:1, oro vivo 12.35:1, oro antiguo 8.89:1
+     sobre el disco y 9.33:1 sobre la obsidiana; y los metales que no
+     alcanzan el umbral de texto sí superan el de gráfico significativo
+     (3:1): bronce 3.69:1 y cera 4.13:1 —el bermellón hondo #7e3524
+     caía a 2.16:1 y por eso la cera hubo de reforjarse—. El estado se
+     declara por metal Y forma: el color jamás habla solo (RF-07.4).
+
+     La CARGA del linaje se tiñe con la paleta de afinidades
+     (--color-affinity-*, sección 1bis) y no con el color del
+     estandarte: sobre la tinta, el estandarte de las Sombras Abisales
+     caía a 1.44:1, y los tokens de afinidad —elegidos para el disco—
+     los mide `scratch/verify_design_tokens.php` entre 4.64:1
+     (Oscuridad) y 13.11:1 (Luz). RF-07.6.
+     ----------------------------------------------------------------- */
+
+  /* Disco de tinta: el soporte del sello. */
+  --sigil-disc: #141210;
+
+  /* Muescas marfil: la casa escrita en su propio anillo. */
+  --sigil-tick: #e8dfcc;
+
+  /* Metales del anillo: casa viva, Clan Regente y casa disuelta. */
+  --sigil-ring-active: #d4af37;
+  --sigil-ring-regent: #f3cf58;
+  --sigil-ring-archived: #8c6747;
+
+  /* Cera del sello: el honor del regente, presionado a las doce en punto. */
+  --sigil-wax: #c0563b;
+
+  /* -----------------------------------------------------------------
      1. Paleta del grimorio: fantasía oscura y pergamino antiguo
      ----------------------------------------------------------------- */
 

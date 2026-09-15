@@ -128,6 +128,17 @@ function createFakeElement(tagName) {
 
 const fakeElementFactory = (tagName) => createFakeElement(tagName);
 
+/**
+ * Documento anfitrión simulado: el Sello Rúnico se forja como SVG en línea
+ * (SPEC-02 RF-07), así que el arnés presta el `createElementNS` que el
+ * navegador siempre trae. En producción el documento es el global.
+ */
+const fakeDocument = {
+  createElement: (tagName) => createFakeElement(tagName),
+  createElementNS: (_namespace, tagName) => createFakeElement(tagName),
+};
+globalThis.document = fakeDocument;
+
 /** Barrido recursivo por clase sobre el DOM simulado. */
 function queryByClass(node, className, found = []) {
   for (const child of node.children) {
@@ -400,8 +411,19 @@ console.log('\n[FASE 2] Blasón, lema, linaje, ocupación, corona y censo');
     'El estandarte ata el marco heráldico y el tinte del linaje (Tarea 6.1)',
   );
   assertCondition(
-    byClass(root, 'clan-view__shield').getAttribute('aria-label') === 'Escudo heráldico de Custodios de la Llama: rune-ignis',
-    'El blasón rúnico porta su nombre accesible',
+    byClass(root, 'clan-view__shield').getAttribute('aria-label')
+      === 'Sello heráldico de Custodios de la Llama, del Linaje de la Llama Primordial.',
+    'El sello forjado porta su nombre accesible en castellano (RF-07.5)',
+  );
+  assertCondition(
+    byClass(root, 'clan-view__shield').tagName === 'SVG'
+      && byClass(root, 'clan-view__shield').getAttribute('data-heraldic-state') === 'active'
+      && byClass(root, 'clan-view__shield').getAttribute('data-heraldic-charge') === 'flame',
+    'La casa viva forja su sello en oro antiguo con la carga de su linaje (RF-07.2, RF-07.4)',
+  );
+  assertCondition(
+    byClass(root, 'clan-view__shield').textContent === '',
+    'El identificador `coat_of_arms` jamás se imprime en la ficha (RF-07.3)',
   );
 
   const occupancy = byClass(root, 'clan-view__occupancy');
@@ -523,6 +545,12 @@ console.log('\n[FASE 4] Sello de Herencia Ancestral y sus vetos');
   });
 
   assertCondition(byClass(root, 'clan-view__sheet').getAttribute('data-status') === 'archived', 'La ficha declara el estado `archived` de la casa');
+  assertCondition(
+    byClass(root, 'clan-view__shield').getAttribute('data-heraldic-state') === 'archived'
+      && byClass(root, 'clan-view__shield').getAttribute('aria-label')
+        === 'Sello heráldico de Ceniza Eterna, del Linaje de la Llama Primordial; casa disuelta, conservada como Herencia Ancestral.',
+    'La casa disuelta viste el sello de bronce con anillo roto y lo declara (RF-07.4)',
+  );
   assertCondition(
     byClass(root, 'clan-view__heritage-seal')?.textContent === HERITAGE_ANCESTRAL_SEAL
       && byClass(root, 'clan-view__heritage-seal').getAttribute('data-heritage') === 'ancestral',

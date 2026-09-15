@@ -40,6 +40,8 @@ export const CONSECRATION_ACTION = 'joinClan';
  * @param {(slug: string) => void} options.onSpellSelect Notifica la selección de un destacado.
  * @param {(clanId: string) => void} [options.onRegentSelect] Notifica la selección del linaje reinante.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica inyectable (tests).
+ * @param {Document} [options.documentRef] Documento anfitrión del sello forjado
+ *        del Clan Regente (arneses sin navegador).
  * @returns {Object} API: { render, destroy }.
  */
 export function createLandingView(mountRoot, options) {
@@ -49,7 +51,8 @@ export function createLandingView(mountRoot, options) {
     onReservedAction,
     onSpellSelect,
     onRegentSelect,
-    elementFactory = (tagName) => document.createElement(tagName),
+    elementFactory = (tagName) => globalThis.document.createElement(tagName),
+    documentRef = globalThis.document,
   } = options;
 
   /** Blasón del Clan Regente montado en la cabecera, si procede (Tarea 5.2). */
@@ -100,6 +103,7 @@ export function createLandingView(mountRoot, options) {
       dominionClient,
       onRegentSelect,
       elementFactory,
+      documentRef,
     });
     await regentBanner.render();
   }

@@ -127,6 +127,17 @@ function createFakeElement(tagName) {
 
 const fakeElementFactory = (tagName) => createFakeElement(tagName);
 
+/**
+ * Documento anfitrión simulado: los sellos del podio se forjan como SVG en
+ * línea (SPEC-02 RF-07), así que el arnés presta el `createElementNS` que el
+ * navegador siempre trae. En producción el documento es el global.
+ */
+const fakeDocument = {
+  createElement: (tagName) => createFakeElement(tagName),
+  createElementNS: (_namespace, tagName) => createFakeElement(tagName),
+};
+globalThis.document = fakeDocument;
+
 /** Barrido recursivo por clase sobre el DOM simulado. */
 function queryByClass(node, className, found = []) {
   for (const child of node.children) {
@@ -255,8 +266,8 @@ console.log('FASE 1: Superficie del módulo y Dogma Vanilla');
     'El componente jamás asigna innerHTML (AGENTS.md 6.1)',
   );
   assertCondition(
-    !/\bimport\b[^\n]*from\s+['"](?!\.\.\/utils\/comboResolver\.js)/.test(source),
-    'El componente solo importa el espejo elemental del propio santuario (Art. I)',
+    !/\bimport\b[^\n]*from\s+['"](?!\.{1,2}\/)/.test(source),
+    'El componente solo importa módulos del propio santuario, nunca dependencias externas (Art. I)',
   );
   assertCondition(
     !/https?:\/\/(?!.*example)/.test(source) && !/cdn\./i.test(source) && !/cdn\./i.test(viewSource),
@@ -380,8 +391,18 @@ console.log('\nFASE 3: Clasificación Semanal en Vivo (RF-06.1, RF-04.4)');
     'El podio exhibe los PDA de la semana en curso y el censo de adeptos',
   );
   assertCondition(
-    byClass(regent, 'podium-rank__coat')?.getAttribute('aria-label') === 'Escudo heráldico de Custodios de la Llama: rune-ignis',
-    'Cada estandarte porta su blasón rúnico accesible',
+    byClass(regent, 'podium-rank__coat')?.getAttribute('aria-label')
+      === 'Sello heráldico de Custodios de la Llama, del Linaje de la Llama Primordial; porta la corona dorada del Dominio durante los siete días de su mandato.',
+    'Cada estandarte porta su sello rúnico forjado, con nombre accesible en castellano (RF-07.5)',
+  );
+  assertCondition(
+    byClass(regent, 'podium-rank__coat')?.getAttribute('data-heraldic-state') === 'regent'
+      && byClass(regent, 'podium-rank__coat')?.getAttribute('data-heraldic-charge') === 'flame',
+    'El sello del podio declara su estado de regente y la carga de su linaje (RF-07.4)',
+  );
+  assertCondition(
+    allByTag(root, 'svg').every((seal) => seal.textContent === ''),
+    'Ningún sello del Salón imprime su clave técnica: el blasón se codifica, no se deletrea (RF-07.3)',
   );
 
   const announcement = byClass(root, 'lineage-hall__announcement');

@@ -127,6 +127,22 @@ Establecer las directrices de diseño visual, la jerarquía tipográfica noble, 
 
 ---
 
+### RF-07: El Sello Rúnico Forjado y la Heráldica Determinista
+* **RF-07.1 [Ubicuo]:**  
+  El sistema DEBERÁ declarar la materia del sello como tokens de diseño (disco de tinta, muescas marfil, oro antiguo de casa viva, oro vivo del regente, bronce de casa disuelta y cera de brasa) y vestir todo sello exclusivamente con ellos, sin un solo literal de color en las hojas que lo consumen.
+* **RF-07.2 [Ubicuo]:**  
+  El sistema DEBERÁ forjar el blasón de una casa como **Sello Rúnico determinista**: la carga central declara su Linaje Mágico según el canon alquímico (fuego △, agua ▽, tierra ▽ barrada, viento △ con barra, más rayo, sol radiante, creciente abisal y ouroboros) y el anillo de ocho muescas codifica su identificador de blasón mediante una huella FNV-1a de 32 bits. La misma casa forja siempre el mismo sello, sin aleatoriedad ni estado oculto.
+* **RF-07.3 [Ubicuo]:**  
+  El sistema DEBERÁ **jamás imprimir el identificador técnico del blasón** —ni el glifo rúnico de un linaje— como texto de interfaz, ni dentro del nombre accesible de un elemento. Lo que el sello codifica, no lo deletrea.
+* **RF-07.4 [Estado]:**  
+  MIENTRAS una casa ostente un estado heráldico, el sello DEBERÁ declararlo por **metal y forma a la vez**: casa activa con anillo de oro antiguo, Clan Regente con anillo de oro vivo y el sello de cera presionado a las doce, y casa disuelta con anillo de bronce **roto en su base**. El estado jamás dependerá del color por sí solo.
+* **RF-07.5 [Ubicuo]:**  
+  El sistema DEBERÁ exponer cada sello como contenido gráfico accesible (`role="img"` con etiqueta en noble castellano que nombre la casa, su linaje y su honor vigente) y DEBERÁ forjarlo como SVG en línea por aritmética nativa: sin imágenes, sin tipografías nuevas, sin dependencias y sin movimiento ni resplandor añadidos.
+* **RF-07.6 [Ubicuo]:**  
+  El sistema DEBERÁ medir el contraste de la materia del sello sobre su disco de tinta: muescas por encima de 7:1, carga del linaje por encima de 4.5:1 y metales ceremoniales por encima del umbral de gráfico significativo de 3:1.
+
+---
+
 ## 5. Requisitos No Funcionales (RNF)
 
 * **RNF-01 (Fidelidad y Velo Arcano):**  
@@ -173,6 +189,7 @@ Establecer las directrices de diseño visual, la jerarquía tipográfica noble, 
 - [ ] La Respiración Arcana ejecuta ciclos solemnes de 3 a 4 segundos a 60 fps estables.
 - [ ] El contraste visual de texto supera 4.5:1 sobre fondos texturizados fundidos en bases sólidas.
 - [ ] El escalado al 200% y el modo de impresión en pergamino claro de bajo consumo funcionan de forma armoniosa.
+- [ ] El blasón de cada casa y el sello de cada linaje se forjan como Sello Rúnico determinista: el identificador técnico jamás se imprime, el estado se declara por metal y forma, y la etiqueta accesible nombra casa, linaje y honor en castellano.
 
 ---
 

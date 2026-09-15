@@ -581,6 +581,8 @@ const hallView = createLineageHallView(hallMount, {
   dominionClient: hallClient,
   eventTarget: hallBus,
   elementFactory: (tagName) => createFakeElement(tagName),
+  // Los sellos del podio se forjan como SVG en línea (SPEC-02 RF-07).
+  documentRef: createFakeDocument(),
 });
 
 await hallView.render();

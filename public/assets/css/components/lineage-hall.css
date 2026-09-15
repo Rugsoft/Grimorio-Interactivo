@@ -142,9 +142,12 @@
   transition: transform var(--transition-arcane), box-shadow var(--transition-arcane);
 }
 
+/* Sello del linaje dentro del filtro (SPEC-02 RF-07): materia en tokens.css,
+   forja en runeSealComponent.js. El glifo técnico ya no se imprime. */
 .lineage-filter__glyph {
-  font-family: var(--font-arcane-seal);
-  font-size: var(--font-size-ink-base);
+  display: block;
+  width: 34px;
+  height: auto;
 }
 
 .lineage-filter:hover {
@@ -480,12 +483,12 @@
   color: var(--color-text-muted);
 }
 
-/* Blasón rúnico del estandarte: contenido, no adorno. */
+/* Sello Rúnico del estandarte: contenido, no adorno (SPEC-02 RF-07). Su
+   metal declara el estado de la casa: oro, oro vivo o bronce quebrado. */
 .podium-rank__coat {
-  font-family: var(--font-arcane-seal);
-  font-size: var(--font-size-title-spell);
-  line-height: 1;
-  color: var(--color-gold-arcane);
+  display: block;
+  width: 44px;
+  height: auto;
 }
 
 .podium-rank__reign {

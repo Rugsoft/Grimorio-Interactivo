@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estudio de Heráldica — Sello Rúnico forjado</title>
+<style>
+  /* =====================================================================
+     ESTUDIO DE DISEÑO — no es código de producto.
+     Reproduce la voz tipográfica real del santuario (Cinzel + EB Garamond
+     servidas por el propio servidor local) y propone un sistema heráldico.
+     ===================================================================== */
+
+  @font-face {
+    font-family: 'MedievalArcaneTitle';
+    src: url('http://127.0.0.1:8099/assets/fonts/medieval-arcane-title.woff2') format('woff2');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'LoreReadable';
+    src: url('http://127.0.0.1:8099/assets/fonts/lore-readable-regular.woff2') format('woff2');
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'LoreReadable';
+    src: url('http://127.0.0.1:8099/assets/fonts/lore-readable-bold.woff2') format('woff2');
+    font-weight: 700;
+    font-display: swap;
+  }
+
+  :root {
+    /* Materia del santuario (tokens vigentes, SPEC-02). */
+    --obsidian-deep: #0c0b0e;
+    --obsidian-surface: #141318;
+    --parchment-dark: #1c1916;
+    --gold-ancient: #d4af37;
+    --gold-bright: #f3cf58;
+    --bronze: #8c6747;
+    --text-primary: #f5f0e6;
+    --text-secondary: #c9bfaf;
+    --text-muted: #9e9382;
+
+    /* Materia PROPUESTA del sello: tinta, cera, plata de tally. */
+    --sigil-disc: #141210;
+    --sigil-tick: #e8dfcc;
+    --sigil-ring-active: #d4af37;
+    --sigil-ring-regent: #f3cf58;
+    --sigil-ring-archived: #8c6747;
+    --sigil-wax: #c0563b;          /* brasa de sello: 4.05:1 sobre el disco (el #7e3524 caía a 2.16:1) */
+
+    /* Afinidades canónicas (tokens de SPEC-02 §1cuater). */
+    --fire: #e25822;  --water: #228be6; --lightning: #9775fa; --earth: #b58900;
+    --wind: #38d9a9;  --light: #ffd43b; --darkness: #be4bdb;  --arcane: #d4af37;
+
+    --title: 'MedievalArcaneTitle', 'Palatino Linotype', Georgia, serif;
+    --body: 'LoreReadable', Georgia, 'Iowan Old Style', Palatino, serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--obsidian-deep);
+    color: var(--text-primary);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.65;
+    padding: 48px 24px 96px;
+  }
+
+  .study { max-width: 1080px; margin: 0 auto; }
+
+  .study__title {
+    font-family: var(--title);
+    font-size: 28px;
+    letter-spacing: 0.06em;
+    margin: 0 0 8px;
+    color: var(--gold-ancient);
+  }
+  .study__note { color: var(--text-muted); font-size: 14px; margin: 0 0 48px; }
+
+  h2 {
+    font-family: var(--title);
+    font-size: 15px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin: 64px 0 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(212, 169, 78, 0.28);
+  }
+  h2:first-of-type { margin-top: 0; }
+  .lede { color: var(--text-secondary); max-width: 62ch; margin: 0 0 32px; }
+
+  /* ---------- Lo que hay hoy: el identificador impreso ---------- */
+
+  .today { display: grid; gap: 16px; max-width: 420px; }
+  .today__box {
+    border: 1px solid rgba(212, 169, 78, 0.7);
+    border-radius: 8px;
+    background: var(--parchment-dark);
+    padding: 20px;
+    text-align: center;
+    font-family: var(--title);
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    color: var(--gold-ancient);
+    outline: 2px solid #7ab7ff;   /* el anillo de foco canónico, tal cual se ve */
+    outline-offset: 2px;
+  }
+  .today__verdict {
+    font-size: 14px;
+    color: var(--text-muted);
+    border-left: 2px solid var(--sigil-wax);
+    padding-left: 12px;
+  }
+
+  /* ---------- El sello forjado ---------- */
+
+  .seals { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-end; }
+  .seal { display: grid; justify-items: center; gap: 10px; width: 132px; }
+  .seal svg { display: block; width: 100%; height: auto; }
+  .seal__name {
+    font-family: var(--title);
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    line-height: 1.35;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--gold-ancient);
+    /* Jamás partir una palabra por la mitad: «MAREA S DE AETHER» no es un nombre. */
+    word-break: keep-all;
+    overflow-wrap: normal;
+    hyphens: manual;
+  }
+  .seal__state { font-size: 12px; color: var(--text-muted); text-align: center; font-style: italic; }
+
+  .lineages { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 24px; }
+  .lineages .seal { width: 100%; }
+
+  /* ---------- El cartucho de una casa ---------- */
+
+  .cartouche {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr) auto;
+    gap: 28px;
+    align-items: center;
+    background: var(--obsidian-surface);
+    border: 1px solid rgba(212, 169, 78, 0.28);
+    border-radius: 4px;                 /* radio de pergamino recortado, no de sello */
+    padding: 28px 32px;
+    max-width: 760px;
+  }
+  .cartouche__identity { min-width: 0; }
+  .cartouche__name {
+    font-family: var(--title);
+    font-size: 24px;
+    letter-spacing: 0.05em;
+    margin: 0 0 6px;
+    color: var(--gold-ancient);
+  }
+  .cartouche__motto {
+    font-style: italic;
+    font-size: 18px;
+    color: var(--text-primary);
+    margin: 0 0 10px;
+  }
+  .cartouche__lineage {
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .cartouche__lineage b { color: var(--water); font-weight: 400; }
+  .cartouche__tally { text-align: right; white-space: nowrap; }
+  .cartouche__figure {
+    /* Gloria: cifra de manuscrito, antigua y alineada. */
+    font-variant-numeric: oldstyle-nums tabular-nums;
+    font-weight: 700;
+    font-size: 26px;
+    color: var(--gold-bright);
+    line-height: 1.1;
+  }
+  /* Censo: cifra de dato, jamás antigua. En cifras antiguas «30» se lee «3o»,
+     y un cupo no es una licencia poética. */
+  .cartouche__figure--census {
+    font-variant-numeric: lining-nums tabular-nums;
+    color: var(--text-primary);
+  }
+  .cartouche__figure small {
+    display: block;
+    font-family: var(--body);
+    font-weight: 400;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .cartouche__figure + .cartouche__figure { margin-top: 12px; }
+
+  /* El cartucho JAMÁS se estrangula: por debajo de 720 px apila el sello
+     arriba, el nombre debajo y la gloria en fila. */
+  @media (max-width: 720px) {
+    .cartouche:not(.cartouche--desktop) {
+      grid-template-columns: 1fr;
+      gap: 18px;
+      padding: 24px;
+      justify-items: start;
+    }
+    .cartouche:not(.cartouche--desktop) .cartouche__seal { width: 84px; }
+    .cartouche:not(.cartouche--desktop) .cartouche__tally {
+      text-align: left;
+      display: flex;
+      gap: 32px;
+      border-top: 1px solid rgba(212, 169, 78, 0.22);
+      padding-top: 16px;
+      width: 100%;
+    }
+  }
+
+  /* Variante móvil forzada, para enseñarla junto a la de escritorio. */
+  .cartouche--mobile {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    max-width: 360px;
+    padding: 24px;
+    justify-items: start;
+  }
+  .cartouche--mobile .cartouche__seal { width: 84px; }
+  .cartouche--mobile .cartouche__tally {
+    text-align: left;
+    display: flex;
+    gap: 28px;
+    border-top: 1px solid rgba(212, 169, 78, 0.22);
+    padding-top: 16px;
+    width: 100%;
+  }
+
+  /* El cartucho de escritorio se exhibe a su ancho real (la ventana de este
+     estudio es estrecha): se desliza en horizontal en vez de mentir su forma. */
+  .double { display: flex; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
+  .double__track { overflow-x: auto; padding-bottom: 12px; }
+  .cartouche--desktop { min-width: 720px; }
+  .double__hint {
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0 0 10px;
+  }
+
+  .notes { max-width: 68ch; color: var(--text-secondary); font-size: 15px; }
+  .notes dt { font-family: var(--title); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold-ancient); margin-top: 20px; }
+  .notes dd { margin: 4px 0 0; }
+  code { font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace; font-size: 13px; color: var(--text-primary); background: #1b1922; padding: 1px 6px; border-radius: 3px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="study">
+
+  <h1 class="study__title">Sello Rúnico forjado</h1>
+  <p class="study__note">Estudio de diseño — andamiaje local, no es código de producto. Materia y voces tipográficas tomadas del sistema vigente (SPEC-02).</p>
+
+  <h2>1 · Lo que hay hoy</h2>
+  <p class="lede">El blasón de una casa se imprime como su clave técnica dentro de una caja de pergamino, y el anillo de foco la convierte en lo primero que mira el ojo. Los ocho linajes del Salón hacen lo mismo (<code>RUNE=IGNIS</code>, <code>RUNE=AQUA</code>…).</p>
+  <div class="today">
+    <div class="today__box">RUNE_TIDE_SPIRAL</div>
+    <p class="today__verdict">Ocho casas, ocho cadenas distintas, ninguna heráldica. El identificador codifica linaje, estado y casa, pero no los <em>dice</em>: los deletrea.</p>
+  </div>
+
+  <h2>2 · El sello forjado</h2>
+  <p class="lede">Heráldica procedural determinista: el mismo blasón forja siempre el mismo sello. La carga central es el linaje; las muescas del anillo codifican el identificador; el metal del anillo declara el estado.</p>
+  <div class="seals" id="stateSeals"></div>
+
+  <h2>3 · Los ocho linajes</h2>
+  <p class="lede">La carga se dibuja, no se teclea: ocho figuras geométricas —triángulo ígneo, triángulo invertido, rayo, barrado, barra superior, sol radiante, creciente, ouroboros— teñidas con su afinidad canónica. Cero dependencia de fuentes de emoji.</p>
+  <div class="lineages" id="lineageSeals"></div>
+
+  <h2>4 · El cartucho de una casa</h2>
+  <p class="lede">La identidad se alinea a la izquierda —como se escribe un grimorio— y la gloria se tabula a la derecha en cifras antiguas y alineadas. El lema es la única cursiva de la superficie: es la voz de la casa, no un rótulo más.</p>
+  <div class="double">
+   <div class="double__track">
+    <p class="double__hint">Escritorio · 720 px · desliza en horizontal</p>
+    <div class="cartouche cartouche--desktop">
+      <div class="cartouche__seal" id="cartoucheSeal"></div>
+      <div class="cartouche__identity">
+        <p class="cartouche__name">Mareas de Aether</p>
+        <p class="cartouche__motto">«La marea no olvida a quien la escuchó una vez.»</p>
+        <p class="cartouche__lineage">Linaje de las Mareas Celestiales · <b>Agua / Escarcha</b></p>
+      </div>
+      <div class="cartouche__tally">
+        <div class="cartouche__figure">180 <small>PDA semanales</small></div>
+        <div class="cartouche__figure cartouche__figure--census">3 / 30 <small>adeptos</small></div>
+      </div>
+    </div>
+   </div>
+
+    <div class="double__track">
+    <p class="double__hint">Móvil · apilado</p>
+    <div class="cartouche cartouche--mobile">
+      <div class="cartouche__seal" id="cartoucheSealMobile"></div>
+      <div class="cartouche__identity">
+        <p class="cartouche__name" style="font-size:20px">Mareas de Aether</p>
+        <p class="cartouche__motto" style="font-size:16px">«La marea no olvida a quien la escuchó una vez.»</p>
+        <p class="cartouche__lineage">Linaje de las Mareas Celestiales</p>
+      </div>
+      <div class="cartouche__tally">
+        <div class="cartouche__figure" style="font-size:22px">180 <small>PDA semanales</small></div>
+        <div class="cartouche__figure cartouche__figure--census" style="font-size:22px">3 / 30 <small>adeptos</small></div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <h2>5 · Notas de ejecución</h2>
+  <dl class="notes">
+    <dt>Determinismo</dt>
+    <dd>La geometría del anillo se deriva de un hash FNV-1a de 32 bits sobre el blasón (<code>rune_tide_spiral</code>): ocho muescas de 45°, cada una con grosor y longitud tomados de dos de sus bits (<code>[1.2, 2, 3, 4]</code>), y una muesca maestra —más larga y rematada en rombo de metal— en el sector <code>(hash &gt;&gt; 16) % 8</code>. Misma entrada, mismo sello, para siempre: auditable y probable.</dd>
+    <dt>Cifras: dos registros, no uno</dt>
+    <dd>La gloria (<code>180</code> PDA) viste cifras antiguas y alineadas, de manuscrito. El censo (<code>3 / 30</code> adeptos) viste cifras de dato: en cifras antiguas «30» se lee «3o», y un cupo no es una licencia poética.</dd>
+    <dt>El cartucho no se estrangula</dt>
+    <dd>Por debajo de 720 px abandona las tres columnas: sello arriba, nombre debajo, gloria en fila con su filete. Se probó el apilado contra el propio estudio (el cartucho de escritorio, estrechado a 537 px, partía el lema en cuatro líneas y recortaba el censo).</dd>
+    <dt>El identificador jamás se imprime</dt>
+    <dd>Viaja como <code>role="img"</code> y etiqueta accesible en castellano: «Sello heráldico de Mareas de Aether, del Linaje de las Mareas Celestiales; porta la corona dorada del Dominio». El texto técnico no entra en el DOM de la interfaz.</dd>
+    <dt>Dogma Vanilla</dt>
+    <dd>SVG en línea dibujado por aritmética nativa: sin imágenes, sin fuentes nuevas, sin dependencias. Las cargas y las muescas son trazos, no glifos.</dd>
+    <dt>Contraste</dt>
+    <dd>Medido con la fórmula WCAG 2.1 sobre el disco de tinta <code>#141210</code>: muescas marfil <code>#e8dfcc</code> <b>14.11:1</b>; carga de agua <code>#228be6</code> <b>5.25:1</b>; oro vivo del regente <code>#f3cf58</code> <b>12.35:1</b>; oro antiguo <code>#d4af37</code> <b>8.89:1</b> sobre el disco y <b>9.33:1</b> sobre la obsidiana del santuario. Los dos metales ceremoniales que no llegan al umbral de texto sí superan el de gráfico significativo (3:1): bronce de casa disuelta <b>3.69:1</b> y cera <b>4.05:1</b> —esta última hubo de reforjarse: el bermellón hondo <code>#7e3524</code> caía a 2.16:1—. Y el estado no depende jamás del color: la casa disuelta lleva el <b>anillo roto</b> en su base y el regente la <b>cera a las doce</b>.</dd>
+    <dt>Movimiento</dt>
+    <dd>Ninguno. El sello es cera: la respiración arcana ya vive en el Canvas y en las auras. Se retiró además el segundo anillo interior y todo resplandor: un solo metal, una sola lectura.</dd>
+  </dl>
+
+  <h2>6 · Retirado a propósito</h2>
+  <p class="lede">Primera pasada de crítica: el segundo anillo concéntrico (ruido), el resplandor del sello (el santuario ya respira en exceso), la corona tipográfica de las tablas y la muesca maestra como <em>punto</em> —un punto se pierde; un rombo se lee—.</p>
+
+  <h2>7 · Y lo que sigue</h2>
+  <p class="lede">Este estudio no es código de producto: la heráldica de las casas vive hoy en SPEC-02 (tokens, componentes) y SPEC-07 (blasón y linaje), así que el sistema del sello solo entra al santuario después de que esas especificaciones lo ratifiquen y declaren su norma —el hash, los estados, la etiqueta accesible y la procedencia de los nombres— tal como manda el ciclo SDD.</p>
+
+</div>
+
+<script>
+/* =======================================================================
+   Forja del sello — estudio de diseño (vanilla, sin dependencias).
+   ======================================================================= */
+
+const LINEAGES = {
+  primordialFlame: { name: 'Llama Primordial', color: 'var(--fire)',      charge: 'flame' },
+  celestialTides:  { name: 'Mareas Celestiales', color: 'var(--water)',   charge: 'tide' },
+  eternalTempest:  { name: 'Tempestad Eterna', color: 'var(--lightning)', charge: 'bolt' },
+  worldRoots:      { name: 'Raíces del Mundo', color: 'var(--earth)',     charge: 'root' },
+  dawnWinds:       { name: 'Vientos del Alba', color: 'var(--wind)',      charge: 'wind' },
+  solarCrown:      { name: 'Corona Solar', color: 'var(--light)',         charge: 'sun' },
+  abyssalShadows:  { name: 'Sombras Abisales', color: 'var(--darkness)',  charge: 'moon' },
+  aetherWeavers:   { name: 'Tejedores del Éter', color: 'var(--arcane)',  charge: 'ouroboros' },
+};
+
+/** FNV-1a de 32 bits: huella estable del blasón. */
+function forgeHash(text) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash >>> 0;
+}
+
+/** Carga central: geometría dibujada, jamás un glifo de fuente. */
+function chargePath(kind, color) {
+  const ink = `fill="${color}"`;
+  const line = `fill="none" stroke="${color}" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"`;
+  switch (kind) {
+    /* Las cuatro elementales siguen el canon alquímico que los propios
+       tokens declaran: fuego △ arriba, agua ▽ abajo, tierra ▽ abajo
+       barrada, viento △ arriba con barra. La barra es el dato que separa
+       cada par; por eso agua y tierra, y fuego y viento, se distinguen a
+       cualquier tamaño, además del tinte de su afinidad. */
+    case 'flame':      return `<path ${ink} d="M50 24 L74 70 L26 70 Z"/>`;
+    case 'tide':       return `<path ${ink} d="M50 76 L26 34 L74 34 Z"/>`;
+    case 'bolt':       return `<path ${ink} d="M56 22 L34 54 L48 54 L42 78 L66 44 L50 44 Z"/>`;
+    case 'root':       return `<path ${ink} d="M50 76 L26 34 L74 34 Z"/><path ${line} d="M33 48 H67"/>`;
+    case 'wind':       return `<path ${ink} d="M50 32 L72 70 L28 70 Z"/><path ${line} d="M26 20 H74"/>`;
+    case 'sun':        return `<circle ${ink} cx="50" cy="50" r="13"/>` +
+                              [0, 45, 90, 135, 180, 225, 270, 315].map(function (deg) {
+                                const rad = deg * Math.PI / 180;
+                                const x1 = 50 + Math.cos(rad) * 21, y1 = 50 + Math.sin(rad) * 21;
+                                const x2 = 50 + Math.cos(rad) * 31, y2 = 50 + Math.sin(rad) * 31;
+                                return `<path ${line} d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}"/>`;
+                              }).join('');
+    case 'moon':       return `<path ${ink} d="M60 24 A30 30 0 1 0 60 76 A24 24 0 1 1 60 24 Z"/>`;
+    case 'ouroboros':  return `<circle ${line} cx="50" cy="50" r="24" stroke-width="5"/>` +
+                              `<path ${ink} d="M46 22 L58 30 L46 38 Z"/>`;
+    default:           return '';
+  }
+}
+
+/** Anillo de muescas: ocho sectores, longitud y remate desde el hash. */
+function tallyRing(hash, metal) {
+  let marks = '';
+  const master = (hash >> 16) % 8;
+  for (let sector = 0; sector < 8; sector++) {
+    const bits = (hash >> (sector * 2)) & 0b11;
+    const isMaster = sector === master;
+    const length = (4 + bits * 2.5) * (isMaster ? 1.55 : 1);   // la muesca maestra se distingue
+    const angle = sector * 45 + 22.5;
+    const rad = angle * Math.PI / 180;
+    const r1 = 31;
+    const r2 = r1 + length;
+    const x1 = 50 + Math.cos(rad) * r1, y1 = 50 + Math.sin(rad) * r1;
+    const x2 = 50 + Math.cos(rad) * r2, y2 = 50 + Math.sin(rad) * r2;
+    const weight = [1.2, 2, 3, 4][bits];                        // el peso también es dato
+    marks += `<path d="M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}"
+                     stroke="var(--sigil-tick)" stroke-width="${weight}" stroke-linecap="round" opacity="0.88"/>`;
+    if (isMaster) {
+      // Remate de la muesca maestra: rombo de metal, no un punto perdido.
+      marks += `<path d="M${x2.toFixed(1)} ${(y2 - 3.4).toFixed(1)} L${(x2 + 3.4).toFixed(1)} ${y2.toFixed(1)}
+                         L${x2.toFixed(1)} ${(y2 + 3.4).toFixed(1)} L${(x2 - 3.4).toFixed(1)} ${y2.toFixed(1)} Z"
+                       fill="${metal}"/>`;
+    }
+  }
+  return marks;
+}
+
+/**
+ * Forja el sello.
+ * @param {{name:string, coatOfArms:string, lineageKey:string, state?:string}} house
+ * @returns {string} SVG en línea
+ */
+function forgeSeal(house) {
+  const lineage = LINEAGES[house.lineageKey] || LINEAGES.aetherWeavers;
+  const state = house.state || 'active';
+  const hash = forgeHash(house.coatOfArms);
+
+  const metal = state === 'regent' ? 'var(--sigil-ring-regent)'
+              : state === 'archived' ? 'var(--sigil-ring-archived)'
+              : 'var(--sigil-ring-active)';
+
+  // El anillo de una casa disuelta queda ROTO en su base: memoria, no fuerza.
+  const ring = state === 'archived'
+    ? `<path d="M8 50 A42 42 0 1 1 92 50" fill="none" stroke="${metal}" stroke-width="2.4" stroke-linecap="round"/>`
+    : `<circle cx="50" cy="50" r="42" fill="none" stroke="${metal}" stroke-width="2.4"/>`;
+
+  // Honor del regente: la cera se PRESIONA sobre el anillo, a las doce en punto.
+  const wax = state === 'regent'
+    ? `<circle cx="50" cy="8" r="7.5" fill="var(--sigil-wax)"/>`
+      + `<path d="M46 8 A4 4 0 0 1 54 8" fill="none" stroke="var(--gold-bright)" stroke-width="1.2"/>`
+      + `<circle cx="50" cy="8" r="7.5" fill="none" stroke="#7e3524" stroke-width="1" opacity="0.9"/>`
+    : '';
+
+  return `<svg viewBox="0 0 100 100" role="img" aria-label="${house.label || house.name}">
+    <circle cx="50" cy="50" r="46" fill="var(--sigil-disc)" ${state === 'archived' ? 'opacity="0.82"' : ''}/>
+    ${ring}${tallyRing(hash, metal)}${chargePath(lineage.charge, lineage.color)}${wax}
+  </svg>`;
+}
+
+function sealLabel(house) {
+  const lineage = LINEAGES[house.lineageKey];
+  const honor = house.state === 'regent'
+    ? '; porta la corona dorada del Dominio'
+    : house.state === 'archived' ? '; casa disuelta, Herencia Ancestral' : '';
+  return `Sello heráldico de ${house.name}, del Linaje de ${lineage.name}${honor}`;
+}
+
+function sealCard(house, caption) {
+  return `<figure class="seal" style="margin:0">
+    ${forgeSeal({ ...house, label: sealLabel(house) })}
+    <figcaption>
+      <span class="seal__name">${caption || house.name}</span>
+      ${house.stateText ? `<span class="seal__state">${house.stateText}</span>` : ''}
+    </figcaption>
+  </figure>`;
+}
+
+/* --- Estados del sello ------------------------------------------------- */
+document.getElementById('stateSeals').innerHTML = [
+  { name: 'Mareas de Aether', coatOfArms: 'rune_tide_spiral', lineageKey: 'celestialTides', state: 'regent', stateText: 'Clan Regente · cera y oro vivo' },
+  { name: 'Tempestad Eterna', coatOfArms: 'rune_tempest_bolt', lineageKey: 'eternalTempest', state: 'active', stateText: 'Casa activa · oro antiguo' },
+  { name: 'Ceniza Eterna', coatOfArms: 'rune_ember_urn', lineageKey: 'primordialFlame', state: 'archived', stateText: 'Disuelta · bronce y anillo roto' },
+].map(function (house) {
+  return sealCard(house);
+}).join('');
+
+/* --- Los ocho linajes -------------------------------------------------- */
+document.getElementById('lineageSeals').innerHTML = Object.keys(LINEAGES).map(function (key) {
+  return sealCard({ name: LINEAGES[key].name, coatOfArms: 'rune_lineage_' + key, lineageKey: key });
+}).join('');
+
+/* --- Cartucho ---------------------------------------------------------- */
+const mareas = {
+  name: 'Mareas de Aether', coatOfArms: 'rune_tide_spiral',
+  lineageKey: 'celestialTides', state: 'regent',
+  label: 'Sello heráldico de Mareas de Aether, del Linaje de las Mareas Celestiales; porta la corona dorada del Dominio',
+};
+document.getElementById('cartoucheSeal').innerHTML = forgeSeal(mareas);
+document.getElementById('cartoucheSealMobile').innerHTML = forgeSeal(mareas);
+</script>
+</body>
+</html>

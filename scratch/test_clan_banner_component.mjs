@@ -108,6 +108,17 @@ const allByClass = (root, className) => queryByClass(root, className);
 
 const fakeElementFactory = (tagName) => createFakeElement(tagName);
 
+/**
+ * Documento anfitrión simulado: el Sello Rúnico se forja como SVG en línea
+ * (SPEC-02 RF-07), así que el arnés presta el `createElementNS` que el
+ * navegador siempre trae. En producción el documento es el global.
+ */
+const fakeDocument = {
+  createElement: (tagName) => createFakeElement(tagName),
+  createElementNS: (_namespace, tagName) => createFakeElement(tagName),
+};
+globalThis.document = fakeDocument;
+
 /** Linaje canónico tal y como lo sirve el Endpoint 10 (Tarea 3.1). */
 const LINEAGE_PAYLOAD = {
   success: true,
@@ -207,9 +218,26 @@ assertCondition(byClass(mount1, 'clan-banner__title')?.textContent === 'Clan Reg
 const regent1 = byClass(mount1, 'clan-banner__regent');
 assertCondition(regent1 !== null && regent1.getAttribute('data-regent') === 'true', 'La casa reinante se marca como regente');
 assertCondition(regent1?.getAttribute('data-clan-id') === 'cln_llama', 'El blasón porta el identificador del Clan Soberano');
+const seal1 = byClass(mount1, 'clan-banner__shield');
 assertCondition(
-  byClass(mount1, 'clan-banner__shield')?.textContent === 'rune-ignis',
-  'El ESCUDO heráldico del clan se exhibe de forma destacada'
+  seal1?.tagName === 'SVG' && seal1?.getAttribute('viewBox') === '0 0 100 100',
+  'El blasón del clan se FORJA como Sello Rúnico (SVG en línea, SPEC-02 RF-07)'
+);
+assertCondition(
+  seal1?.getAttribute('data-heraldic-charge') === 'flame',
+  'La carga central del sello declara el Linaje rector (Llama Primordial)'
+);
+assertCondition(
+  seal1?.getAttribute('data-heraldic-state') === 'regent',
+  'El sello del reinante se forja en su estado de regente (oro vivo)'
+);
+assertCondition(
+  seal1?.textContent === '' && String(seal1?.getAttribute('aria-label') ?? '').includes('rune-ignis') === false,
+  'El identificador del blasón JAMÁS se imprime: se codifica en las muescas (RF-07.3)'
+);
+assertCondition(
+  seal1?.children.filter((child) => child.getAttribute('stroke') === 'var(--sigil-tick)').length === 8,
+  'El anillo forja sus ocho muescas: la casa escrita en su propio metal'
 );
 assertCondition(
   byClass(mount1, 'clan-banner__motto')?.textContent === '«En la ceniza renace la llama inmortal»',
@@ -250,10 +278,11 @@ assertCondition(
     && byClass(mount1, 'clan-banner__title')?.getAttribute('id') === 'clanBannerTitle',
   'aria-labelledby apunta al título ceremonial del blasón'
 );
-const shield1 = byClass(mount1, 'clan-banner__shield');
 assertCondition(
-  shield1?.getAttribute('role') === 'img' && shield1?.getAttribute('aria-label') === 'Escudo heráldico de Custodios de la Llama: rune-ignis',
-  'El escudo expone role="img" con nombre accesible completo'
+  seal1?.getAttribute('role') === 'img'
+    && seal1?.getAttribute('aria-label')
+      === 'Sello heráldico de Custodios de la Llama, del Linaje de la Llama Primordial; porta la corona dorada del Dominio durante los siete días de su mandato.',
+  'El sello expone role="img" y su nombre accesible nombra casa, linaje y honor (RF-07.5)'
 );
 const crown1 = byClass(mount1, 'clan-banner__crown');
 assertCondition(
@@ -431,9 +460,9 @@ assertCondition(
   'La narrativa del héroe sigue a continuación sin desplazarse'
 );
 assertCondition(
-  byClass(portalRoot, 'clan-banner__shield')?.textContent === 'rune-ignis'
+  byClass(portalRoot, 'clan-banner__shield')?.getAttribute('data-heraldic-state') === 'regent'
     && byClass(portalRoot, 'clan-banner__motto')?.textContent.includes('En la ceniza renace la llama inmortal'),
-  'El escudo y el lema del Clan Soberano se ven en la portada (criterio)'
+  'El sello forjado y el lema del Clan Soberano se ven en la portada (criterio)'
 );
 portal.destroy();
 assertCondition(byClass(portalRoot, 'clan-banner') === null, 'destroy() de la portada retira también el blasón');
@@ -488,6 +517,11 @@ assertCondition(
 assertCondition(
   byClass(mount10, 'clan-banner__regent') !== null,
   'El blasón sobrevive a un lore hostil sin ejecutar nada'
+);
+assertCondition(
+  byClass(mount10, 'clan-banner__shield')?.textContent === ''
+    && String(byClass(mount10, 'clan-banner__shield')?.getAttribute('aria-label') ?? '').includes('<svg') === false,
+  'Un blasón hostil se reduce a huella numérica: ni texto ni nombre accesible lo transportan'
 );
 
 // =====================================================================

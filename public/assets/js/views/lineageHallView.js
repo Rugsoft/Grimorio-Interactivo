@@ -44,6 +44,8 @@ const WEEK_CLOSED_EVENT = 'dominion:week-closed';
  *        casa del podio o del histórico (la ficha llegará con la Tarea 6.4).
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
+ * @param {Document} [options.documentRef] Documento anfitrión de los sellos
+ *        forjados de las casas (arneses sin navegador).
  * @param {EventTarget} [options.eventTarget] Bus del plan 4.1; el Salón se
  *        refresca solo cuando alguien acredita gloria (`dominion:points-awarded`)
  *        o se proclama la semana (`dominion:week-closed`), sin sondear el reloj
@@ -56,6 +58,7 @@ export function createLineageHallView(mountRoot, options = {}) {
     store = null,
     onClanSelect,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
+    documentRef = globalThis.document,
   } = options;
 
   /** Bus de eventos: la gloria recién acreditada llega por evento, no por sondeo. */
@@ -172,6 +175,7 @@ export function createLineageHallView(mountRoot, options = {}) {
       },
       onClanSelect: typeof onClanSelect === 'function' ? onClanSelect : undefined,
       elementFactory,
+      documentRef,
     });
     hall.render();
 

@@ -31,6 +31,7 @@
  */
 
 import { ELEMENTAL_MATRIX_ELEMENTS } from '../utils/comboResolver.js';
+import { createRuneSeal, RUNE_SEAL_STATES } from './runeSealComponent.js';
 
 /** Título ceremonial del pabellón. */
 export const LINEAGE_HALL_TITLE = 'Salón de los Linajes';
@@ -101,6 +102,8 @@ function ordinalLabel(position) {
  * @param {(clanId: string) => void} [options.onClanSelect] Selección de una casa.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
+ * @param {Document} [options.documentRef] Documento anfitrión de los sellos
+ *        forjados (arneses sin navegador).
  * @returns {Object} API: { render, setLineages, setHall, setError, setTab,
  *          setLineageFilter, getActiveTab, getActiveLineageFilter, destroy }.
  */
@@ -111,6 +114,7 @@ export function createLineageHallComponent(mountRoot, options = {}) {
     onRetry,
     onClanSelect,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
+    documentRef = globalThis.document,
   } = options;
 
   /** Nodos vivos del componente, para limpieza determinista. */
@@ -186,6 +190,7 @@ export function createLineageHallComponent(mountRoot, options = {}) {
 
     return {
       ceremonialName: lineage?.name ?? (lineageType === '' ? 'Linaje no declarado' : lineageType),
+      rulingElement: lineage?.rulingElement ?? null,
       elementName: element?.name ?? null,
       glyph: lineage?.glyph ?? null,
       bannerColor: lineage?.bannerColor ?? null,
@@ -349,10 +354,18 @@ export function createLineageHallComponent(mountRoot, options = {}) {
       button.setAttribute('title', String(lineage.name ?? lineageId));
       button.addEventListener('click', () => setLineageFilter(lineageId));
 
-      const glyph = elementFactory('span');
-      glyph.className = 'lineage-filter__glyph';
-      glyph.textContent = String(lineage.glyph ?? lineageId);
-      // El glifo es ornamental: su significado viaja en el nombre accesible.
+      // El sello del linaje (SPEC-02 RF-07): su carga y su afinidad rectora
+      // lo declaran; el glifo rúnico técnico no se imprime jamás.
+      const glyph = track(createRuneSeal({
+        houseName: String(lineage.name ?? lineageId),
+        coatOfArms: `rune_lineage_${lineageId}`,
+        rulingElement: String(lineage.rulingElement ?? ''),
+        lineageName: String(lineage.name ?? lineageId),
+        role: 'lineage',
+        document: documentRef,
+      }));
+      glyph.classList.add('lineage-filter__glyph');
+      // El sello es ornamental aquí: su significado viaja en el nombre accesible.
       glyph.setAttribute('aria-hidden', 'true');
       button.appendChild(glyph);
 
@@ -389,21 +402,21 @@ export function createLineageHallComponent(mountRoot, options = {}) {
      Pintado de las tres secciones
      ===================================================================== */
 
-  /** Escudo heráldico de una casa, con el glifo del linaje rector. */
-  function appendShield(parent, clanDto, lineage) {
-    const shield = elementFactory('span');
-    shield.className = 'podium-rank__coat';
-    shield.setAttribute('role', 'img');
-    const coatOfArms = String(clanDto.coatOfArms ?? '');
-    shield.setAttribute(
-      'aria-label',
-      coatOfArms === ''
-        ? `Escudo heráldico de ${String(clanDto.name ?? '')}`
-        : `Escudo heráldico de ${String(clanDto.name ?? '')}: ${coatOfArms}`,
-    );
-    shield.textContent = coatOfArms === '' ? String(lineage.glyph ?? '🛡') : coatOfArms;
+  /**
+   * Sello Rúnico de una casa (SPEC-02 RF-07): la carga declara el linaje y el
+   * metal del anillo declara su estado. El blasón se codifica, no se imprime.
+   */
+  function appendShield(parent, clanDto, lineage, state = RUNE_SEAL_STATES.ACTIVE) {
+    const shield = track(createRuneSeal({
+      houseName: String(clanDto.name ?? ''),
+      coatOfArms: String(clanDto.coatOfArms ?? ''),
+      rulingElement: String(lineage?.rulingElement ?? ''),
+      lineageName: String(lineage?.ceremonialName ?? ''),
+      state,
+      document: documentRef,
+    }));
+    shield.classList.add('podium-rank__coat');
     parent.appendChild(shield);
-    track(shield);
   }
 
   /** ¿Es esta casa el linaje fundacional neutro? (Art. III) */
@@ -451,7 +464,16 @@ export function createLineageHallComponent(mountRoot, options = {}) {
       track(crown);
     }
 
-    appendShield(article, clanDto, lineage);
+    appendShield(
+      article,
+      clanDto,
+      lineage,
+      isRegent
+        ? RUNE_SEAL_STATES.REGENT
+        : (String(clanDto.status ?? 'active') === 'archived'
+          ? RUNE_SEAL_STATES.ARCHIVED
+          : RUNE_SEAL_STATES.ACTIVE),
+    );
 
     const name = appendTextElement(
       article,

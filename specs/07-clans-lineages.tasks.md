@@ -107,8 +107,9 @@
 
 - [x] **Tarea 5.2: Componente del Clan Regente en Portal (`clanBannerComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/clanBannerComponent.js` para renderizar en el Gran Portal (SPEC-01) el blasón del Clan Regente semanal, lema heráldico, linaje elemental y corona dorada ceremonial.
-  * **Cubre:** `RF-04.4`, `RF-02.2`, `RNF-03`
+  * **Cubre:** `RF-04.4`, `RF-02.2`, `RF-02.4`, `RNF-03`
   * **Hecho cuando:** La cabecera del portal muestra de forma destacada el escudo y lema del Clan Soberano de la semana actual con atributos ARIA accesibles.
+  * **Reforja de heráldica (Ronda de Diseño):** el blasón dejó de imprimir el identificador técnico y se **forja** como Sello Rúnico (SPEC-02 RF-07) con el estado del reinante: oro vivo y sello de cera a las doce (`RF-02.4`).
 
 - [x] **Tarea 5.3: Componente de aviso de Convalecencia Arcana (`convalescenceBannerComponent.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/convalescenceBannerComponent.js` para incrustar en el perfil del mago el indicador de descanso obligatorio (*«En Convalecencia Arcana: restan X días de meditación»*), deshabilitando los botones de ingreso o fundación mientras esté activo.
@@ -131,12 +132,14 @@
 
 - [x] **Tarea 6.3: Componente y Vista del Salón de los Linajes (`lineageHallComponent.js` y `lineageHallView.js`)**
   * **Alcance:** Desarrollar `public/assets/js/components/lineageHallComponent.js` y `public/assets/js/views/lineageHallView.js` presentando: podio ceremonial en vivo de la semana en curso, conmutador de filtros por los 8 linajes elementales, tabla del Prestigio Histórico perpetuo y el Libro Mayor de Campeones Pasados.
-  * **Cubre:** `RF-04.4`, `RF-06.1`, `RF-06.2`, `RNF-03`
+  * **Cubre:** `RF-04.4`, `RF-06.1`, `RF-06.2`, `RF-02.4`, `RNF-03`
+  * **Reforja de heráldica (Ronda de Diseño):** los blasones del podio y los glifos de los ocho filtros se forjan como Sello Rúnico (SPEC-02 RF-07): la clave del linaje viaja en la huella del anillo y en el nombre accesible, jamás impresa (`RF-02.4`).
   * **Hecho cuando:** El usuario puede alternar entre clasificación semanal e histórica, y filtrar las hermandades pulsando en el icono rúnico de cualquiera de los 8 linajes.
 
 - [x] **Tarea 6.4: Vista de Detalle de Clan y Legado Ancestral (`clanView.js`)**
   * **Alcance:** Desarrollar `public/assets/js/views/clanView.js` que visualice el blasón del clan, lema, Patriarca, lista de miembros activos, botón de unirse/postularse (sujeto a cupo de 30 y convalecencia), botón de renuncia para adeptos, y catálogo de conjuros sellados bajo su sello (distinguiendo la «Herencia Ancestral» si el clan está archivado).
-  * **Cubre:** `RF-01.2`, `RF-01.4`, `RF-01.5`, `RF-05.1`, `RF-05.2`, `RF-05.3`, `RF-05.4`
+  * **Cubre:** `RF-01.2`, `RF-01.4`, `RF-01.5`, `RF-05.1`, `RF-05.2`, `RF-05.3`, `RF-05.4`, `RF-02.4`
+  * **Reforja de heráldica (Ronda de Diseño):** el blasón de la ficha se forja como Sello Rúnico (SPEC-02 RF-07) y declara el estado de la casa por metal **y** forma: oro antiguo la viva, bronce con anillo roto la disuelta (`RF-02.4`).
   * **Hecho cuando:** La vista muestra los conjuros validados del clan independientemente de si los autores siguen en la hermandad, y marca con el sello de «Herencia Ancestral» si el clan está en estado `archived`.
 
 ---

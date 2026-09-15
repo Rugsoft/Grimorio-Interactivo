@@ -39,6 +39,7 @@
  */
 
 import { createClanManagementComponent } from '../components/clanManagementComponent.js';
+import { createRuneSeal, RUNE_SEAL_STATES } from '../components/runeSealComponent.js';
 import { ELEMENTAL_MATRIX_ELEMENTS } from '../utils/comboResolver.js';
 import { ceremonialLegendFor } from '../api/clanClient.js';
 
@@ -143,6 +144,8 @@ function formatMoment(isoStamp) {
  * @param {(legend: string) => void} [options.onError] Fallo de una acción.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
+ * @param {Document} [options.documentRef] Documento anfitrión del sello
+ *        forjado de la casa (arneses sin navegador).
  * @returns {Object} API: { render, destroy, retry, setClanClient, getClan }.
  */
 export function createClanView(mountRoot, options = {}) {
@@ -157,6 +160,7 @@ export function createClanView(mountRoot, options = {}) {
     onMembershipChanged = null,
     onError = null,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
+    documentRef = globalThis.document,
   } = options;
 
   /** Cliente vivo (conmutable en reintentos tras un fallo). */
@@ -267,6 +271,7 @@ export function createClanView(mountRoot, options = {}) {
 
     return {
       ceremonialName: lineage?.name ?? (lineageType === '' ? 'Linaje no declarado' : lineageType),
+      rulingElement: lineage?.rulingElement ?? null,
       elementName: element?.name ?? null,
       glyph: lineage?.glyph ?? null,
       bannerColor: lineage?.bannerColor ?? null,
@@ -433,17 +438,17 @@ export function createClanView(mountRoot, options = {}) {
     }
     section.appendChild(banner);
 
-    const shield = track(elementFactory('span'));
-    shield.className = 'clan-view__shield';
-    shield.setAttribute('role', 'img');
-    const coatOfArms = String(clan.coatOfArms ?? '');
-    shield.setAttribute(
-      'aria-label',
-      coatOfArms === ''
-        ? `Escudo heráldico de ${String(clan.name ?? '')}`
-        : `Escudo heráldico de ${String(clan.name ?? '')}: ${coatOfArms}`,
-    );
-    shield.textContent = coatOfArms === '' ? String(lineage.glyph ?? '🛡') : coatOfArms;
+    // Sello Rúnico forjado (SPEC-02 RF-07, SPEC-07 RF-02.4): la casa disuelta
+    // viste bronce y anillo roto; la viva, oro antiguo.
+    const shield = track(createRuneSeal({
+      houseName: String(clan.name ?? ''),
+      coatOfArms: String(clan.coatOfArms ?? ''),
+      rulingElement: lineage.rulingElement ?? '',
+      lineageName: lineage.ceremonialName,
+      state: clan.status === 'archived' ? RUNE_SEAL_STATES.ARCHIVED : RUNE_SEAL_STATES.ACTIVE,
+      document: documentRef,
+    }));
+    shield.classList.add('clan-view__shield');
     banner.appendChild(shield);
 
     const identity = track(elementFactory('div'));

@@ -16,6 +16,10 @@
  *      selector de components.css fija con tokens hex o var() resolubles
  *      se compone y mide (insignias elementales por afinidad, maná,
  *      sellos de estado, escuela, clan, etc.).
+ *   4. Verificación del contraste de la materia del Sello Rúnico forjado
+ *      (SPEC-02 RF-07.6) sobre el disco de tinta: muescas > 7:1, carga de
+ *      la afinidad rectora > 4.5:1 y metales ceremoniales > 3:1 (umbral de
+ *      gráfico significativo).
  *
  * Uso:
  *   php scratch/verify_design_tokens.php [raiz_alternativa]
@@ -379,6 +383,64 @@ if (!file_exists($componentsPath)) {
             echo "  OK   {$label}: {$ratioStr}:1 >= {$minRatio}:1\n";
         } else {
             $msg = "{$label}: {$ratioStr}:1 < {$minRatio}:1 (texto " . strtoupper($colorHex) . " sobre fondo " . strtoupper($bgHex) . ")";
+            $violations[] = $msg;
+            echo "  FALLA {$msg}\n";
+        }
+    }
+}
+
+// =====================================================================
+// CERTIFICACIÓN 4: contraste de la materia del Sello Rúnico (RF-07.6).
+//
+// El sello se forja sobre un disco de tinta, de modo que sus pares no son
+// texto sobre fondo de componente: son trazos gráficos sobre `--sigil-disc`.
+// Se miden con el umbral que les corresponde: muescas por encima de 7:1,
+// carga del linaje por encima de 4.5:1 (la paleta de afinidades, elegida
+// para leer sobre la tinta) y metales ceremoniales por encima del umbral de
+// gráfico significativo de 3:1.
+// =====================================================================
+echo "\n[4] Contraste de la materia del Sello Rúnico sobre el disco de tinta (RF-07.6)\n";
+
+$colorTokens = extractColorTokens($tokensCss);
+$sigilMatter = ['--sigil-disc', '--sigil-tick', '--sigil-ring-active', '--sigil-ring-regent', '--sigil-ring-archived', '--sigil-wax'];
+
+foreach ($sigilMatter as $sigilToken) {
+    if (!isset($colorTokens[$sigilToken])) {
+        $violations[] = "Falta el token de la materia del sello {$sigilToken} (RF-07.1)";
+        echo "  FALLA falta el token {$sigilToken}\n";
+    }
+}
+
+if (isset($colorTokens['--sigil-disc'])) {
+    $discHex = $colorTokens['--sigil-disc'];
+
+    // Muescas: el anillo que escribe la casa en su propio metal.
+    $sigilPairs = [
+        ['--sigil-tick', 7.0, 'muescas marfil del anillo'],
+        ['--sigil-ring-active', 3.0, 'oro antiguo (casa viva)'],
+        ['--sigil-ring-regent', 3.0, 'oro vivo (Clan Regente)'],
+        ['--sigil-ring-archived', 3.0, 'bronce (casa disuelta)'],
+        ['--sigil-wax', 3.0, 'cera del honor'],
+    ];
+
+    // La carga central declara el linaje rector: una entrada por afinidad.
+    foreach (['fire', 'water', 'lightning', 'earth', 'wind', 'light', 'darkness', 'arcane'] as $affinity) {
+        $sigilPairs[] = ['--color-affinity-' . $affinity, 4.5, 'carga del linaje rector (' . $affinity . ')'];
+    }
+
+    foreach ($sigilPairs as [$token, $minRatio, $label]) {
+        $hex = $colorTokens[$token] ?? null;
+        if ($hex === null) {
+            $violations[] = "Falta el color {$token} para {$label} (RF-07.6)";
+            echo "  FALLA falta el token {$token}\n";
+            continue;
+        }
+        $ratio = contrastRatio($hex, $discHex);
+        $ratioStr = number_format($ratio, 2, '.', '');
+        if ($ratio >= $minRatio) {
+            echo "  OK   {$label}: {$ratioStr}:1 >= {$minRatio}:1\n";
+        } else {
+            $msg = "{$label}: {$ratioStr}:1 < {$minRatio}:1 sobre el disco de tinta (RF-07.6)";
             $violations[] = $msg;
             echo "  FALLA {$msg}\n";
         }

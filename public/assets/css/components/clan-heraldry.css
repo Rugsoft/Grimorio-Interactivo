@@ -483,17 +483,12 @@
   background-color: var(--color-bg-obsidian-surface);
 }
 
+/* Sello Rúnico de la casa (SPEC-02 RF-07): la materia vive en tokens.css y la
+   forja en runeSealComponent.js; aquí solo se le da presencia. */
 .clan-view__shield {
-  display: inline-grid;
-  place-items: center;
-  min-width: var(--touch-target-min);
-  min-height: var(--touch-target-min);
-  padding: var(--space-ink-2);
-  border-radius: 50%;
-  background-color: var(--color-parchment-old);
-  color: var(--color-ink);
-  font-family: var(--font-arcane-seal);
-  font-size: var(--font-size-ink-base);
+  display: block;
+  width: 84px;
+  height: auto;
 }
 
 .clan-view__identity {

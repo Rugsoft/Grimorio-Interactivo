@@ -29,6 +29,7 @@
  */
 
 import { ELEMENTAL_MATRIX_ELEMENTS } from '../utils/comboResolver.js';
+import { createRuneSeal, RUNE_SEAL_STATES } from './runeSealComponent.js';
 
 /** Leyenda del trono vacío: aún nadie ha contendido por el Dominio. */
 export const CLAN_BANNER_EMPTY_LEGEND =
@@ -54,13 +55,16 @@ const ELEMENT_BY_ID = Object.freeze(
  *        blasón (el orquestador abrirá la ficha del linaje reinante).
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
+ * @param {Document} [options.documentRef] Documento anfitrión del sello
+ *        forjado (arneses sin navegador).
  * @returns {Object} API: { render, setRegent, destroy }.
  */
 export function createClanBannerComponent(mountRoot, options = {}) {
   const {
     dominionClient,
     onRegentSelect,
-    elementFactory = (tagName) => document.createElement(tagName),
+    elementFactory = (tagName) => globalThis.document.createElement(tagName),
+    documentRef = globalThis.document,
   } = options;
 
   /** Nodos vivos del componente, para limpieza determinista. */
@@ -160,6 +164,7 @@ export function createClanBannerComponent(mountRoot, options = {}) {
 
     return {
       ceremonialName: lineage?.name ?? lineageType,
+      rulingElement: lineage?.rulingElement ?? null,
       elementName: element?.name ?? null,
       elementGlyph: element?.glyph ?? null,
       bannerColor: lineage?.bannerColor ?? null,
@@ -191,23 +196,22 @@ export function createClanBannerComponent(mountRoot, options = {}) {
     bannerRoot.appendChild(article);
     track(article);
 
-    // Escudo heráldico: runa del blasón del clan, con el estandarte del linaje.
-    const shield = elementFactory('span');
-    shield.className = 'clan-banner__shield';
-    shield.setAttribute('role', 'img');
-    shield.setAttribute(
-      'aria-label',
-      coatOfArms === ''
-        ? `Escudo heráldico de ${clanName}`
-        : `Escudo heráldico de ${clanName}: ${coatOfArms}`,
-    );
+    // Sello Rúnico forjado (SPEC-02 RF-07, SPEC-07 RF-02.4): el blasón se
+    // forja, jamás se imprime. El reinado se declara con oro vivo y cera.
+    const shield = track(createRuneSeal({
+      houseName: clanName,
+      coatOfArms,
+      rulingElement: lineage.rulingElement ?? '',
+      lineageName: lineage.ceremonialName,
+      state: RUNE_SEAL_STATES.REGENT,
+      document: documentRef,
+    }));
+    shield.classList.add('clan-banner__shield');
     if (lineage.bannerColor !== null) {
-      // El color viaja como custom property: la paleta vive en el sistema.
+      // El color del estandarte viaja como custom property: la paleta vive en el sistema.
       shield.setAttribute('style', `--banner-tint: ${lineage.bannerColor}`);
     }
-    shield.textContent = coatOfArms === '' ? '🛡' : coatOfArms;
     article.appendChild(shield);
-    track(shield);
 
     // Corona dorada ceremonial: es CONTENIDO (el reinado), no adorno.
     const crown = elementFactory('span');

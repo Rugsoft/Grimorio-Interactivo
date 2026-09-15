@@ -652,20 +652,15 @@
   border-bottom: var(--border-ink);
 }
 
-/* Escudo heráldico: el tinte del estandarte llega por --banner-tint
-   (glifo del linaje rector) y jamás sustituye al emblema textual. */
+/* El Sello Rúnico forjado del Clan Regente (SPEC-02 RF-07): su materia vive
+   en tokens.css y la forja en runeSealComponent.js. Aquí solo se le da
+   presencia; el tinte del estandarte sigue llegando por --banner-tint para
+   el marco heráldico. El blasón ya no se imprime como texto. */
 .clan-banner__shield {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--touch-target-min);
-  padding: var(--space-ink-2) var(--space-ink-4);
-  border: 2px solid var(--banner-tint, var(--color-gold-arcane));
-  border-radius: var(--radius-seal);
-  background-color: var(--color-parchment);
-  color: var(--color-ink);
-  font-family: var(--font-arcane-seal);
-  letter-spacing: var(--letter-spacing-seal);
+  display: inline-block;
+  width: clamp(72px, 12vw, 96px);
+  height: auto;
+  vertical-align: middle;
 }
 
 /* Corona dorada ceremonial del Dominio (RF-04.4). Los filamentos ornan el
