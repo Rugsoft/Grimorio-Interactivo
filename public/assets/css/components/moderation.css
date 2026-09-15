@@ -1,0 +1,603 @@
+/**
+ * moderation.css — Vestimenta ceremonial de la Moderación en Dos Pasos
+ * (SPEC-08, Tarea 6.3).
+ *
+ * Viste los componentes de moderación de las Tareas 5.2, 5.3, 6.1 y 6.2:
+ *   - experimentalHallComponent.js  → .experimental-hall*
+ *   - mastersTowerComponent.js      → .masters-tower*
+ *   - objectionModalComponent.js    → .objection-modal*
+ *   - imperialDecreeModalComponent.js → .imperial-decree-modal*
+ *   - spellCorrectionComponent.js   → .spell-correction*
+ *
+ * Cubre RF-05.1 (marco rúnico de advertencia del Atrio), RF-05.4 (la Torre
+ * con sus filtros), RNF-03 (accesibilidad, foco visible, contraste y
+ * respeto por el movimiento reducido) y el Artículo IV (Velo Arcano).
+ *
+ * Constitución:
+ *   - Artículo I (Dogma Vanilla): CSS3 puro, sin preprocesadores, sin
+ *     @import, sin recurso externo alguno.
+ *   - Artículo II: esta hoja no toca coste de maná ni cifra canónica;
+ *     solo viste la liturgia.
+ *   - Artículo IV: fantasía oscura — obsidiana, pergamino, oro arcano,
+ *     brumas frías y sellos rúnicos.
+ *   - Artículo V: clases semánticas kebab-case; comentarios en castellano.
+ *
+ * Pureza de tokens: CERO literales de color. Toda tinta procede de la
+ * fuente de verdad del sistema (tokens.css), de modo que la vestimenta y
+ * la atmósfera jamás puedan divergir.
+ */
+
+/* =======================================================================
+   1. Paleta litúrgica de la Moderación: lecturas de tokens.css
+
+   El ámbar ceremonial tiñe la advertencia del Atrio (obra en fase de
+   prueba) y el pergamino de observaciones del autor; el oro radiante
+   consagra; el bermellón del sello rúnico veta.
+   ======================================================================= */
+
+:root {
+  --moderation-warning-ink: var(--color-unstable-seal);
+  --moderation-warning-glow: var(--glow-affinity-fire);
+  --moderation-consecration-ink: var(--color-gold-bright);
+  --moderation-consecration-glow: var(--shadow-gold-glow);
+  --moderation-veto-ink: var(--color-ember-red);
+  --moderation-veto-deep: var(--color-ember-red-deep);
+  --moderation-mana-ink: var(--mana-blue-readable);
+  --moderation-surface: var(--color-bg-obsidian-elevated);
+  --moderation-parchment: var(--color-parchment-surface);
+  --moderation-text: var(--color-text-primary);
+  --moderation-text-muted: var(--color-text-muted);
+}
+
+/* =======================================================================
+   2. Pabellón del Atrio de los Arcanos Experimentales (Tarea 5.2)
+   ======================================================================= */
+
+.experimental-hall {
+  display: grid;
+  gap: var(--space-ink-4);
+  padding: var(--space-ink-4);
+  background: var(--color-bg-obsidian-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+}
+
+/* Insignia del Atrio declarada UNA sola vez: marco rúnico de advertencia
+   ámbar sobre la cabecera del pabellón (RF-05.1, plan 2.2 nota 3). */
+.experimental-hall__warning {
+  margin: 0;
+  padding: var(--space-ink-3) var(--space-ink-4);
+  color: var(--moderation-text);
+  background: var(--moderation-parchment);
+  border: 1px solid var(--moderation-warning-ink);
+  border-left-width: 4px;
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: var(--line-height-parchment);
+}
+
+/* Tarjetas del Atrio: pergamino ancestral con su medidor de firmas. */
+.experimental-hall__card {
+  display: grid;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  background: var(--moderation-parchment);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  transition: box-shadow var(--transition-arcane), transform var(--transition-arcane);
+}
+
+.experimental-hall__card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-arcane-soft);
+}
+
+/* Medidor circular de firmas (0/3, 1/3, 2/3): el anillo se dibuja con
+   las claves de datos que el componente declara (data-signatures,
+   data-consignable); la cifra es la SERVIDA por el expediente (Art. II). */
+.experimental-hall__meter {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--moderation-warning-ink);
+  display: grid;
+  place-items: center;
+  color: var(--moderation-text);
+  font-family: var(--font-arcane-body);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+  background: var(--color-bg-obsidian-deep);
+}
+
+.experimental-hall__meter[data-consignable='true'] {
+  border-color: var(--moderation-consecration-ink);
+  box-shadow: var(--moderation-consecration-glow);
+}
+
+/* Botón de prueba en el simulador (RF-05.2): gesto de afirmación. */
+.experimental-hall__test-button {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  color: var(--moderation-text);
+  background: var(--moderation-mana-ink);
+  border: none;
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.experimental-hall__test-button:hover {
+  filter: brightness(1.15);
+}
+
+/* Bloqueo de PDA PROCLAMADO (RF-05.3): la gloria se reserva a la
+   consagración; la insignia lo explica y el color jamás habla solo. */
+.experimental-hall__blocked-note {
+  margin: 0;
+  color: var(--moderation-text-muted);
+  font-size: var(--font-size-ink-small);
+}
+
+/* Aviso del Atrio vacío y alerta de corriente de maná. */
+.experimental-hall__empty,
+.experimental-hall__outage {
+  margin: 0;
+  padding: var(--space-ink-3);
+  color: var(--moderation-text-muted);
+  font-style: italic;
+}
+
+.experimental-hall__outage {
+  color: var(--moderation-warning-ink);
+  border: 1px dashed var(--moderation-warning-ink);
+  border-radius: var(--radius-scroll);
+}
+
+/* =======================================================================
+   3. Torre de Deliberación (Tarea 5.3)
+   ======================================================================= */
+
+.masters-tower {
+  display: grid;
+  gap: var(--space-ink-4);
+  padding: var(--space-ink-4);
+  background: var(--moderation-surface);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+}
+
+/* Filtros de la Torre (RF-05.4): tres renglones sobrios del Cónclave. */
+.masters-tower__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+  align-items: end;
+}
+
+.masters-tower__filter-group {
+  display: grid;
+  gap: var(--space-ink-1);
+}
+
+.masters-tower__filter-label {
+  color: var(--moderation-text-muted);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.masters-tower__filter-select {
+  min-height: var(--touch-target-min);
+  color: var(--moderation-text);
+  background: var(--color-bg-obsidian-deep);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+}
+
+/* Tarjetas de la cola del Cónclave, por antigüedad ascendente. */
+.masters-tower__card {
+  display: grid;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  background: var(--moderation-parchment);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+}
+
+/* Sello rúnico de veto: el botón del Maestro vetado nace INHABILITADO
+   con su leyenda declarada; la piedra desgastada viste lo bloqueado. */
+.masters-tower__sign-button:disabled {
+  background: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  border: 1px solid var(--moderation-veto-ink);
+  cursor: not-allowed;
+}
+
+.masters-tower__veto-alert {
+  margin: 0;
+  padding: var(--space-ink-2) var(--space-ink-3);
+  color: var(--moderation-text);
+  background: var(--moderation-veto-deep);
+  border: 1px solid var(--moderation-veto-ink);
+  border-radius: var(--radius-scroll);
+  font-size: var(--font-size-ink-small);
+}
+
+/* Gestos de firma y objeción: enlazados por el modal litúrgico. */
+.masters-tower__sign-button,
+.masters-tower__object-button {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  color: var(--moderation-text);
+  background: var(--mana-blue-deep);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.masters-tower__object-button {
+  background: transparent;
+  color: var(--moderation-veto-ink);
+  border-color: var(--moderation-veto-ink);
+}
+
+.masters-tower__sign-button:not(:disabled):hover,
+.masters-tower__object-button:hover {
+  filter: brightness(1.15);
+}
+
+/* =======================================================================
+   4. Modal del Dictamen de Objeción (Tarea 6.1)
+   ======================================================================= */
+
+.objection-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: var(--z-modal-access);
+  padding: var(--space-ink-3);
+}
+
+.objection-modal__panel {
+  width: min(560px, 100%);
+  display: grid;
+  gap: var(--space-ink-3);
+  padding: var(--space-ink-4);
+  background: var(--moderation-surface);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  box-shadow: var(--shadow-arcane);
+}
+
+.objection-modal__title {
+  margin: 0;
+  color: var(--moderation-veto-ink);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* Campo del dictamen y su contador decreciente (región viva). */
+.objection-modal__reason,
+.imperial-decree-modal__decree {
+  width: 100%;
+  min-height: 96px;
+  padding: var(--space-ink-2);
+  color: var(--moderation-text);
+  background: var(--color-bg-obsidian-deep);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: var(--line-height-parchment);
+  resize: vertical;
+}
+
+.objection-modal__counter,
+.imperial-decree-modal__counter {
+  margin: 0;
+  min-height: 1.5em;
+  color: var(--moderation-text-muted);
+  font-size: var(--font-size-ink-small);
+}
+
+.objection-modal__submit,
+.imperial-decree-modal__submit {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  color: var(--moderation-text);
+  background: var(--moderation-veto-deep);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.objection-modal__submit:disabled,
+.imperial-decree-modal__submit:disabled {
+  background: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+  filter: none;
+}
+
+.objection-modal__cancel,
+.imperial-decree-modal__cancel {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  background: transparent;
+  color: var(--moderation-text-muted);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  cursor: pointer;
+}
+
+/* =======================================================================
+   5. Modal del Edicto Imperial (Tarea 6.1)
+   ======================================================================= */
+
+.imperial-decree-modal {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: var(--z-modal-access);
+  padding: var(--space-ink-3);
+}
+
+.imperial-decree-modal__panel {
+  width: min(560px, 100%);
+  display: grid;
+  gap: var(--space-ink-3);
+  padding: var(--space-ink-4);
+  background: var(--moderation-surface);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  box-shadow: var(--shadow-arcane);
+}
+
+.imperial-decree-modal__title {
+  margin: 0;
+  color: var(--moderation-consecration-ink);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+.imperial-decree-modal__notice {
+  margin: 0;
+  color: var(--moderation-text-muted);
+  font-size: var(--font-size-ink-small);
+}
+
+/* Destino del rescate: dos opciones canónicas, decisión DECLARADA. */
+.imperial-decree-modal__target-group {
+  display: grid;
+  gap: var(--space-ink-2);
+  margin: 0;
+  padding: var(--space-ink-2);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+}
+
+.imperial-decree-modal__target-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-ink-2);
+  min-height: var(--touch-target-min);
+  color: var(--moderation-text);
+}
+
+/* Orden de deducción: SOLO en el destierro, explícita y desmarcada. */
+.imperial-decree-modal__deduction-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-ink-2);
+  min-height: var(--touch-target-min);
+  color: var(--moderation-text);
+}
+
+.imperial-decree-modal__actions {
+  display: flex;
+  gap: var(--space-ink-2);
+  justify-content: flex-end;
+}
+
+/* =======================================================================
+   6. Libreta de Subsanación del Autor (Tarea 6.2)
+   ======================================================================= */
+
+.spell-correction {
+  display: grid;
+  gap: var(--space-ink-3);
+  padding: var(--space-ink-4);
+  background: var(--moderation-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+}
+
+/* Pergamino ámbar de observaciones del Maestro (plan 4.2.4). */
+.spell-correction__verdict-scroll {
+  margin: 0;
+  padding: var(--space-ink-3);
+  background: var(--moderation-parchment);
+  border: 1px solid var(--moderation-warning-ink);
+  border-left-width: 4px;
+  border-radius: var(--radius-scroll);
+}
+
+.spell-correction__verdict-field {
+  margin: 0 0 var(--space-ink-2);
+  color: var(--moderation-text);
+  line-height: var(--line-height-parchment);
+}
+
+.spell-correction__verdict-field strong {
+  color: var(--moderation-warning-ink);
+}
+
+.spell-correction__status {
+  margin: 0;
+  color: var(--moderation-veto-ink);
+  font-family: var(--font-arcane-seal);
+  letter-spacing: var(--letter-spacing-seal);
+  font-size: var(--font-size-ink-small);
+}
+
+.spell-correction__reopen {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  color: var(--color-ink-seal);
+  background: var(--color-gold-arcane);
+  border: none;
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.spell-correction__reopen:hover {
+  filter: brightness(1.15);
+}
+
+.spell-correction__empty,
+.spell-correction__outage {
+  margin: 0;
+  padding: var(--space-ink-3);
+  color: var(--moderation-text-muted);
+}
+
+.spell-correction__outage {
+  color: var(--moderation-warning-ink);
+  border: 1px dashed var(--moderation-warning-ink);
+  border-radius: var(--radius-scroll);
+}
+
+/* =======================================================================
+   7. Animaciones @keyframes nativas (Artículo IV)
+   ======================================================================= */
+
+/* Efecto dorado triunfal de consagración (RF-05.1, plan 4.1:
+   moderation:consecrated). El Atrio lo aplica a la tarjeta ascendida. */
+@keyframes moderation-consecration-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(212, 175, 55, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+  }
+}
+
+.experimental-hall__card[data-consecrated='true'] {
+  animation: moderation-consecration-glow var(--transition-arcane-slow) ease-out;
+}
+
+/* Pulso solemne del sello de veto sobre la tarjeta objetada. */
+@keyframes moderation-veto-pulse {
+  0%, 100% {
+    border-color: var(--moderation-veto-ink);
+  }
+  50% {
+    border-color: var(--moderation-veto-deep);
+  }
+}
+
+.masters-tower__card[data-vetoed='true'] {
+  animation: moderation-veto-pulse 2.4s ease-in-out infinite;
+}
+
+/* =======================================================================
+   8. Adaptación responsive a móvil y escritorio (RNF-03)
+   ======================================================================= */
+
+@media (max-width: 767.9px) {
+  .experimental-hall,
+  .masters-tower,
+  .spell-correction {
+    padding: var(--space-ink-3);
+  }
+
+  .experimental-hall__card,
+  .masters-tower__card {
+    grid-template-columns: 1fr;
+  }
+
+  .objection-modal,
+  .imperial-decree-modal {
+    padding: var(--space-ink-2);
+    align-items: end;
+  }
+
+  .imperial-decree-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .imperial-decree-modal__actions > button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .experimental-hall__card,
+  .masters-tower__card {
+    grid-template-columns: auto 1fr;
+  }
+}
+
+/* =======================================================================
+   9. Foco visible y movimiento reducido (RNF-03)
+   ======================================================================= */
+
+.experimental-hall__test-button:focus-visible,
+.masters-tower__sign-button:focus-visible,
+.masters-tower__object-button:focus-visible,
+.masters-tower__filter-select:focus-visible,
+.objection-modal__reason:focus-visible,
+.objection-modal__submit:focus-visible,
+.objection-modal__cancel:focus-visible,
+.imperial-decree-modal__decree:focus-visible,
+.imperial-decree-modal__submit:focus-visible,
+.imperial-decree-modal__cancel:focus-visible,
+.imperial-decree-modal__target-option input:focus-visible,
+.imperial-decree-modal__deduction-label input:focus-visible,
+.spell-correction__reopen:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experimental-hall__card,
+  .experimental-hall__card[data-consecrated='true'],
+  .masters-tower__card[data-vetoed='true'] {
+    animation: none;
+    transition: none;
+  }
+
+  .experimental-hall__card:hover {
+    transform: none;
+  }
+
+  .experimental-hall__test-button,
+  .masters-tower__sign-button,
+  .masters-tower__object-button,
+  .spell-correction__reopen {
+    transition: none;
+  }
+}
