@@ -99,7 +99,7 @@
 
 ## Fase 4: Suite de Pruebas Automatizadas Backend CLI
 
-- [ ] **Tarea 4.1: Suite automatizada de pruebas de moderación en CLI (`scratch/test_moderation_workflow.php`)**
+- [x] **Tarea 4.1: Suite automatizada de pruebas de moderación en CLI (`scratch/test_moderation_workflow.php`)**
   * **Alcance:** Crear `scratch/test_moderation_workflow.php` ejecutando sobre SQLite en memoria la verificación de los 11 escenarios críticos del plan:
     1. Transición `draft` $\rightarrow$ `experimental` sellando huella matemática.
     2. Consagración automática exactamente en la 3ª firma y liquidación de PDA.
@@ -114,6 +114,7 @@
     11. Caducidad automática a `rejected` tras 90 días de inactividad.
   * **Cubre:** `RF-01.1` a `RF-06.2`, `RNF-01` a `RNF-05`, `Plan Sec. 6.1`
   * **Hecho cuando:** La ejecución `php scratch/test_moderation_workflow.php` supera el 100% de los 11 bloques de asertos con código de salida 0.
+  * **Verificación:** `scratch/test_moderation_workflow.php` — **13 bloques, 168 asertos, 0 fallos, salida 0**. El plano arcano es SQLite **en memoria** (`GRIMORIO_DB_DSN=sqlite::memory:`, comprobado contra `pragma_database_list`), y el flujo entero se despacha por la pila REAL de producción (`buildRouter()`). Los once escenarios críticos se cubren uno a uno —elevación con la huella amañada reescrita por el backend y gemela determinista (15 asertos); consagración en la 3ª firma con el Círculo y el maná publicados recalculados por el balance y la gloria acreditada al linaje originario (21); veto ético del linaje actual, del abandonado hace 29 días y la potestad recuperada a los 31 (10); auto-firma prohibida al autor-Maestro y a la potestad suprema, cuya via es el decreto (10); pluralidad de hermandades con dos ermitaños admitidos (10); dictamen de objeción que veta y retira del Atrio (17); re-apertura con el dictamen íntegro y la plaza entera (7); cupo de tres plazas y su liberación (10); anulación de oficio por rango perdido y conflicto sobrevenido (15); Firma Soberana sobre el borrador invisible (404), sobre el borrador con expediente (400), sobre el linaje propio y sobre la propia pluma (403) y sobre la obra ajena (200) (18); y letargo de noventa días (11)—, y el bloque 12 cubre la Herencia Ancestral del Plan §6.1 (9) mientras el 13 audita la Constitución (15).
 
 ---
 
