@@ -13,6 +13,7 @@
   * **Alcance:** Actualizar `database/schema.sql` ampliando la tabla `spells` con columnas cuantitativas (`damage`, `healing`, `barrier`, `crowd_control_type`, `range_type`, `area_type`, `duration_type`, `has_verbal`, `has_somatic`, `has_material`, `mana_cost`, `circle`, `math_fingerprint`, `signatures_count`) e índices de optimización por autor y clan.
   * **Cubre:** `RF-01.1`, `RF-01.2`, `RF-01.3`, `RF-01.4`, `RF-01.5`, `RF-05.1`, `Artículo V`
   * **Hecho cuando:** La ejecución del script SQL amplía o crea la tabla `spells` con todos los campos tipados, valores por defecto e índices sin arrojar errores de sintaxis en SQLite / MariaDB.
+  * **Ampliaciones ratificadas:** el `CHECK` de `spells.status` pasa de tres a **cinco estados** y las columnas `status` y `signatures_count` quedan declaradas como **ESPEJO denormalizado** de `spell_reviews`, con `SpellReviewRepository` como único escritor; la verificación es `scratch/test_spell_status_single_source.php` y la reconciliación de bases legadas, `sql/08_spell_status_single_source.sql` (TASK-08, Tarea 1.5; véase la Ampliación ratificada de `RF-05.4` en `specs/04-spell-creator-balance.spec.md`).
 
 - [x] **Tarea 1.2: DTOs de parámetros numéricos de entrada (`SpellCalculationInputDto`)**
   * **Alcance:** Crear `src/Dto/SpellCalculationInputDto.php` con `declare(strict_types=1);`, propiedades tipadas (`damage`, `healing`, `barrier`, `crowdControlType`, `rangeType`, `areaType`, `durationType`, `hasVerbal`, `hasSomatic`, `hasMaterial`), validaciones de dominio y constructor inmutable.

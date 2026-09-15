@@ -33,8 +33,10 @@ use Grimorio\Exceptions\DraftQuotaExceededException;
 use Grimorio\Exceptions\SpellImmutableException;
 use Grimorio\Exceptions\SpellNotFoundException;
 use Grimorio\Models\User;
+use Grimorio\Repositories\SpellReviewRepository;
 use PDO;
 use RuntimeException;
+use Throwable;
 
 /**
  * Gestión del ciclo de vida de los conjuros del santuario.
@@ -53,11 +55,19 @@ final class SpellManagementService
     /** Bitácora inmutable de auditoría (RF-08.1, Art. III). */
     private AuditService $auditService;
 
+    /**
+     * Autoridad del ciclo de vida y ÚNICO escritor de su espejo (Tarea 1.5 de
+     * TASKS-08): `spells.status` y `spells.signatures_count` no se escriben
+     * jamás desde aquí, sino delegando en el expediente de moderación.
+     */
+    private SpellReviewRepository $reviewRepository;
+
     public function __construct(PDO $pdo, ?SpellBalanceService $balanceService = null)
     {
-        $this->pdo            = $pdo;
-        $this->balanceService = $balanceService ?? new SpellBalanceService();
-        $this->auditService   = new AuditService($pdo);
+        $this->pdo              = $pdo;
+        $this->balanceService   = $balanceService ?? new SpellBalanceService();
+        $this->auditService     = new AuditService($pdo);
+        $this->reviewRepository = new SpellReviewRepository($pdo);
     }
 
     /**
@@ -568,7 +578,9 @@ final class SpellManagementService
         // Determinismo ciego (Art. II): el maná siempre se recalcula.
         $calculation = $this->balanceService->calculate($createDto->calculationInput);
 
-        // Reseteo selectivo de firmas: solo ante cambio matemático.
+        // El contador de firmas pertenece al ESPEJO, y su único escritor es el
+        // expediente (Tarea 1.5 de TASKS-08): aquí solo se LEE, para devolver
+        // al llamante el indicador que quede tras la enmienda.
         $signaturesCount = 0;
         if (!$mathChangeDetected) {
             $signaturesStatement = $this->pdo->prepare('SELECT signatures_count FROM spells WHERE id = :spellId');
@@ -576,44 +588,61 @@ final class SpellManagementService
             $signaturesCount = (int) $signaturesStatement->fetchColumn();
         }
 
-        $updateStatement = $this->pdo->prepare(
-            'UPDATE spells SET
-                name = :name, magic_school = :magicSchool, elemental_affinity = :elementalAffinity,
-                casting_time = :castingTime, mana_cost = :manaCost, circle = :circle,
-                math_fingerprint = :mathFingerprint, summary = :summary, description = :description,
-                damage = :damage, healing = :healing, barrier = :barrier,
-                crowd_control_type = :crowdControlType, range_type = :rangeType,
-                area_type = :areaType, duration_type = :durationType,
-                has_verbal = :hasVerbal, has_somatic = :hasSomatic, has_material = :hasMaterial,
-                signatures_count = :signaturesCount,
-                updated_at = :updatedAt
-             WHERE id = :spellId AND author_id = :authorId AND status = \'experimental\''
-        );
-        $updateStatement->execute([
-            ':name'              => $createDto->name,
-            ':magicSchool'       => $createDto->magicSchool,
-            ':elementalAffinity' => $createDto->elementalAffinity,
-            ':castingTime'       => $createDto->castingTime,
-            ':manaCost'          => $calculation->finalManaCost,
-            ':circle'            => $calculation->circle,
-            ':mathFingerprint'   => $newFingerprint,
-            ':summary'           => mb_substr($createDto->description, 0, 140),
-            ':description'       => $createDto->description,
-            ':damage'            => $createDto->calculationInput->damage,
-            ':healing'           => $createDto->calculationInput->healing,
-            ':barrier'           => $createDto->calculationInput->barrier,
-            ':crowdControlType'  => $createDto->calculationInput->crowdControlType,
-            ':rangeType'         => $createDto->calculationInput->rangeType,
-            ':areaType'          => $createDto->calculationInput->areaType,
-            ':durationType'      => $createDto->calculationInput->durationType,
-            ':hasVerbal'         => (int) $createDto->calculationInput->hasVerbal,
-            ':hasSomatic'        => (int) $createDto->calculationInput->hasSomatic,
-            ':hasMaterial'       => (int) $createDto->calculationInput->hasMaterial,
-            ':signaturesCount'   => $signaturesCount,
-            ':updatedAt'         => gmdate('Y-m-d\TH:i:s\Z'),
-            ':spellId'           => $spellId,
-            ':authorId'          => $author->getId(),
-        ]);
+        // La enmienda narrativa y el reinicio de firmas son un solo gesto: o la
+        // obra queda enmendada con sus firmas restablecidas por su autoridad, o
+        // no queda enmendada.
+        $this->pdo->beginTransaction();
+
+        try {
+            $updateStatement = $this->pdo->prepare(
+                'UPDATE spells SET
+                    name = :name, magic_school = :magicSchool, elemental_affinity = :elementalAffinity,
+                    casting_time = :castingTime, mana_cost = :manaCost, circle = :circle,
+                    math_fingerprint = :mathFingerprint, summary = :summary, description = :description,
+                    damage = :damage, healing = :healing, barrier = :barrier,
+                    crowd_control_type = :crowdControlType, range_type = :rangeType,
+                    area_type = :areaType, duration_type = :durationType,
+                    has_verbal = :hasVerbal, has_somatic = :hasSomatic, has_material = :hasMaterial,
+                    updated_at = :updatedAt
+                 WHERE id = :spellId AND author_id = :authorId AND status = \'experimental\''
+            );
+            $updateStatement->execute([
+                ':name'              => $createDto->name,
+                ':magicSchool'       => $createDto->magicSchool,
+                ':elementalAffinity' => $createDto->elementalAffinity,
+                ':castingTime'       => $createDto->castingTime,
+                ':manaCost'          => $calculation->finalManaCost,
+                ':circle'            => $calculation->circle,
+                ':mathFingerprint'   => $newFingerprint,
+                ':summary'           => mb_substr($createDto->description, 0, 140),
+                ':description'       => $createDto->description,
+                ':damage'            => $createDto->calculationInput->damage,
+                ':healing'           => $createDto->calculationInput->healing,
+                ':barrier'           => $createDto->calculationInput->barrier,
+                ':crowdControlType'  => $createDto->calculationInput->crowdControlType,
+                ':rangeType'         => $createDto->calculationInput->rangeType,
+                ':areaType'          => $createDto->calculationInput->areaType,
+                ':durationType'      => $createDto->calculationInput->durationType,
+                ':hasVerbal'         => (int) $createDto->calculationInput->hasVerbal,
+                ':hasSomatic'        => (int) $createDto->calculationInput->hasSomatic,
+                ':hasMaterial'       => (int) $createDto->calculationInput->hasMaterial,
+                ':updatedAt'         => gmdate('Y-m-d\TH:i:s\Z'),
+                ':spellId'           => $spellId,
+                ':authorId'          => $author->getId(),
+            ]);
+
+            // Fraude matemático detectado: el aforo vuelve a 0/3 por su
+            // autoridad, que arrastra consigo el espejo del conjuro.
+            if ($mathChangeDetected) {
+                $this->reviewRepository->updateSignaturesCount($spellId, 0);
+            }
+
+            $this->pdo->commit();
+        } catch (Throwable $failure) {
+            $this->pdo->rollBack();
+
+            throw $failure;
+        }
 
         // Trazabilidad solemne (Art. III, RF-08.1): ambos caminos quedan
         // imborrables en la bitácora, con su motivo en texto noble.
@@ -688,7 +717,7 @@ final class SpellManagementService
         // revalidarlos íntegramente en el servidor (Art. II, plan 5.2).
         $rowStatement = $this->pdo->prepare(
             'SELECT damage, healing, barrier, crowd_control_type, range_type, area_type, duration_type,
-                    has_verbal, has_somatic, has_material
+                    has_verbal, has_somatic, has_material, clan_id
              FROM spells WHERE id = :spellId'
         );
         $rowStatement->execute([':spellId' => $spellId]);
@@ -716,24 +745,54 @@ final class SpellManagementService
         $calculation     = $this->balanceService->calculate($revalidatedInput);
         $mathFingerprint = $this->balanceService->computeMathFingerprint($revalidatedInput);
 
-        $publishStatement = $this->pdo->prepare(
-            "UPDATE spells
-             SET status = 'experimental',
-                 mana_cost = :manaCost,
-                 circle = :circle,
-                 math_fingerprint = :mathFingerprint,
-                 signatures_count = 0,
-                 updated_at = :updatedAt
-             WHERE id = :spellId AND author_id = :authorId AND status = 'draft'"
-        );
-        $publishStatement->execute([
-            ':manaCost'       => $calculation->finalManaCost,
-            ':circle'         => $calculation->circle,
-            ':mathFingerprint' => $mathFingerprint,
-            ':updatedAt'      => gmdate('Y-m-d\TH:i:s\Z'),
-            ':spellId'        => $spellId,
-            ':authorId'       => $author->getId(),
-        ]);
+        // El ciclo de vida NO se escribe aquí (Tarea 1.5 de TASKS-08):
+        // `spells.status` y `spells.signatures_count` son el ESPEJO del
+        // expediente de moderación, y su único escritor es
+        // SpellReviewRepository. Esta consulta solo revalida la matemática
+        // —el maná publicado es el del backend (Art. II)— y deja el estado
+        // como estaba: `draft`. El expediente es quien lo eleva después.
+        $originClanId = (string) ($quantitativeRow['clan_id'] ?? '');
+        $publishedAt  = gmdate('Y-m-d\TH:i:s\Z');
+
+        $this->pdo->beginTransaction();
+
+        try {
+            $publishStatement = $this->pdo->prepare(
+                "UPDATE spells
+                 SET mana_cost = :manaCost,
+                     circle = :circle,
+                     math_fingerprint = :mathFingerprint,
+                     updated_at = :updatedAt
+                 WHERE id = :spellId AND author_id = :authorId AND status = 'draft'"
+            );
+            $publishStatement->execute([
+                ':manaCost'        => $calculation->finalManaCost,
+                ':circle'          => $calculation->circle,
+                ':mathFingerprint' => $mathFingerprint,
+                ':updatedAt'       => $publishedAt,
+                ':spellId'         => $spellId,
+                ':authorId'        => $author->getId(),
+            ]);
+
+            // La autoridad habla: el expediente nace en deliberación con cero
+            // firmas y arrastra consigo el espejo, dentro de esta transacción.
+            $this->reviewRepository->createOrUpdateReview(
+                'rev_' . $spellId,
+                $spellId,
+                $author->getId(),
+                SpellReviewRepository::STATUS_EXPERIMENTAL,
+                $mathFingerprint,
+                $originClanId === '' ? null : $originClanId,
+                0,
+                $publishedAt
+            );
+
+            $this->pdo->commit();
+        } catch (Throwable $failure) {
+            $this->pdo->rollBack();
+
+            throw $failure;
+        }
 
         return [
             'id'              => $spellId,

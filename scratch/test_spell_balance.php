@@ -43,6 +43,7 @@ require __DIR__ . '/../src/Models/User.php';
 require __DIR__ . '/../src/Models/AuditEntry.php';
 require __DIR__ . '/../src/Services/AuditLogPage.php';
 require __DIR__ . '/../src/Services/AuditService.php';
+require __DIR__ . '/../src/Repositories/SpellReviewRepository.php';
 require __DIR__ . '/../src/Services/SpellManagementService.php';
 
 use Grimorio\Dto\SpellCalculationInputDto;

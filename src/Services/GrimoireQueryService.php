@@ -78,8 +78,15 @@ final class GrimoireQueryService
 
     /**
      * MIS ENSAYOS ARCENOS (RF-01.4): los conjuros propios del autor
-     * autenticado en estado `draft` o `experimental`, con aislamiento
-     * estricto por titular (nadie ajeno los consulta jamás).
+     * autenticado en estado `draft`, `experimental` o `rejected`, con
+     * aislamiento estricto por titular (nadie ajeno los consulta jamás).
+     *
+     * El quinto estado entró aquí con el canon de SPEC-08 (Tarea 1.5 de
+     * TASKS-08): un Dictamen de Objeción devuelve la obra a la libreta de su
+     * autor (RF-02.6), y sin `rejected` en esta lista el conjuro vetado
+     * desaparecería de su propio grimorio —el autor no podría leer la
+     * objeción ni subsanarla (RF-06.2)—. El destierro soberano (`archived`)
+     * queda fuera a propósito: no hay enmienda para una obra desterrada.
      *
      * @param int|null $circle  Círculo Arcano de filtrado (1-5) o null.
      * @param string|null $element Afinidad elemental canónica o null.
@@ -95,7 +102,7 @@ final class GrimoireQueryService
     public function getAuthorEssays(User $author, ?int $circle, ?string $element, int $page, int $limit): array
     {
         return $this->queryPagedPages(
-            statusFilter: ['draft', 'experimental'],
+            statusFilter: ['draft', 'experimental', 'rejected'],
             authorId: $author->getId(),
             circle: $circle,
             element: $element,

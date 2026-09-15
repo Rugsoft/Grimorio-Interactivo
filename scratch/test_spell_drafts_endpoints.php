@@ -43,6 +43,7 @@ require __DIR__ . '/../src/Models/AuditEntry.php';
 require __DIR__ . '/../src/Services/AuditLogPage.php';
 require __DIR__ . '/../src/Services/AuditService.php';
 require __DIR__ . '/../src/Exceptions/SpellNotFoundException.php';
+require __DIR__ . '/../src/Repositories/SpellReviewRepository.php';
 require __DIR__ . '/../src/Services/SpellManagementService.php';
 require __DIR__ . '/../src/Core/Response.php';
 require __DIR__ . '/../src/Core/Request.php';

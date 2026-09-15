@@ -153,7 +153,20 @@ $checkSql = is_string($checks) ? $checks : '';
 assertArcane(str_contains($checkSql, 'CHECK (mana_cost >= 0 AND mana_cost <= 200)'), 'CHECK mana_cost entre 0 y 200 (techo de Sobrecarga Arcana)');
 assertArcane(str_contains($checkSql, 'CHECK (circle >= 1 AND circle <= 5)'), 'CHECK circle entre 1 y 5 (Círculos Arcanos)');
 assertArcane(str_contains($checkSql, "CHECK (signatures_count >= 0 AND signatures_count <= 3)"), 'CHECK signatures_count entre 0 y 3 (moderación en 2 pasos)');
-assertArcane(str_contains($checkSql, "status IN ('draft', 'experimental', 'validated')"), "CHECK status porta el canon 'draft', 'experimental', 'validated'");
+// El CHECK de estado se ensanchó con el canon de SPEC-08 (Tarea 1.5 de TASKS-08):
+// `spells.status` es el ESPEJO de `spell_reviews.status`, que declara los cinco
+// estados de RF-01.1. Los tres de TASKS-04 siguen ahí, en su orden original.
+assertArcane(
+    str_contains($checkSql, "status IN ('draft', 'experimental', 'validated', 'rejected', 'archived')"),
+    "CHECK status porta los CINCO estados del canon: 'draft', 'experimental', 'validated', 'rejected', 'archived'"
+);
+// Autoridad y espejo han de hablar con UNA sola voz: si los dos CHECK se
+// separaran, el espejo no podría repetir un estado que la autoridad declarase.
+$reviewSql = (string) $pdo->query("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'spell_reviews'")->fetchColumn();
+assertArcane(
+    str_contains($reviewSql, "status IN ('draft', 'experimental', 'validated', 'rejected', 'archived')"),
+    'La AUTORIDAD (`spell_reviews.status`) declara exactamente el mismo canon de cinco estados que su espejo'
+);
 assertArcane(str_contains($checkSql, "crowd_control_type IN ('none', 'slow', 'root', 'stun')"), 'CHECK crowd_control_type con los 4 modos del plan');
 assertArcane(str_contains($checkSql, "range_type IN ('touch', 'short', 'medium', 'long')"), 'CHECK range_type con los 4 alcances del plan');
 assertArcane(str_contains($checkSql, "area_type IN ('singleTarget', 'cone', 'line', 'sphere')"), 'CHECK area_type con las 4 geometrías del plan');

@@ -245,10 +245,26 @@ CREATE TABLE IF NOT EXISTS spells (
     has_verbal            INTEGER NOT NULL DEFAULT 0 CHECK (has_verbal IN (0, 1)),  -- Componente atenuador verbal (-10%)
     has_somatic           INTEGER NOT NULL DEFAULT 0 CHECK (has_somatic IN (0, 1)), -- Componente atenuador somático (-10%)
     has_material          INTEGER NOT NULL DEFAULT 0 CHECK (has_material IN (0, 1)),-- Componente atenuador material (-10%)
+    -- ESPEJO denormalizado del ciclo de vida (TASKS-08, Tarea 1.5). La
+    -- AUTORIDAD es `spell_reviews.status`, que declara los cinco estados
+    -- canónicos de SPEC-08 RF-01.1; esta columna los repite para que el Tomo
+    -- Canónico, el Atrio y la libreta del autor se consulten sin cruzar el
+    -- expediente en cada página. Su ÚNICO escritor es
+    -- `SpellReviewRepository`, dentro de la misma transacción que el
+    -- expediente, de modo que el espejo no puede desviarse de la autoridad.
+    -- Un conjuro que aún no ha entrado a moderación —un borrador— no tiene
+    -- expediente y esta columna sostiene su estado embrionario.
     status                TEXT NOT NULL DEFAULT 'draft'
-                          CHECK (status IN ('draft', 'experimental', 'validated')),  -- Ciclo de vida completo (TASKS-04)
+                          CHECK (status IN ('draft', 'experimental', 'validated', 'rejected', 'archived')),  -- Ciclo de vida completo (TASKS-08, RF-01.1)
     validation_signatures_count INTEGER NOT NULL DEFAULT 0 CHECK (validation_signatures_count >= 0),
-    signatures_count      INTEGER NOT NULL DEFAULT 0 CHECK (signatures_count >= 0 AND signatures_count <= 3), -- Firmas de Maestros 0/3 (TASKS-04); la columna génesis validation_signatures_count se conserva por compatibilidad hasta SPEC-08
+    -- ESPEJO denormalizado del contador de firmas vivas (TASKS-08, Tarea 1.5):
+    -- la AUTORIDAD es `spell_reviews.signatures_count`, mantenida por
+    -- `SpellReviewRepository` y verificable contra las firmas reales de
+    -- `master_signatures`. Mismo ÚNICO escritor que la columna `status`.
+    -- `validation_signatures_count` NO compite con este contador: es el
+    -- vestigio congelado del aforo génesis de TASKS-04, jamás escrito tras
+    -- las semillas, y forma parte del contrato JSON público de SPEC-04.
+    signatures_count      INTEGER NOT NULL DEFAULT 0 CHECK (signatures_count >= 0 AND signatures_count <= 3), -- Firmas de Maestros 0/3 (TASKS-08, RF-02.1)
     is_genesis_sample     INTEGER NOT NULL DEFAULT 0 CHECK (is_genesis_sample IN (0, 1)),  -- Pergamino Primordial (RF-01.3)
     created_at            TEXT NOT NULL,                  -- Nacimiento del conjuro (ISO 8601 UTC)
     updated_at            TEXT NOT NULL,                  -- Última modificación (ISO 8601 UTC, TASKS-04)

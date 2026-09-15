@@ -4,10 +4,9 @@
  * SpellReviewRepository.php — Persistencia PDO del expediente de moderación
  * de cada conjuro (SPEC-08, Tarea 1.2).
  *
- * Cubre: RF-01.1 (los cinco estados canónicos), RF-01.2 (cupo de tres
- * conjuros en deliberación), RF-01.5 (liberación de cupo), RF-01.6 (letargo
- * de 90 días), RF-02.1 (conteo de firmas 0/3), RF-05.1 (cola del Atrio),
- * RNF-01 (determinismo auditable) y RNF-02 (concurrencia sin carrera).
+ * Cubre: RF-01.1 (los cinco estados), RF-01.2 (cupo de tres), RF-01.5
+ * (liberación de cupo), RF-01.6 (letargo de 90 días), RF-02.1 (firmas 0/3),
+ * RF-05.1 (cola del Atrio), RNF-01 (determinismo) y RNF-02 (sin carreras).
  *
  * Constitución:
  *   - Art. I (Dogma Vanilla): PDO nativo, 100% consultas preparadas con
@@ -32,7 +31,9 @@
  * (relación 1:1, `UNIQUE (spell_id)` en la Tarea 1.1). Toda la vida de la
  * obra —envío, retirada, objeción, re-apertura y destierro— se escribe
  * mutando esa única fila, de modo que la cola, el cupo del autor y el
- * contador de firmas jamás pueden leerse de dos lugares distintos.
+ * contador de firmas jamás pueden leerse de dos lugares distintos. Este
+ * repositorio es además el ÚNICO escritor del espejo `spells.status` /
+ * `spells.signatures_count` (Tarea 1.5).
  */
 
 declare(strict_types=1);
@@ -48,6 +49,16 @@ use Throwable;
 
 /**
  * Repositorio del expediente de moderación: estado, firmas y cola.
+ *
+ * ESPEJO denormalizado de `spells` (Tarea 1.5): `spells.status` y
+ * `spells.signatures_count` repiten el estado y el contador del expediente
+ * para que el Tomo Canónico, el Atrio y la libreta del autor se consulten sin
+ * cruzar `spell_reviews` en cada página. Este repositorio es su ÚNICO
+ * escritor, y lo hace SIEMPRE dentro de la misma transacción que el
+ * expediente: o ambas caras de la verdad cambian a la vez, o ninguna. Un
+ * conjuro que nunca ha entrado a moderación no tiene expediente, y entonces
+ * el espejo sostiene su estado embrionario (`draft`); en cuanto la autoridad
+ * habla, el espejo la sigue sin voz propia.
  */
 final class SpellReviewRepository
 {
@@ -266,6 +277,9 @@ final class SpellReviewRepository
                 );
             }
 
+            // El espejo sigue a la autoridad en el mismo aliento transaccional.
+            $this->mirrorSpellLifecycle($spellId, $review['status'], $review['signatures_count']);
+
             return $review;
         });
     }
@@ -390,32 +404,40 @@ final class SpellReviewRepository
 
         $timestampColumn = self::STATUS_TIMESTAMP_COLUMNS[$status];
 
-        if ($occurredAtUtc === null) {
-            $statement = $this->pdo->prepare(
-                'UPDATE spell_reviews
-                    SET status = :status
-                  WHERE spell_id = :spellId'
-            );
-            $statement->execute([':status' => $status, ':spellId' => $spellId]);
+        return $this->runAtomically(function () use ($spellId, $status, $occurredAtUtc, $timestampColumn): bool {
+            if ($occurredAtUtc === null) {
+                $statement = $this->pdo->prepare(
+                    'UPDATE spell_reviews
+                        SET status = :status
+                      WHERE spell_id = :spellId'
+                );
+                $statement->execute([':status' => $status, ':spellId' => $spellId]);
+            } else {
+                // El nombre de la columna sale de la lista cerrada de arriba,
+                // jamás del llamador: ningún valor del exterior se interpola.
+                $statement = $this->pdo->prepare(
+                    'UPDATE spell_reviews
+                        SET status = :status,
+                            ' . $timestampColumn . ' = :occurredAt
+                      WHERE spell_id = :spellId'
+                );
+                $statement->execute([
+                    ':status'     => $status,
+                    ':occurredAt' => $occurredAtUtc,
+                    ':spellId'    => $spellId,
+                ]);
+            }
 
-            return $statement->rowCount() > 0;
-        }
+            if ($statement->rowCount() === 0) {
+                return false;
+            }
 
-        // El nombre de la columna sale de la lista cerrada de arriba, jamás
-        // del llamador: ningún valor del exterior se interpola en el SQL.
-        $statement = $this->pdo->prepare(
-            'UPDATE spell_reviews
-                SET status = :status,
-                    ' . $timestampColumn . ' = :occurredAt
-              WHERE spell_id = :spellId'
-        );
-        $statement->execute([
-            ':status'     => $status,
-            ':occurredAt' => $occurredAtUtc,
-            ':spellId'    => $spellId,
-        ]);
+            // El espejo sigue a la autoridad: quien transiciona el expediente
+            // transiciona el conjuro, y nadie más puede hacerlo.
+            $this->mirrorSpellLifecycle($spellId, $status, null);
 
-        return $statement->rowCount() > 0;
+            return true;
+        });
     }
 
     /**
@@ -433,17 +455,25 @@ final class SpellReviewRepository
     {
         $this->assertSignaturesCount($signaturesCount);
 
-        $statement = $this->pdo->prepare(
-            'UPDATE spell_reviews
-                SET signatures_count = :signaturesCount
-              WHERE spell_id = :spellId'
-        );
-        $statement->execute([
-            ':signaturesCount' => $signaturesCount,
-            ':spellId'         => $spellId,
-        ]);
+        return $this->runAtomically(function () use ($spellId, $signaturesCount): bool {
+            $statement = $this->pdo->prepare(
+                'UPDATE spell_reviews
+                    SET signatures_count = :signaturesCount
+                  WHERE spell_id = :spellId'
+            );
+            $statement->execute([
+                ':signaturesCount' => $signaturesCount,
+                ':spellId'         => $spellId,
+            ]);
 
-        return $statement->rowCount() > 0;
+            if ($statement->rowCount() === 0) {
+                return false;
+            }
+
+            $this->mirrorSpellLifecycle($spellId, null, $signaturesCount);
+
+            return true;
+        });
     }
 
     /**
@@ -641,6 +671,49 @@ final class SpellReviewRepository
         }
 
         return $stale;
+    }
+
+    /**
+     * Escribe el espejo denormalizado de `spells` (Tarea 1.5).
+     *
+     * Es la ÚNICA pluma que toca `spells.status` y `spells.signatures_count`
+     * en todo el santuario, y siempre se invoca dentro de la transacción del
+     * expediente: el espejo no puede quedar a medio actualizar ni desviarse de
+     * la autoridad. Se escribe solo lo que cambia —el estado, el contador o
+     * ambos— para no reescribir `updated_at` ni columnas ajenas al ciclo de
+     * vida; un conjuro inexistente se ignora en silencio, porque el expediente
+     * manda y la clave foránea ya impide revisar una obra que no existe.
+     *
+     * Los nombres de columna salen de esta lista cerrada; los valores del
+     * llamante viajan siempre como parámetros vinculados.
+     *
+     * @param string      $spellId         Conjuro cuyo espejo se sincroniza.
+     * @param string|null $status          Estado canónico a reflejar, o null si no cambia.
+     * @param int|null    $signaturesCount Contador de firmas a reflejar, o null si no cambia.
+     */
+    private function mirrorSpellLifecycle(string $spellId, ?string $status, ?int $signaturesCount): void
+    {
+        $assignments = [];
+        $parameters = [':spellId' => $spellId];
+
+        if ($status !== null) {
+            $assignments[] = 'status = :status';
+            $parameters[':status'] = $status;
+        }
+
+        if ($signaturesCount !== null) {
+            $assignments[] = 'signatures_count = :signaturesCount';
+            $parameters[':signaturesCount'] = $signaturesCount;
+        }
+
+        if ($assignments === []) {
+            return;
+        }
+
+        $statement = $this->pdo->prepare(
+            'UPDATE spells SET ' . implode(', ', $assignments) . ' WHERE id = :spellId'
+        );
+        $statement->execute($parameters);
     }
 
     /** Identificador del expediente de un conjuro, o null si aún no lo tiene. */
