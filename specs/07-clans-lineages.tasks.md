@@ -57,6 +57,7 @@
   * **Alcance:** Implementar `src/Services/WeeklyDominionService.php` con la liquidación de PDA: por Círculo ($100 + C \times 20$), combos de simulador (+10 PDA con techo de 50 PDA diarios reiniciado a las 00:00:00 UTC), favoritos (+5 PDA), atribución de conjuros en moderación al clan originario, y el cierre dominical a las 23:59:59 UTC con resolución de desempate determinista (1º conjuros validados en semana, 2º timestamp), reseteo de puntos semanales a 0 y archivo histórico.
   * **Cubre:** `RF-03.1`, `RF-03.2`, `RF-03.3`, `RF-03.5`, `RF-04.1` a `RF-04.5`, `RF-05.1`, `RNF-01`, `RNF-02`
   * **Hecho cuando:** El cierre semanal dirime empates favoreciendo primero al clan con más conjuros validados en la semana, resetea `weekly_points` a 0 para todos los clanes y añade los puntos al total histórico.
+  * **Ampliación ratificada (TASK-08, RF-04.4, Tarea 2.5 de SPEC-08):** el servicio estrena además `revokeValidatedSpellGlory(spellId, now)`, la operación INVERSA del otorgamiento, que deduce retroactivamente la gloria de un conjuro desterrado con orden de deducción. Su aritmética —el contador que sostiene la gloria, los dos contadores reales como última palabra y la casa que jamás queda en números rojos— queda declarada en el plan (§3.2) y probada por `scratch/test_moderation_sovereign_service.php`.
 
 ---
 

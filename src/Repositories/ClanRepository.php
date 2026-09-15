@@ -53,8 +53,13 @@ final class ClanRepository
     /** Estado canónico de una hermandad en contienda (RF-05.3). */
     private const STATUS_ACTIVE = 'active';
 
-    /** Estado canónico de una hermandad disuelta (Herencia Ancestral). */
-    private const STATUS_ARCHIVED = 'archived';
+    /**
+     * Estado canónico de una hermandad disuelta (Herencia Ancestral).
+     *
+     * Público desde SPEC-08 (RF-03.7): la acreditación de gloria necesita
+     * distinguir una casa en contienda de una disuelta sin repetir el literal.
+     */
+    public const STATUS_ARCHIVED = 'archived';
 
     /** Regímenes de admisión canónicos (RF-01.5). */
     private const ADMISSION_MODES = ['open', 'byApplication'];

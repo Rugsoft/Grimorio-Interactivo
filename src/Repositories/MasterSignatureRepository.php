@@ -74,13 +74,35 @@ final class MasterSignatureRepository
     public const REVOCATION_SOVEREIGN_ARCHIVE = 'sovereign_archive';
 
     /**
-     * Los cinco motivos canónicos de revocación.
+     * La obra caducó por letargo de noventa días sin resonancia (RF-01.6).
+     *
+     * Motivo estrenado por la Tarea 2.3 de TASKS-08: la especificación nombra
+     * los cinco anteriores y el esquema dejó la enumeración ABIERTA —sin
+     * `CHECK`— precisamente para admitir motivos ceremoniales nuevos. Al caer
+     * la obra en letargo, sus avales viejos no pueden sobrevivirla: un aval
+     * solo vive sobre una obra en deliberación, y el contador 0/3 del
+     * expediente tiene que seguir contando firmas VIVAS.
+     */
+    public const REVOCATION_REVIEW_EXPIRED = 'review_expired';
+
+    /**
+     * Un Dictamen de Objeción Fundamentada canceló los avales previos (RF-02.6).
+     *
+     * La obra vetada regresa a la libreta de su autor, y ninguna firma previa
+     * puede sobrevivirla: el aval juzgaba una versión que el veto declaró
+     * inadmisible. Motivo estrenado por la Tarea 2.4 de TASKS-08, hermano del
+     * letargo.
+     */
+    public const REVOCATION_REVIEW_REJECTED = 'review_rejected';
+
+    /**
+     * Los siete motivos canónicos de revocación.
      *
      * La base no los acota con un `CHECK` —a diferencia del techo de firmas o
      * de la huella de 64 caracteres— porque un motivo nuevo es una decisión de
-     * gobierno, no una corrupción del datos; pero el repositorio solo admite
-     * los cinco que la especificación declara, de modo que una revocación
-     * siempre puede contarse en la bitácora sin inventar taxonomía.
+     * gobierno, no una corrupción de los datos; este repositorio acota la lista
+     * a los motivos RATIFICADOS por las especificaciones, de modo que una
+     * revocación siempre puede contarse en la bitácora sin inventar taxonomía.
      */
     public const CANONICAL_REVOCATION_REASONS = [
         self::REVOCATION_RETRACTED,
@@ -88,6 +110,8 @@ final class MasterSignatureRepository
         self::REVOCATION_RANK_LOST,
         self::REVOCATION_AUTHOR_WITHDRAWN,
         self::REVOCATION_SOVEREIGN_ARCHIVE,
+        self::REVOCATION_REVIEW_EXPIRED,
+        self::REVOCATION_REVIEW_REJECTED,
     ];
 
     /**

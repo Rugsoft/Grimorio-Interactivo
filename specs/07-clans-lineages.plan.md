@@ -328,6 +328,12 @@ ALGORITMO computeDominionPoints(actionType, spellCircle, spellElement, clanLinea
     }
 ```
 
+> **Ampliación ratificada (TASK-08, RF-04.4 de SPEC-08, Tarea 2.5).** La operación INVERSA del otorgamiento vive en este mismo servicio, junto a su espejo, porque es el mismo contador y el mismo libro: `WeeklyDominionService::revokeValidatedSpellGlory(spellId, now): DominionReversalDto` deduce retroactivamente la gloria que un conjuro fraudulento otorgó a su linaje cuando el Administrador Supremo lo destierra con orden de deducción. Una segunda aritmética de la gloria —implementada en SPEC-08— podría divergir de la primera sin que nadie lo note, de modo que SPEC-08 compone este motor igual que compuso el de la consagración en su Tarea 2.4.
+>
+> La deducción lee el asiento original del libro (`spellValidated` + conjuro, único por `UNIQUE (action_type, source_id)`) y descuenta del contador que REALMENTE sostiene esa gloria: el haber perpetuo si un cierre dominical posterior a la acreditación ya la plegó o si la casa estaba ya disuelta —Herencia Ancestral de RF-03.7—, y el marcador semanal en cualquier otro caso. Los contadores reales tienen la última palabra: se drena primero el designado y después el otro, y la casa NUNCA queda en números rojos, porque la gloria no se debe; la parte que ningún contador alcanza a cubrir viaja en el recibo (`outstandingPoints`) y en la memoria de la Bitácora de SPEC-08.
+>
+> La deducción NO se inscribe como asiento de `dominion_awards`: el diario registra MÉRITOS —su `CHECK` exige importes positivos y su `UNIQUE` impide pagar dos veces el mismo— y una sentencia no es un mérito. El veredicto vive en `sovereign_decrees` con su Edicto Imperial (RF-04.5) y su efecto en la Bitácora inmutable (Art. III.3). El `CHECK` de `action_type` no se toca, y ninguna de las garantías de esta especificación queda alterada: la gloria sigue pagándose una sola vez por mérito y el cierre dominical sigue plegando los contadores sin contar dos veces la misma gloria.
+
 ---
 
 ### 3.3 Algoritmo de Cierre Semanal Dominical y Desempate Determinista

@@ -39,6 +39,12 @@ final class SpellImmutableException extends RuntimeException
     /** Plantilla del mensaje solemne (RF-06.2). */
     private const CEREMONIAL_LEGEND = 'Un conjuro validado es patrimonio inmutable del grimorio y no puede alterarse: su evolución exige forjar una Variante propia.';
 
+    /**
+     * Leyenda de la obra desterrada: el archivo póstumo tampoco se enmienda
+     * (SPEC-08, RF-04.4).
+     */
+    private const ARCHIVED_LEGEND = 'Una obra desterrada del canon duerme en el archivo póstumo y jamás se enmienda: solo un decreto soberano podría rescatarla.';
+
     /** Identificador del conjuro protegido (para trazabilidad y auditoría). */
     private string $spellId;
 
@@ -54,6 +60,15 @@ final class SpellImmutableException extends RuntimeException
     public static function forValidatedSpell(string $spellId): self
     {
         return new self(self::CEREMONIAL_LEGEND, $spellId);
+    }
+
+    /**
+     * Obra desterrada del canon: el archivo póstumo es igual de inviolable
+     * que la consagración (SPEC-08, RF-04.4).
+     */
+    public static function forArchivedSpell(string $spellId): self
+    {
+        return new self(self::ARCHIVED_LEGEND, $spellId);
     }
 
     /**

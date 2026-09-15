@@ -27,6 +27,8 @@ declare(strict_types=1);
 
 namespace Grimorio\Services;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use Grimorio\Dto\SpellCalculationInputDto;
 use Grimorio\Dto\SpellCreateDto;
 use Grimorio\Exceptions\DraftQuotaExceededException;
@@ -693,8 +695,43 @@ final class SpellManagementService
      *
      * @throws RuntimeException Si el borrador no existe, es ajeno al
      *         invocante o ya no está en estado 'draft'.
+     *
+     * Puerta HISTÓRICA de SPEC-04: conserva su contrato íntegro y solo añade
+     * el control transaccional. El gesto interno vive en
+     * publishDraftWithinTransaction(), de modo que quien deba gobernar además
+     * el cupo de la Torre dentro de la MISMA transacción (SPEC-08,
+     * ModerationWorkflowService) reutilice este flujo sin duplicar la
+     * matemática publicada.
      */
     public function publishToExperimental(User $author, string $spellId): array
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $publication = $this->publishDraftWithinTransaction($author, $spellId);
+            $this->pdo->commit();
+        } catch (Throwable $failure) {
+            $this->pdo->rollBack();
+
+            throw $failure;
+        }
+
+        return $publication;
+    }
+
+    /**
+     * Núcleo de la publicación, SIN control transaccional propio: revalida la
+     * matemática persistida, la graba en `spells` y crea el expediente —que
+     * arrastra el espejo del ciclo de vida— dentro de la transacción del
+     * LLAMANTE. Así el mismo flujo sirve a la publicación aislada de SPEC-04 y
+     * a la elevación con cupo de SPEC-08, sin dos copias del coste publicado.
+     *
+     * @return array{id: string, status: string, manaCost: int, circle: int, mathFingerprint: string, signaturesCount: int}
+     *
+     * @throws RuntimeException Si el borrador no existe, es ajeno al
+     *         invocante o ya no está en estado 'draft'.
+     */
+    public function publishDraftWithinTransaction(User $author, string $spellId, ?DateTimeImmutable $now = null): array
     {
         // Titularidad y estado: SOLO el autor publica, y SOLO un draft.
         // Inexistente/ajeno → 404 canónico; ya publicado → RuntimeException
@@ -752,47 +789,39 @@ final class SpellManagementService
         // —el maná publicado es el del backend (Art. II)— y deja el estado
         // como estaba: `draft`. El expediente es quien lo eleva después.
         $originClanId = (string) ($quantitativeRow['clan_id'] ?? '');
-        $publishedAt  = gmdate('Y-m-d\TH:i:s\Z');
+        $publishedAt  = ($now ?? new DateTimeImmutable('now', new DateTimeZone('UTC')))
+            ->setTimezone(new DateTimeZone('UTC'))
+            ->format('Y-m-d\TH:i:s\Z');
 
-        $this->pdo->beginTransaction();
+        $publishStatement = $this->pdo->prepare(
+            "UPDATE spells
+             SET mana_cost = :manaCost,
+                 circle = :circle,
+                 math_fingerprint = :mathFingerprint,
+                 updated_at = :updatedAt
+             WHERE id = :spellId AND author_id = :authorId AND status = 'draft'"
+        );
+        $publishStatement->execute([
+            ':manaCost'        => $calculation->finalManaCost,
+            ':circle'          => $calculation->circle,
+            ':mathFingerprint' => $mathFingerprint,
+            ':updatedAt'       => $publishedAt,
+            ':spellId'         => $spellId,
+            ':authorId'        => $author->getId(),
+        ]);
 
-        try {
-            $publishStatement = $this->pdo->prepare(
-                "UPDATE spells
-                 SET mana_cost = :manaCost,
-                     circle = :circle,
-                     math_fingerprint = :mathFingerprint,
-                     updated_at = :updatedAt
-                 WHERE id = :spellId AND author_id = :authorId AND status = 'draft'"
-            );
-            $publishStatement->execute([
-                ':manaCost'        => $calculation->finalManaCost,
-                ':circle'          => $calculation->circle,
-                ':mathFingerprint' => $mathFingerprint,
-                ':updatedAt'       => $publishedAt,
-                ':spellId'         => $spellId,
-                ':authorId'        => $author->getId(),
-            ]);
-
-            // La autoridad habla: el expediente nace en deliberación con cero
-            // firmas y arrastra consigo el espejo, dentro de esta transacción.
-            $this->reviewRepository->createOrUpdateReview(
-                'rev_' . $spellId,
-                $spellId,
-                $author->getId(),
-                SpellReviewRepository::STATUS_EXPERIMENTAL,
-                $mathFingerprint,
-                $originClanId === '' ? null : $originClanId,
-                0,
-                $publishedAt
-            );
-
-            $this->pdo->commit();
-        } catch (Throwable $failure) {
-            $this->pdo->rollBack();
-
-            throw $failure;
-        }
+        // La autoridad habla: el expediente nace en deliberación con cero
+        // firmas y arrastra consigo el espejo, dentro de esta transacción.
+        $this->reviewRepository->createOrUpdateReview(
+            'rev_' . $spellId,
+            $spellId,
+            $author->getId(),
+            SpellReviewRepository::STATUS_EXPERIMENTAL,
+            $mathFingerprint,
+            $originClanId === '' ? null : $originClanId,
+            0,
+            $publishedAt
+        );
 
         return [
             'id'              => $spellId,

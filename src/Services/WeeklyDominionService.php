@@ -12,6 +12,12 @@
  * Cubre: RF-03.1, RF-03.2, RF-03.3, RF-03.5, RF-04.1 a RF-04.5, RF-05.1,
  * RNF-01 y RNF-02.
  *
+ * Ampliación de SPEC-08 (Tarea 2.5): RF-04.4 faculta al Administrador Supremo
+ * a deducir RETROACTIVAMENTE los PDA que un conjuro fraudulento otorgó a su
+ * linaje. La operación inversa vive aquí, junto al otorgamiento, porque es el
+ * mismo contador y el mismo libro: una deducción implementada en otro servicio
+ * sería una segunda aritmética de la gloria, capaz de divergir de la primera.
+ *
  * Constitución:
  *   - Art. I (Dogma Vanilla): PDO nativo, cero librerías; ninguna gloria se
  *     acredita sin dejar su asiento en el libro, y ambos movimientos viajan
@@ -35,6 +41,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Grimorio\Dto\ClanDto;
 use Grimorio\Dto\DominionAwardDto;
+use Grimorio\Dto\DominionReversalDto;
 use Grimorio\Dto\WeeklyCycleDto;
 use Grimorio\Exceptions\ClanGovernanceException;
 use Grimorio\Exceptions\SpellNotFoundException;
@@ -127,6 +134,13 @@ final class WeeklyDominionService
         $hasSynergy = $this->lineageService->hasSynergy($clanLineage, $element);
         $awardedPoints = $this->lineageService->applySynergy($basePoints, $clanLineage, $element);
 
+        // ¿Se disolvió el linaje durante la revisión? (RF-03.7 de SPEC-08) La
+        // casa disuelta conserva su vinculación histórica y su gloria eterna,
+        // pero deja de disputar el Dominio semanal.
+        $originClan = $this->clanRepository->findById($clanId);
+        $isAncestralHeritage = $originClan !== null
+            && (string) ($originClan['status'] ?? '') === ClanRepository::STATUS_ARCHIVED;
+
         $receipted = $this->runAtomically(function () use (
             $clanId,
             $authorId,
@@ -134,7 +148,8 @@ final class WeeklyDominionService
             $awardedPoints,
             $hasSynergy,
             $spellId,
-            $nowUtc
+            $nowUtc,
+            $isAncestralHeritage
         ): bool {
             $inscribed = $this->recordAward(
                 $this->newIdentifier('awd'),
@@ -150,6 +165,17 @@ final class WeeklyDominionService
 
             if (!$inscribed) {
                 return false;
+            }
+
+            if ($isAncestralHeritage) {
+                // El clan se disolvió durante la revisión (RF-03.7 de SPEC-08):
+                // la casa ya no compite por el Dominio semanal, así que su
+                // gloria se inscribe DIRECTAMENTE en el haber perpetuo. Sin
+                // este ramal, una casa disuelta seguiría figurando en la
+                // contienda semanal que ya no disputa.
+                $this->clanRepository->addWeeklyAndHistoricalPoints($clanId, 0, $awardedPoints, $nowUtc);
+
+                return true;
             }
 
             // Durante la contienda solo se acredita el marcador semanal: el
@@ -176,6 +202,205 @@ final class WeeklyDominionService
             hasSynergy: $hasSynergy,
             awardedAt: $nowUtc,
         );
+    }
+
+    /**
+     * Deduce RETROACTIVAMENTE la gloria que un conjuro otorgó a su linaje
+     * (RF-04.4 de SPEC-08, Tarea 2.5).
+     *
+     * La operación es el espejo exacto de `awardValidatedSpell()`: se lee el
+     * asiento original del libro (`spellValidated` + conjuro) para conocer el
+     * importe y el linaje, y se descuenta del contador que REALMENTE sostiene
+     * esa gloria. El contador se designa así:
+     *
+     *   1. Si un cierre dominical posterior a la acreditación ya plegó el
+     *      marcador semanal sobre el haber perpetuo, la gloria vive en
+     *      `historical_points`.
+     *   2. Si la casa estaba YA disuelta cuando acreditó, recibió la gloria como
+     *      Herencia Ancestral, y también vive en `historical_points`.
+     *   3. En cualquier otro caso sigue disputando la contienda de la semana:
+     *      `weekly_points`.
+     *
+     * Los contadores reales mandan sobre esa designación: un decreto anterior
+     * puede haber drenado parte del asiento, de modo que se drena primero el
+     * contador designado y después el otro, y la casa NUNCA queda en números
+     * rojos —la gloria no se debe—. La parte que ningún contador alcance a
+     * cubrir viaja en el recibo como `outstanding`, para que la Bitácora pueda
+     * decir la verdad exacta de lo ocurrido.
+     *
+     * La deducción NO se inscribe como asiento del libro de méritos: un asiento
+     * negativo obligaría a torcer el `CHECK` de `dominion_awards` y el sentido
+     * de un diario que registra MÉRITOS, y una sentencia no es un mérito. El
+     * veredicto vive en `sovereign_decrees` con su Edicto Imperial, su efecto
+     * en la Bitácora inmutable y su aritmética en este recibo (Artículo III.3).
+     *
+     * @param string                 $spellId Conjuro desterrado.
+     * @param DateTimeImmutable|null $now     Instante de la deducción.
+     *
+     * @return DominionReversalDto Recibo con el importe, su reparto y la gloria no cubierta.
+     *
+     * @throws Throwable Si la escritura falla; la deducción se deshace entera.
+     */
+    public function revokeValidatedSpellGlory(string $spellId, ?DateTimeImmutable $now = null): DominionReversalDto
+    {
+        $instant = $this->instant($now);
+        $nowUtc = $this->formatInstant($instant);
+
+        return $this->runAtomically(function () use ($spellId, $nowUtc, $instant): DominionReversalDto {
+            $award = $this->findSpellValidatedAward($spellId);
+            if ($award === null) {
+                // El conjuro nunca pagó gloria: no hubo fraude que descontar.
+                return DominionReversalDto::denied(
+                    $spellId,
+                    DominionReversalDto::REASON_NO_MERIT,
+                    $nowUtc,
+                );
+            }
+
+            $clanId = (string) $award['clan_id'];
+            if ($this->clanRepository->findById($clanId) === null) {
+                return DominionReversalDto::denied(
+                    $spellId,
+                    DominionReversalDto::REASON_CLAN_VANISHED,
+                    $nowUtc,
+                );
+            }
+
+            $debts = $this->drainGloryPointCounters(
+                $clanId,
+                (int) $award['awarded_points'],
+                (string) $award['awarded_at'],
+                $instant,
+            );
+
+            return DominionReversalDto::performed(
+                $spellId,
+                $clanId,
+                $debts['weekly'],
+                $debts['historical'],
+                $debts['outstanding'],
+                $nowUtc,
+            );
+        });
+    }
+
+    /**
+     * Asiento original de la validación de un conjuro, o null si nunca pagó.
+     *
+     * La unicidad `(action_type, source_id)` del libro garantiza que haya a lo
+     * sumo UNA fila: el mérito paga una sola vez y, por tanto, se revoca una
+     * sola vez (RNF-01).
+     *
+     * @return array{clan_id: string, base_points: int, awarded_points: int, awarded_at: string}|null
+     */
+    private function findSpellValidatedAward(string $spellId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT clan_id, base_points, awarded_points, awarded_at
+               FROM dominion_awards
+              WHERE action_type = :actionType
+                AND source_id = :spellId'
+        );
+        $statement->execute([
+            ':actionType' => DominionAwardDto::ACTION_SPELL_VALIDATED,
+            ':spellId'    => $spellId,
+        ]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($row === false) {
+            return null;
+        }
+
+        return [
+            'clan_id'        => (string) $row['clan_id'],
+            'base_points'    => (int) $row['base_points'],
+            'awarded_points' => (int) $row['awarded_points'],
+            'awarded_at'     => (string) $row['awarded_at'],
+        ];
+    }
+
+    /**
+     * Descuenta la gloria del contador que la sostiene y devuelve su reparto.
+     *
+     * @param string            $clanId    Linaje que pierde la gloria.
+     * @param int               $points    Gloria a deducir.
+     * @param string            $awardedAt Marca UTC del asiento original.
+     * @param DateTimeImmutable $instant   Instante de la deducción.
+     *
+     * @return array{weekly: int, historical: int, outstanding: int}
+     */
+    private function drainGloryPointCounters(
+        string $clanId,
+        int $points,
+        string $awardedAt,
+        DateTimeImmutable $instant,
+    ): array {
+        $clan = $this->clanRepository->findById($clanId);
+        if ($clan === null || $points <= 0) {
+            return ['weekly' => 0, 'historical' => 0, 'outstanding' => max(0, $points)];
+        }
+
+        $weekly = (int) ($clan['weekly_points'] ?? 0);
+        $historical = (int) ($clan['historical_points'] ?? 0);
+
+        // El reparto se intenta en el contador que sostiene la gloria y, solo
+        // si no alcanza, en el otro.
+        $order = $this->counterHoldingAward($clanId, $awardedAt) === DominionReversalDto::COUNTER_HISTORICAL
+            ? ['historical' => $historical, 'weekly' => $weekly]
+            : ['weekly' => $weekly, 'historical' => $historical];
+
+        $debts = ['weekly' => 0, 'historical' => 0];
+        $remaining = $points;
+        foreach ($order as $counter => $available) {
+            if ($remaining === 0) {
+                break;
+            }
+
+            $take = min($remaining, max(0, $available));
+            if ($take > 0) {
+                $debts[$counter] = $take;
+                $remaining -= $take;
+            }
+        }
+
+        $this->clanRepository->addWeeklyAndHistoricalPoints(
+            $clanId,
+            -$debts['weekly'],
+            -$debts['historical'],
+            $this->formatInstant($instant),
+        );
+
+        return [
+            'weekly'      => $debts['weekly'],
+            'historical'  => $debts['historical'],
+            'outstanding' => $remaining,
+        ];
+    }
+
+    /**
+     * ¿Qué contador sostiene hoy la gloria acreditada en el instante dado?
+     *
+     * @return string Uno de los dos contadores canónicos del recibo.
+     */
+    private function counterHoldingAward(string $clanId, string $awardedAt): string
+    {
+        // La casa disuelta conserva su gloria como Herencia Ancestral, que se
+        // inscribe DIRECTAMENTE en el haber perpetuo (RF-03.7 de SPEC-08).
+        $clan = $this->clanRepository->findById($clanId);
+        if ($clan !== null && (string) ($clan['status'] ?? '') === ClanRepository::STATUS_ARCHIVED) {
+            return DominionReversalDto::COUNTER_HISTORICAL;
+        }
+
+        // El pliegue dominical mueve el marcador semanal al haber perpetuo: si
+        // alguna semana cerró después de la acreditación, la gloria está allí.
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM weekly_cycles WHERE closed_at >= :awardedAt'
+        );
+        $statement->execute([':awardedAt' => $awardedAt]);
+
+        return (int) $statement->fetchColumn() > 0
+            ? DominionReversalDto::COUNTER_HISTORICAL
+            : DominionReversalDto::COUNTER_WEEKLY;
     }
 
     /**

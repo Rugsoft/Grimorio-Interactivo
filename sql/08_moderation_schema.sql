@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS master_signatures (
     is_revoked         INTEGER NOT NULL DEFAULT 0
                        CHECK (is_revoked IN (0, 1)),        -- 1 si fue retractada o anulada de oficio
     revoked_at         TEXT NULL,                           -- Fecha de revocación
-    revocation_reason  TEXT NULL,                           -- 'retracted' | 'clan_conflict_arisen' | 'rank_lost' | 'author_withdrawn' | 'sovereign_archive'
+    revocation_reason  TEXT NULL,                           -- 'retracted' | 'clan_conflict_arisen' | 'rank_lost' | 'author_withdrawn' | 'sovereign_archive' | 'review_expired' (letargo de RF-01.6) | 'review_rejected' (veto de RF-02.6)
     FOREIGN KEY (spell_id) REFERENCES spells (id) ON DELETE CASCADE,
     FOREIGN KEY (master_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (master_clan_id) REFERENCES clans (id) ON UPDATE CASCADE

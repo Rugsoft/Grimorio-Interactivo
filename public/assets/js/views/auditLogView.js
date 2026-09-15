@@ -114,6 +114,7 @@ export function createAuditLogView(mountRoot, options = {}) {
       SOVEREIGN_VALIDATION: 'Firma Soberana del Cónclave',
       SOVEREIGN_RESCUE: 'Rescate Soberano de una Obra',
       SOVEREIGN_ARCHIVE: 'Destierro Soberano del Canon',
+      SOVEREIGN_POINTS_DEDUCTED: 'Deducción Retroactiva de Gloria',
     };
     return labels[actionType] ?? String(actionType);
   }

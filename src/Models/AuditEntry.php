@@ -72,7 +72,8 @@ final class AuditEntry
         'MODERATION_EXPIRED',         // Caducidad por letargo de noventa días sin resonancia (RF-01.6)
         'SOVEREIGN_VALIDATION',       // Firma Soberana instantánea del Administrador Supremo (RF-04.1)
         'SOVEREIGN_RESCUE',           // Rescate de una obra rechazada, a experimental o a validated (RF-04.3)
-        'SOVEREIGN_ARCHIVE',          // Revocación y archivo póstumo, con deducción de PDA (RF-04.4)
+        'SOVEREIGN_ARCHIVE',          // Revocación y archivo póstumo de una obra consagrada (RF-04.4)
+        'SOVEREIGN_POINTS_DEDUCTED',  // Deducción retroactiva de los PDA del linaje fraudulento (RF-04.4)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

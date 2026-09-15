@@ -433,8 +433,10 @@ final class SpellReviewRepository
             }
 
             // El espejo sigue a la autoridad: quien transiciona el expediente
-            // transiciona el conjuro, y nadie más puede hacerlo.
-            $this->mirrorSpellLifecycle($spellId, $status, null);
+            // transiciona el conjuro, y nadie más puede hacerlo. El instante
+            // viaja para que la consagración quede FECHADA en el espejo: sin
+            // esa fecha, el Libro de Oro ordenaría por un campo vacío.
+            $this->mirrorSpellLifecycle($spellId, $status, null, $occurredAtUtc);
 
             return true;
         });
@@ -691,14 +693,26 @@ final class SpellReviewRepository
      * @param string|null $status          Estado canónico a reflejar, o null si no cambia.
      * @param int|null    $signaturesCount Contador de firmas a reflejar, o null si no cambia.
      */
-    private function mirrorSpellLifecycle(string $spellId, ?string $status, ?int $signaturesCount): void
-    {
+    private function mirrorSpellLifecycle(
+        string $spellId,
+        ?string $status,
+        ?int $signaturesCount,
+        ?string $occurredAtUtc = null,
+    ): void {
         $assignments = [];
         $parameters = [':spellId' => $spellId];
 
         if ($status !== null) {
             $assignments[] = 'status = :status';
             $parameters[':status'] = $status;
+        }
+
+        // La fecha de consagración se espeja con el estado: es la que ordena el
+        // Libro de Oro del linaje (RF-02.3). Solo la consagración la fija; un
+        // destierro posterior la conserva, porque la gloria no se desdice.
+        if ($status === self::STATUS_VALIDATED && $occurredAtUtc !== null) {
+            $assignments[] = 'validated_at = :validatedAt';
+            $parameters[':validatedAt'] = $occurredAtUtc;
         }
 
         if ($signaturesCount !== null) {
