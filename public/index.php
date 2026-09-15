@@ -42,6 +42,9 @@ spl_autoload_register(static function (string $className): void {
 use Grimorio\Controllers\ClanController;
 use Grimorio\Controllers\GrimoireController;
 use Grimorio\Controllers\LineageController;
+use Grimorio\Controllers\MasterDeliberationController;
+use Grimorio\Controllers\ModerationController;
+use Grimorio\Controllers\SovereignAdminController;
 use Grimorio\Controllers\DominionController;
 use Grimorio\Controllers\ElementalMatrixController;
 use Grimorio\Services\ElementalMatrixService;
@@ -58,9 +61,16 @@ use Grimorio\Core\Router;
 use Grimorio\Core\SessionManager;
 use Grimorio\Middleware\AuthMiddleware;
 use Grimorio\Database\Connection;
+use Grimorio\Repositories\ImperialDecreeRepository;
+use Grimorio\Repositories\ObjectionVerdictRepository;
+use Grimorio\Repositories\SpellReviewRepository;
 use Grimorio\Services\AuditService;
 use Grimorio\Services\ClanService;
+use Grimorio\Services\ConstitutionalEthicsValidator;
 use Grimorio\Services\GrimoireQueryService;
+use Grimorio\Services\MasterDeliberationService;
+use Grimorio\Services\ModerationWorkflowService;
+use Grimorio\Services\SovereignAdminService;
 use Grimorio\Services\SpellDiscoveryService;
 use Grimorio\Services\SpellManagementService;
 
@@ -115,6 +125,36 @@ function buildRouter(): Router
             new AuditService($connection->getPdo()),
             new LineageSynergyService(),
         ),
+    );
+
+    // Cónclave de moderación (SPEC-08, Tarea 3.1): el flujo de dos pasos y el
+    // Atrio de Pruebas. `ModerationWorkflowService` es la ÚNICA autoridad del
+    // ciclo de vida, del cupo de tres y del letargo —se construye sobre el
+    // mismo PDO y sobre el canal único de la Bitácora—; el repositorio del
+    // expediente sirve, en lectura, el catálogo público del Atrio.
+    $moderationController = new ModerationController(
+        new ModerationWorkflowService($connection->getPdo()),
+        new SpellReviewRepository($connection->getPdo()),
+    );
+
+    // Torre de Deliberación (SPEC-08, Tarea 3.2): la firma, la retractación y el
+    // dictamen, más la cola con el veredicto del Artículo III ya resuelto por su
+    // autoridad (`ConstitutionalEthicsValidator`, que COMPONE el veto de linaje
+    // de SPEC-07 en lugar de reimplementarlo).
+    $masterDeliberationController = new MasterDeliberationController(
+        new MasterDeliberationService($connection->getPdo()),
+        new SpellReviewRepository($connection->getPdo()),
+        new ConstitutionalEthicsValidator($connection->getPdo()),
+        new ObjectionVerdictRepository($connection->getPdo()),
+    );
+
+    // Cónclave Supremo y letargo arcano (SPEC-08, Tarea 3.3): los tres decretos
+    // de la Firma Soberana y el barrido de caducidad. El sello del cron vive en
+    // GRIMORIO_CRON_SECRET; sin él, el barrido FALLA CERRADO.
+    $sovereignAdminController = new SovereignAdminController(
+        new SovereignAdminService($connection->getPdo()),
+        new ModerationWorkflowService($connection->getPdo()),
+        new ImperialDecreeRepository($connection->getPdo(), new AuditService($connection->getPdo())),
     );
 
     // --- Rutas de la API (base /api/v1) ---
@@ -176,6 +216,30 @@ function buildRouter(): Router
     $router->addRoute('POST', '/api/v1/spells/publish/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->publishSpell($request, $routeParams));
     $router->addRoute('PUT', '/api/v1/spells/experimental/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->updateExperimental($request, $routeParams));
     $router->addRoute('POST', '/api/v1/spells/variant/{id}', fn (Request $request, array $routeParams): Response => $spellCreatorController->createVariant($request, $routeParams));
+
+    // --- Rutas del flujo de dos pasos y del Atrio (SPEC-08, plan Endpoints 1-4) ---
+    // El Atrio es de lectura pública; las tres transiciones exigen vínculo
+    // arcano (401) y el rango y el cupo los dicta el servicio (403/409).
+    $router->addRoute('POST', '/api/v1/moderation/spells/{id}/submit', fn (Request $request, array $routeParams): Response => $moderationController->submit($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/moderation/spells/{id}/withdraw', fn (Request $request, array $routeParams): Response => $moderationController->withdraw($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/moderation/spells/{id}/reopen', fn (Request $request, array $routeParams): Response => $moderationController->reopen($request, $routeParams));
+    $router->addRoute('GET', '/api/v1/moderation/experimental', fn (Request $request): Response => $moderationController->experimental($request));
+
+    // --- Rutas de la Torre de Deliberación (SPEC-08, plan Endpoints 5-8) ---
+    // La cola es exclusiva de Maestros y Administrador Supremo; las tres
+    // acciones exigen el rango `master` y el veto ético lo dicta el servicio.
+    $router->addRoute('GET', '/api/v1/moderation/queue', fn (Request $request): Response => $masterDeliberationController->queue($request));
+    $router->addRoute('POST', '/api/v1/moderation/spells/{id}/sign', fn (Request $request, array $routeParams): Response => $masterDeliberationController->sign($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/moderation/spells/{id}/retract', fn (Request $request, array $routeParams): Response => $masterDeliberationController->retract($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/moderation/spells/{id}/object', fn (Request $request, array $routeParams): Response => $masterDeliberationController->object($request, $routeParams));
+
+    // --- Rutas del Cónclave Supremo y del letargo (SPEC-08, plan Endpoints 9-12) ---
+    // Los tres decretos exigen el rango `supremeAdmin`; el barrido de caducidad
+    // lo invoca el planificador con el sello del custodio, jamas una sesion.
+    $router->addRoute('POST', '/api/v1/moderation/sovereign/validate', fn (Request $request): Response => $sovereignAdminController->validate($request));
+    $router->addRoute('POST', '/api/v1/moderation/sovereign/rescue', fn (Request $request): Response => $sovereignAdminController->rescue($request));
+    $router->addRoute('POST', '/api/v1/moderation/sovereign/archive', fn (Request $request): Response => $sovereignAdminController->archive($request));
+    $router->addRoute('POST', '/api/v1/moderation/cron-check-expiry', fn (Request $request): Response => $sovereignAdminController->cronCheckExpiry($request));
 
     // --- Rutas de autenticación (SPEC-03, plan 2.2, Endpoints 1-5 + renuncia RF-09.1) ---
     $router->addRoute('POST', '/api/v1/auth/consecrate', fn (Request $request): Response => $authController->consecrate($request));

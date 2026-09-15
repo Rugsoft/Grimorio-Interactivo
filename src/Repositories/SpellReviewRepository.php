@@ -139,6 +139,20 @@ final class SpellReviewRepository
     ];
 
     /**
+     * Retrato de la obra que acompaña al expediente en la cola del Atrio y de
+     * la Torre (Tarea 3.1).
+     *
+     * Los nombres son EXACTAMENTE los que `ModerationQueueItemDto::fromDatabaseRow()`
+     * consume: `name` y `slug` de `spells`, `elemental_affinity` y `magic_school`
+     * del conjuro, `author_alias` del firmante y `origin_clan_name` del linaje
+     * patrimonial. El linaje se une con `LEFT JOIN` porque la obra de un
+     * ermitaño no tiene estandarte, y un `INNER JOIN` la haría desaparecer del
+     * Atrio —justo la obra que ningún veto de clan puede alcanzar—.
+     */
+    private const CATALOG_PORTRAIT_COLUMNS = 's.name, s.slug, s.elemental_affinity, s.magic_school, '
+        . 'u.alias AS author_alias, c.name AS origin_clan_name';
+
+    /**
      * Proyección canónica de una revisión (columnas del esquema de SPEC-08,
      * Tarea 1.1). Declarada una sola vez para que toda lectura devuelva
      * exactamente el mismo contrato.
@@ -518,64 +532,27 @@ final class SpellReviewRepository
      * `minSignatures`, `limit` y `offset`. Sin `status` se asume la cola
      * misma, esto es, las obras en `experimental`.
      *
+     * El retrato de la obra (nombre, slug, afinidad, escuela, alias del autor
+     * y nombre del linaje) viaja desde la Tarea 3.1 en la MISMA fila, resuelto
+     * por `JOIN`, para que el Atrio y la Torre compongan sus tarjetas sin una
+     * segunda consulta por elemento ni un `N+1` silencioso.
+     *
      * @param array<string, string|int> $filters Filtros de la consulta.
      *
      * @return list<array{
      *   id: string, spell_id: string, author_id: string, origin_clan_id: string|null,
      *   status: string, signatures_count: int, math_fingerprint: string,
      *   submitted_at: string|null, validated_at: string|null, rejected_at: string|null,
-     *   reopened_at: string|null, archived_at: string|null
+     *   reopened_at: string|null, archived_at: string|null,
+     *   name: string, slug: string|null, elemental_affinity: string,
+     *   magic_school: string, author_alias: string, origin_clan_name: string|null
      * }>
      *
      * @throws InvalidArgumentException Si llega un filtro desconocido o un valor fuera del canon.
      */
     public function findQueueItems(array $filters = []): array
     {
-        foreach (array_keys($filters) as $filterKey) {
-            if (!in_array($filterKey, self::QUEUE_FILTERS, true)) {
-                throw new InvalidArgumentException(
-                    "La cola de deliberación no admite el filtro «{$filterKey}»."
-                );
-            }
-        }
-
-        $conditions = [];
-        $parameters = [];
-        $joinsSpells = false;
-
-        $status = $filters['status'] ?? self::STATUS_EXPERIMENTAL;
-        $this->assertCanonicalStatus((string) $status);
-        $conditions[] = 'r.status = :status';
-        $parameters[':status'] = (string) $status;
-
-        if (array_key_exists('authorId', $filters)) {
-            $conditions[] = 'r.author_id = :authorId';
-            $parameters[':authorId'] = (string) $filters['authorId'];
-        }
-
-        if (array_key_exists('originClanId', $filters)) {
-            $conditions[] = 'r.origin_clan_id = :originClanId';
-            $parameters[':originClanId'] = (string) $filters['originClanId'];
-        }
-
-        if (array_key_exists('elementalAffinity', $filters)) {
-            $joinsSpells = true;
-            $conditions[] = 's.elemental_affinity = :elementalAffinity';
-            $parameters[':elementalAffinity'] = (string) $filters['elementalAffinity'];
-        }
-
-        if (array_key_exists('magicSchool', $filters)) {
-            $joinsSpells = true;
-            $conditions[] = 's.magic_school = :magicSchool';
-            $parameters[':magicSchool'] = (string) $filters['magicSchool'];
-        }
-
-        if (array_key_exists('minSignatures', $filters)) {
-            $minSignatures = (int) $filters['minSignatures'];
-            $this->assertSignaturesCount($minSignatures);
-            $conditions[] = 'r.signatures_count >= :minSignatures';
-            $parameters[':minSignatures'] = $minSignatures;
-        }
+        [$conditions, $parameters] = $this->buildQueueConditions($filters);
 
         $limit = array_key_exists('limit', $filters) ? (int) $filters['limit'] : 0;
         $offset = array_key_exists('offset', $filters) ? (int) $filters['offset'] : 0;
@@ -583,9 +560,11 @@ final class SpellReviewRepository
             throw new InvalidArgumentException('La cola de deliberación no admite paginación negativa.');
         }
 
-        $sql = 'SELECT ' . self::QUALIFIED_REVIEW_COLUMNS . '
-                  FROM spell_reviews r'
-            . ($joinsSpells ? ' JOIN spells s ON s.id = r.spell_id' : '')
+        $sql = 'SELECT ' . self::QUALIFIED_REVIEW_COLUMNS . ', ' . self::CATALOG_PORTRAIT_COLUMNS . '
+                  FROM spell_reviews r
+                  JOIN spells s ON s.id = r.spell_id
+                  JOIN users u ON u.id = r.author_id
+                  LEFT JOIN clans c ON c.id = r.origin_clan_id'
             . ' WHERE ' . implode(' AND ', $conditions)
             . ' ORDER BY r.submitted_at ASC, r.id ASC';
 
@@ -606,10 +585,38 @@ final class SpellReviewRepository
 
         $queue = [];
         foreach ($statement->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $queue[] = $this->hydrate($row);
+            $queue[] = $this->hydrateCatalogItem($row);
         }
 
         return $queue;
+    }
+
+    /**
+     * Censo de la cola: cuántas obras casan con los filtros, sin paginar
+     * (Tarea 3.1).
+     *
+     * Acompaña SIEMPRE a la página que `findQueueItems()` devuelve —el Atrio
+     * declara cuántas obras aguardan y no solo las que caben en la pantalla—
+     * y comparte con ella el mismo constructor de condiciones, para que el
+     * total jamás describa un conjunto distinto del que se está exhibiendo.
+     *
+     * @param array<string, string|int> $filters Filtros de la consulta.
+     *
+     * @throws InvalidArgumentException Si llega un filtro desconocido o un valor fuera del canon.
+     */
+    public function countQueueItems(array $filters = []): int
+    {
+        [$conditions, $parameters] = $this->buildQueueConditions($filters);
+
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*) AS queue_size'
+            . ' FROM spell_reviews r'
+            . ' JOIN spells s ON s.id = r.spell_id'
+            . ' WHERE ' . implode(' AND ', $conditions)
+        );
+        $statement->execute($parameters);
+
+        return (int) $statement->fetchColumn();
     }
 
     /**
@@ -844,7 +851,101 @@ final class SpellReviewRepository
     }
 
     /**
+     * Traduce los filtros de la cola a condiciones SQL con sus parámetros
+     * vinculados (AGENTS.md 6.1: cero concatenación de datos del usuario).
+     *
+     * Se declara UNA sola vez para que la página y su censo no puedan
+     * divergir: dos listas blancas distintas devolverían una página que no
+     * corresponde al total que la acompaña. Las claves de paginación se
+     * admiten pero NO se traducen aquí —acotan la lectura, jamás el censo—.
+     *
+     * @param array<string, string|int> $filters Filtros de la consulta.
+     *
+     * @return array{0: list<string>, 1: array<string, string|int>} Condiciones y parámetros.
+     *
+     * @throws InvalidArgumentException Si llega un filtro desconocido o un valor fuera del canon.
+     */
+    private function buildQueueConditions(array $filters): array
+    {
+        foreach (array_keys($filters) as $filterKey) {
+            if (!in_array($filterKey, self::QUEUE_FILTERS, true)) {
+                throw new InvalidArgumentException(
+                    "La cola de deliberación no admite el filtro «{$filterKey}»."
+                );
+            }
+        }
+
+        $conditions = [];
+        $parameters = [];
+
+        $status = $filters['status'] ?? self::STATUS_EXPERIMENTAL;
+        $this->assertCanonicalStatus((string) $status);
+        $conditions[] = 'r.status = :status';
+        $parameters[':status'] = (string) $status;
+
+        if (array_key_exists('authorId', $filters)) {
+            $conditions[] = 'r.author_id = :authorId';
+            $parameters[':authorId'] = (string) $filters['authorId'];
+        }
+
+        if (array_key_exists('originClanId', $filters)) {
+            $conditions[] = 'r.origin_clan_id = :originClanId';
+            $parameters[':originClanId'] = (string) $filters['originClanId'];
+        }
+
+        // Los filtros de afinidad y escuela son atributos de la OBRA y no del
+        // expediente: el JOIN con `spells` los resuelve.
+        if (array_key_exists('elementalAffinity', $filters)) {
+            $conditions[] = 's.elemental_affinity = :elementalAffinity';
+            $parameters[':elementalAffinity'] = (string) $filters['elementalAffinity'];
+        }
+
+        if (array_key_exists('magicSchool', $filters)) {
+            $conditions[] = 's.magic_school = :magicSchool';
+            $parameters[':magicSchool'] = (string) $filters['magicSchool'];
+        }
+
+        if (array_key_exists('minSignatures', $filters)) {
+            $minSignatures = (int) $filters['minSignatures'];
+            $this->assertSignaturesCount($minSignatures);
+            $conditions[] = 'r.signatures_count >= :minSignatures';
+            $parameters[':minSignatures'] = $minSignatures;
+        }
+
+        return [$conditions, $parameters];
+    }
+
+    /**
+     * Hidrata la tarjeta del Atrio y de la Torre: el expediente canónico más
+     * el retrato de la obra que el JOIN acaba de resolver (Tarea 3.1).
+     *
+     * @param array<string, mixed> $row Fila de la cola con su retrato.
+     *
+     * @return array<string, mixed> Contrato de `ModerationQueueItemDto`.
+     */
+    private function hydrateCatalogItem(array $row): array
+    {
+        $item = $this->hydrate($row);
+
+        $item['name']               = (string) ($row['name'] ?? '');
+        $item['slug']               = isset($row['slug']) && $row['slug'] !== null ? (string) $row['slug'] : null;
+        $item['author_alias']       = (string) ($row['author_alias'] ?? '');
+        $item['origin_clan_name']   = isset($row['origin_clan_name']) && $row['origin_clan_name'] !== null
+            ? (string) $row['origin_clan_name']
+            : null;
+        $item['elemental_affinity'] = (string) ($row['elemental_affinity'] ?? 'none');
+        $item['magic_school']       = (string) ($row['magic_school'] ?? '');
+
+        return $item;
+    }
+
+    /**
      * Proyecta una fila de `spell_reviews` al contrato canónico snake_case.
+     *
+     * Las columnas del retrato de la obra que el `JOIN` añade a la fila —nombre,
+     * `slug`, afinidad, escuela, alias del autor y nombre del linaje— NO se
+     * proyectan aquí: las absorbe `hydrateCatalogItem()`, de modo que este
+     * contrato siga describiendo exactamente lo que el expediente declara.
      *
      * @param array<string, mixed> $row Fila cruda del motor de datos.
      *
