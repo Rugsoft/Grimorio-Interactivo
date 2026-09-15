@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     actor_user_id VARCHAR(36) NOT NULL,          -- Identidad del moderador o admin actuante
     actor_alias VARCHAR(30) NOT NULL,            -- Alias público en el momento de la acción
     actor_role VARCHAR(20) NOT NULL,             -- Rol técnico activo en ese instante
-    action_type VARCHAR(50) NOT NULL,            -- 'SIGN_VALIDATE', 'SIGN_REJECT', 'ADMIN_VETO', 'PROMOTE_MASTER', 'DEMOTE_MASTER', 'CLAN_MODIFY'
+    action_type VARCHAR(50) NOT NULL,            -- 'SIGN_VALIDATE', 'SIGN_REJECT', 'ADMIN_VETO', 'PROMOTE_MASTER', 'DEMOTE_MASTER', 'CLAN_MODIFY', -- catálogo CERRADO de AuditEntry: SPEC-07 lo amplió con los actos de gobierno de hermandades y SPEC-08 con los de la moderación en dos pasos
     target_entity_type VARCHAR(50) NOT NULL,     -- 'spell', 'clan', 'user'
     target_entity_id VARCHAR(36) NOT NULL,
     justification TEXT NOT NULL,                 -- Motivo solemne obligatorio en castellano

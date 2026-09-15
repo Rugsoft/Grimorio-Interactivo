@@ -71,7 +71,17 @@ export function createAuditLogView(mountRoot, options = {}) {
     return track(node);
   }
 
-  /** Etiqueta solemne de cada acción canónica (Art. IV). */
+  /**
+   * Etiqueta solemne de cada acción canónica (Art. IV).
+   *
+   * El mapa ha de cubrir TODO el catálogo de la bitácora: un acto sin etiqueta
+   * se imprimiría en la lengua del código (MODERATION_SUBMITTED), y la
+   * Bitácora es pública —la lee cualquiera—, de modo que dejar caer un
+   * identificador técnico sobre el pergamino sería una grieta del Velo Arcano.
+   * Las acciones de gobierno de linajes y del Dominio Semanal (SPEC-07) y las
+   * de la moderación en dos pasos (SPEC-08) están aquí con su nombre en
+   * castellano.
+   */
   function actionLabel(actionType) {
     const labels = {
       SIGN_VALIDATE: 'Firma de Validación',
@@ -80,6 +90,30 @@ export function createAuditLogView(mountRoot, options = {}) {
       PROMOTE_MASTER: 'Ascenso a Maestro',
       DEMOTE_MASTER: 'Degradación de Maestro',
       CLAN_MODIFY: 'Sello de Linaje',
+      // Actos de gobierno de hermandades (SPEC-07).
+      CLAN_FOUNDED: 'Fundación de Linaje',
+      CLAN_MEMBER_LEFT: 'Partida de un Adepto',
+      CLAN_MEMBER_EXPELLED: 'Expulsión de un Adepto',
+      PATRIARCH_TRANSFERRED: 'Traspaso de la Corona',
+      PATRIARCH_INACTIVITY_SUCCESSION: 'Sucesión por Inactividad',
+      CLAN_ARCHIVED_BY_PATRIARCH: 'Disolución del Linaje',
+      CLAN_ARCHIVED_EMPTY_SUCCESSION: 'Disolución por Orfandad',
+      DOMINION_WEEK_CONCLUDED: 'Cierre de la Semana Arcana',
+      ACC_LINK_RENOUNCED: 'Renuncia al Vínculo de la Cuenta',
+      RESET_SIGNATURES_MATH_CHANGE: 'Reinicio de Firmas por Enmienda Matemática',
+      UPDATE_DESCRIPTION_INTACT_SIGNATURES: 'Enmienda del Pergamino con Firmas Intactas',
+      CREATE_VARIANT_FROM_VALIDATED: 'Variante de una Obra Consagrada',
+      // Actos de la moderación solemne en dos pasos (SPEC-08).
+      MODERATION_SUBMITTED: 'Elevación a Deliberación Arcana',
+      MODERATION_WITHDRAWN: 'Retiro a la Libreta del Autor',
+      MODERATION_REOPENED: 'Reapertura como Borrador',
+      SIGNATURE_RETRACTED: 'Retractación de una Firma',
+      SIGNATURE_ANNULMENT: 'Anulación de Oficio de una Firma',
+      SPELL_CONSECRATED: 'Consagración por Tercera Firma',
+      MODERATION_EXPIRED: 'Caducidad por Letargo Colegiado',
+      SOVEREIGN_VALIDATION: 'Firma Soberana del Cónclave',
+      SOVEREIGN_RESCUE: 'Rescate Soberano de una Obra',
+      SOVEREIGN_ARCHIVE: 'Destierro Soberano del Canon',
     };
     return labels[actionType] ?? String(actionType);
   }

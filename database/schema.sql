@@ -520,3 +520,97 @@ CREATE TABLE IF NOT EXISTS dominion_awards (
 CREATE INDEX IF NOT EXISTS idx_favorites_spell ON favorites (spell_id);
 CREATE INDEX IF NOT EXISTS idx_dominion_awards_clan ON dominion_awards (clan_id, awarded_at);
 CREATE INDEX IF NOT EXISTS idx_dominion_awards_member ON dominion_awards (user_id, clan_id);
+
+
+-- =====================================================================
+-- SISTEMA DE MODERACIÓN SOLEMNE EN DOS PASOS (SPEC-08, Tareas 1.1)
+--
+-- Las cuatro tablas del cónclave viven AQUÍ, en el DDL canónico, y no solo
+-- en `sql/08_moderation_schema.sql`: un esquema repartido entre el DDL raíz
+-- y una migración opcional dejaba sin tablas a toda base levantada solo con
+-- este archivo —fue la fuga que SPEC-07 hubo de cerrar a posteriori—.
+-- Aquel script subsiste como vía de ascensión para bases legadas y su DDL
+-- ha de permanecer idéntico al de esta sección.
+--
+-- Dominio cerrado por la especificación: los cinco estados de RF-01.1, el
+-- techo de tres firmas de RF-02.1, la huella SHA-256 del balance sellado
+-- (Artículo II), la glosa de 250 caracteres de RF-02.2, la justificación
+-- de 20 caracteres de RF-02.5 y RF-04.5 y los cuatro decretos soberanos
+-- de RF-04. La enumeración de `revocation_reason` queda abierta a motivos
+-- ceremoniales nuevos (RF-02.4, RF-03.4, RF-03.5, RF-01.3, RF-04.4).
+-- =====================================================================
+
+-- 1. Seguimiento del estado de moderación (relación 1:1 con `spells`).
+CREATE TABLE IF NOT EXISTS spell_reviews (
+    id                TEXT PRIMARY KEY,                     -- UUID v4 de la revisión
+    spell_id          TEXT NOT NULL UNIQUE,                 -- Relación 1:1 con `spells`
+    author_id         TEXT NOT NULL,                        -- Mago creador de la obra
+    origin_clan_id    TEXT NULL,                            -- Clan patrimonial (o NULL si ermitaño)
+    status            TEXT NOT NULL DEFAULT 'draft'
+                      CHECK (status IN ('draft', 'experimental', 'validated', 'rejected', 'archived')),
+    signatures_count  INTEGER NOT NULL DEFAULT 0
+                      CHECK (signatures_count >= 0 AND signatures_count <= 3),
+    math_fingerprint  TEXT NOT NULL
+                      CHECK (length(math_fingerprint) = 64),  -- SHA-256 hex del balance sellado (Art. II)
+    submitted_at      TEXT NULL,                            -- Entrada a la Torre de Moderación (ISO 8601 UTC)
+    validated_at      TEXT NULL,                            -- Consagración solemne
+    rejected_at       TEXT NULL,                            -- Objeción o caducidad
+    reopened_at       TEXT NULL,                            -- Re-apertura como borrador (RF-01.4)
+    archived_at       TEXT NULL,                            -- Degradación o destierro póstumo (RF-04.4)
+    FOREIGN KEY (spell_id) REFERENCES spells (id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (origin_clan_id) REFERENCES clans (id) ON UPDATE CASCADE
+);
+
+-- 2. Firmas de Maestros y sus glosas litúrgicas (RF-02.1, RF-02.2).
+CREATE TABLE IF NOT EXISTS master_signatures (
+    id                 TEXT PRIMARY KEY,                    -- UUID v4 de la firma
+    spell_id           TEXT NOT NULL,                       -- Conjuro avalado
+    master_id          TEXT NOT NULL,                       -- Maestro firmante
+    master_clan_id     TEXT NULL,                           -- Clan del firmante en el instante de firmar
+    ceremonial_gloss   TEXT NULL
+                       CHECK (ceremonial_gloss IS NULL OR length(ceremonial_gloss) <= 250),  -- Glosa de RF-02.2
+    signed_at          TEXT NOT NULL,                       -- Marca temporal de la firma
+    is_revoked         INTEGER NOT NULL DEFAULT 0
+                       CHECK (is_revoked IN (0, 1)),        -- 1 si fue retractada o anulada de oficio
+    revoked_at         TEXT NULL,                           -- Fecha de revocación
+    revocation_reason  TEXT NULL,                           -- 'retracted' | 'clan_conflict_arisen' | 'rank_lost' | 'author_withdrawn' | 'sovereign_archive'
+    FOREIGN KEY (spell_id) REFERENCES spells (id) ON DELETE CASCADE,
+    FOREIGN KEY (master_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (master_clan_id) REFERENCES clans (id) ON UPDATE CASCADE
+);
+
+-- 3. Dictámenes de objeción fundamentada (RF-02.5, RF-02.6).
+CREATE TABLE IF NOT EXISTS objection_verdicts (
+    id                TEXT PRIMARY KEY,                     -- UUID v4 del dictamen
+    spell_id          TEXT NOT NULL,                        -- Conjuro objetado
+    master_id         TEXT NOT NULL,                        -- Maestro que emitió el veto
+    objection_reason  TEXT NOT NULL
+                      CHECK (length(objection_reason) >= 20),  -- Justificación obligatoria (RF-02.5)
+    objected_at       TEXT NOT NULL,                        -- Marca temporal del dictamen
+    FOREIGN KEY (spell_id) REFERENCES spells (id) ON DELETE CASCADE,
+    FOREIGN KEY (master_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- 4. Decretos del Administrador Supremo (RF-04.1, RF-04.3 a RF-04.5).
+CREATE TABLE IF NOT EXISTS sovereign_decrees (
+    id                    TEXT PRIMARY KEY,                 -- UUID v4 del decreto
+    spell_id              TEXT NOT NULL,                    -- Conjuro sobre el que se decretó
+    admin_id              TEXT NOT NULL,                    -- Administrador Supremo actuante
+    decree_type           TEXT NOT NULL
+                          CHECK (decree_type IN ('sovereignValidation', 'rescueToExperimental', 'rescueToValidated', 'revokeAndArchive')),
+    imperial_decree_text  TEXT NOT NULL
+                          CHECK (length(imperial_decree_text) >= 20),  -- Edicto obligatorio (RF-04.5)
+    decreed_at            TEXT NOT NULL,                    -- Marca temporal del decreto
+    FOREIGN KEY (spell_id) REFERENCES spells (id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- La muralla de RF-02.1 (firma única activa), la cola del Atrio (RF-05.1),
+-- el cupo anti-spam del autor (RF-01.2) y el recuento de firmas vivas.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_active_master_signature
+    ON master_signatures (spell_id, master_id)
+    WHERE is_revoked = 0;
+CREATE INDEX IF NOT EXISTS idx_reviews_queue ON spell_reviews (status, submitted_at ASC);
+CREATE INDEX IF NOT EXISTS idx_reviews_author_active ON spell_reviews (author_id, status);
+CREATE INDEX IF NOT EXISTS idx_signatures_spell_active ON master_signatures (spell_id, is_revoked);

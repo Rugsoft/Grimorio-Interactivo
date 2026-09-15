@@ -56,6 +56,23 @@ final class AuditEntry
         'RESET_SIGNATURES_MATH_CHANGE',
         'UPDATE_DESCRIPTION_INTACT_SIGNATURES',
         'CREATE_VARIANT_FROM_VALIDATED',
+        // Actos de la moderación solemne en dos pasos (TASKS-08, RF-06.1): el
+        // recorrido entero de una obra por el Atrio y la Torre, con su
+        // deliberación, su memoria y sus intervenciones soberanas. La firma de
+        // consagración se inscribe como 'SIGN_VALIDATE' y el Dictamen de
+        // Objeción como 'SIGN_REJECT' —los dos actos que el catálogo de SPEC-03
+        // ya nombraba—; el resto de la vida de la obra estrena nombre propio
+        // para que la bitácora pueda contarse sin ambigüedad.
+        'MODERATION_SUBMITTED',       // Envío de una obra a deliberación (draft -> experimental)
+        'MODERATION_WITHDRAWN',       // Retirada voluntaria a la libreta del autor
+        'MODERATION_REOPENED',        // Re-apertura de una obra rechazada como borrador (RF-01.4)
+        'SIGNATURE_RETRACTED',        // Retractación voluntaria de un aval (RF-02.4)
+        'SIGNATURE_ANNULMENT',        // Anulación de oficio por conflicto sobrevenido o pérdida de rango (RF-03.4, RF-03.5)
+        'SPELL_CONSECRATED',          // Consagración automática al alcanzar la tercera firma (RF-02.3)
+        'MODERATION_EXPIRED',         // Caducidad por letargo de noventa días sin resonancia (RF-01.6)
+        'SOVEREIGN_VALIDATION',       // Firma Soberana instantánea del Administrador Supremo (RF-04.1)
+        'SOVEREIGN_RESCUE',           // Rescate de una obra rechazada, a experimental o a validated (RF-04.3)
+        'SOVEREIGN_ARCHIVE',          // Revocación y archivo póstumo, con deducción de PDA (RF-04.4)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

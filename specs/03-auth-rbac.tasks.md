@@ -22,6 +22,7 @@
   * **Alcance:** Implementar `src/Models/AuditEntry.php` con propiedades tipadas para capturar marcas temporales UTC, identidades de actuantes, rol activo, tipo de acción, entidad objetivo y motivo justificado.
   * **Cubre:** `RF-08.1`, `RNF-02`
   * **Hecho cuando:** Se puede instanciar un objeto `AuditEntry` válido y convertirlo a un array asociativo normalizado para la respuesta JSON de la bitácora.
+  * **Ampliaciones ratificadas:** el catálogo cerrado de `actionType` admite los actos de gobierno de hermandades y del Dominio Semanal que añadió TASK-07 y los diez actos de la moderación solemne en dos pasos que añade TASK-08 (`RF-06.1` de SPEC-08; véase la Ampliación ratificada de `RF-08.2` en `specs/03-auth-rbac.spec.md`). Cada acto nuevo se rotula en castellano en la Bitácora pública (`public/assets/js/views/auditLogView.js`), y un aserto de `scratch/test_moderation_audit_integration.php` exige que no exista acto del catálogo sin nombre.
 
 ---
 
