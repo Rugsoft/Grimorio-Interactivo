@@ -53,6 +53,7 @@ use Grimorio\Services\WeeklyDominionService;
 use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
+use Grimorio\Controllers\AuditController;
 use Grimorio\Controllers\SpellCreatorController;
 use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
@@ -157,6 +158,10 @@ function buildRouter(): Router
         new ImperialDecreeRepository($connection->getPdo(), new AuditService($connection->getPdo())),
     );
 
+    // Bitácora de Auditoría Arcana (SPEC-03, Tarea 3.4): consulta pública y
+    // paginada de los veredictos de moderación y gobierno (RF-08.2).
+    $auditController = new AuditController(new AuditService($connection->getPdo()));
+
     // --- Rutas de la API (base /api/v1) ---
     $router->addRoute('GET', '/api/v1/portal/featured', fn (Request $request): Response => $portalController->featured($request));
     $router->addRoute('GET', '/api/v1/spells', fn (Request $request): Response => $spellController->index($request));
@@ -250,6 +255,10 @@ function buildRouter(): Router
     $router->addRoute('POST', '/api/v1/auth/recovery/request', fn (Request $request): Response => $authController->recoveryRequest($request));
     $router->addRoute('POST', '/api/v1/auth/recovery/reset', fn (Request $request): Response => $authController->recoveryReset($request));
     $router->addRoute('POST', '/api/v1/auth/renounce-account', fn (Request $request): Response => $authController->renounceAccount($request));
+
+    // --- Rutas de la Bitácora de Auditoría (SPEC-03, plan Endpoint 6) ---
+    // Consulta pública y paginada de decisiones solemnes, firmas, vetos y decretos.
+    $router->addRoute('GET', '/api/v1/audit/log', fn (Request $request): Response => $auditController->log($request));
 
     return $router;
 }

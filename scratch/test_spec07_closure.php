@@ -421,7 +421,7 @@ sort($phpSuites);
 sort($mjsSuites);
 
 /** Salidas no-cero que el repositorio declara deliberadas. */
-$byDesignNonZero = ['test_spec07_closure.php', 'test_spell_balance_bridge.php'];
+$byDesignNonZero = ['test_spec07_closure.php', 'test_spec08_closure.php', 'test_spell_balance_bridge.php'];
 
 $totalAsserts = 0;
 $redSuites = [];

@@ -27,12 +27,20 @@
 export const NAV_LINKS = Object.freeze([
   { view: 'landing', hash: '#/', label: 'Inicio' },
   { view: 'library', hash: '#/biblioteca', label: 'Biblioteca de Hechizos' },
+  { view: 'codex', hash: '#/codex', label: 'Códice de Afinidades' },
   { view: 'clans', hash: '#/linajes', label: 'Salón de Linajes' },
   // El Simulador es público: su Tomo Canónico se abre a todo visitante
   // (RF-01.2 de SPEC-05). El tomo privado de Ensayos se guarda en el umbral
   // del orquestador, no en el enlace.
   { view: 'simulator', hash: '#/simulador', label: 'Simulador de Grimorio' },
   { view: 'creator', hash: '#/creador', label: 'Creador de Hechizos', action: 'openCreator' },
+  { view: 'experimentalHall', hash: '#/atrio', label: 'Atrio de Pruebas' },
+  { view: 'auditLog', hash: '#/bitacora', label: 'Bitácora de Auditoría' },
+]);
+
+/** Enlaces restringidos por rol judicial (SPEC-08 RF-05.4, master y supremeAdmin). */
+export const CONDITIONAL_NAV_LINKS = Object.freeze([
+  { view: 'tower', hash: '#/torre', label: 'Torre de Deliberación', requiredRoles: ['master', 'supremeAdmin'] },
 ]);
 
 /** Acciones reservadas que el visitante no puede ejecutar sin vínculo (RF-05.1). */
@@ -56,6 +64,7 @@ export const VISITOR_LINK_ACTIONS = Object.freeze({
 export function createNavbarComponent(navRoot, componentOptions) {
   const {
     isAuthenticated = false,
+    userRole = null,
     onNavigate,
     onReservedAction,
     elementFactory = (tagName) => document.createElement(tagName),
@@ -67,6 +76,7 @@ export function createNavbarComponent(navRoot, componentOptions) {
    * visitante es anónimo, interceptaría el Taller a un erudito ya vinculado.
    */
   let sessionIsAuthenticated = isAuthenticated === true;
+  let currentUserRole = userRole;
 
   /** Elementos del shell cableados en el primer render. */
   let linksList = null;
@@ -175,7 +185,16 @@ export function createNavbarComponent(navRoot, componentOptions) {
       }
     }
 
-    for (const navLink of NAV_LINKS) {
+    const activeLinks = [...NAV_LINKS];
+    if (currentUserRole !== null && currentUserRole !== undefined) {
+      for (const condLink of CONDITIONAL_NAV_LINKS) {
+        if (condLink.requiredRoles.includes(currentUserRole)) {
+          activeLinks.push(condLink);
+        }
+      }
+    }
+
+    for (const navLink of activeLinks) {
       // Fábrica inyectable: el navegador usa document.createElement;
       // las pruebas suministran su DOM simulado.
       const linkElement = elementFactory('a');
@@ -207,21 +226,23 @@ export function createNavbarComponent(navRoot, componentOptions) {
   }
 
   /**
-   * Sincroniza la cabecera con el vínculo vivo (RF-02.1, RF-02.3).
+   * Sincroniza la cabecera con el vínculo vivo y el rol judicial (RF-02.1, RF-02.3, RF-05.4).
    *
-   * Idempotente: si la bandera no cambia, no toca el DOM. Cuando cambia
-   * (sesión que nace o muere), vuelve a pintar la lista —`render()` está
+   * Idempotente: si la bandera y el rol no cambian, no toca el DOM. Cuando cambian
+   * (sesión que nace o muere, o rol que muta), vuelve a pintar la lista —`render()` está
    * declarado idempotente justo para esto— dejando enlaces nuevos con sus
    * manejadores limpios, sin apilar listeners.
    *
    * @param {boolean} isAuthenticated ¿hay vínculo consagrado activo?
+   * @param {string|null} [role=null] Rol técnico del usuario autenticado.
    */
-  function setSession(isAuthenticated) {
+  function setSession(isAuthenticated, role = null) {
     const nextFlag = isAuthenticated === true;
-    if (nextFlag === sessionIsAuthenticated) {
+    if (nextFlag === sessionIsAuthenticated && role === currentUserRole) {
       return;
     }
     sessionIsAuthenticated = nextFlag;
+    currentUserRole = role;
 
     // Si la lista aún no se ha pintado (primer render pendiente), la bandera
     // queda asentada para que el primer render ya nazca con el estado real.

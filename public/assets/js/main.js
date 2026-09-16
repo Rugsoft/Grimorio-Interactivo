@@ -63,9 +63,44 @@ import {
   consecrate as apiConsecrate,
   dissolve as apiDissolve,
   dissolveAll as apiDissolveAll,
+  fetchAuditLog as apiFetchAuditLog,
 } from './api/authClient.js';
+import { createCodexView } from './views/elementalCodexView.js';
+import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
+import { createExperimentalHallView } from './views/experimentalHallView.js';
+import { createMastersTowerView } from './views/mastersTowerView.js';
+import { createModerationClient } from './api/moderationClient.js';
+import { createAuditLogView } from './views/auditLogView.js';
+import { createObjectionModalComponent } from './components/objectionModalComponent.js';
 import { createMemoryBadgeRoot } from './components/userProfileBadge.js';
 import { createConvalescenceBannerComponent } from './components/convalescenceBannerComponent.js';
+
+/** Mapeo canónico de hash de URL a vista de la SPA. */
+export const HASH_TO_VIEW_MAP = Object.freeze({
+  '#/': 'landing',
+  '': 'landing',
+  '#/biblioteca': 'library',
+  '#/codex': 'codex',
+  '#/linajes': 'clans',
+  '#/simulador': 'simulator',
+  '#/creador': 'creator',
+  '#/atrio': 'experimentalHall',
+  '#/torre': 'tower',
+  '#/bitacora': 'auditLog',
+});
+
+/** Mapeo canónico de vista a hash de URL. */
+export const VIEW_TO_HASH_MAP = Object.freeze({
+  landing: '#/',
+  library: '#/biblioteca',
+  codex: '#/codex',
+  clans: '#/linajes',
+  simulator: '#/simulador',
+  creator: '#/creador',
+  experimentalHall: '#/atrio',
+  tower: '#/torre',
+  auditLog: '#/bitacora',
+});
 
 /**
  * Crea la aplicación orquestada.
@@ -111,6 +146,9 @@ export function createGrimoireApp(options = {}) {
     grimoireClient = createGrimoireClient(),
     dominionClient = createDominionClient(),
     clanClient = createClanClient(),
+    elementalMatrixClient = createElementalMatrixClient(),
+    moderationClient = createModerationClient(),
+    auditClient = { fetchAuditLog: apiFetchAuditLog },
     windowRef = globalThis.window,
     documentRef = globalThis.document,
   } = options;
@@ -122,6 +160,9 @@ export function createGrimoireApp(options = {}) {
 
   /** Vista actualmente montada: { name, instance }. */
   let currentView = { name: null, instance: null };
+
+  /** Escucha activa de hashchange para conmutación de vistas por URL. */
+  let windowHashListener = null;
 
   /** Instancias de infraestructura creadas en boot(). */
   let navbar = null;
@@ -297,6 +338,80 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: viewName, instance: simulatorView };
       await simulatorView.render();
+      return;
+    }
+
+    if (viewName === 'codex') {
+      // Códice de Afinidades (SPEC-06, Tarea 5.2): Rueda Rúnica y matriz elemental.
+      const codexView = createCodexView(appRoot, {
+        elementalMatrixClient,
+        elementFactory,
+        document: documentRef,
+      });
+      currentView = { name: viewName, instance: codexView };
+      await codexView.render();
+      return;
+    }
+
+    if (viewName === 'experimentalHall' || viewName === 'atrio') {
+      // Atrio de los Arcanos Experimentales (SPEC-08, Tarea 6.4, RF-05.1).
+      // Contemplación libre: la comunidad prueba conjuros en deliberación.
+      const hallView = createExperimentalHallView(appRoot, {
+        moderationClient,
+        store,
+        onSpellTest: () => {
+          void navigate('simulator');
+        },
+        elementFactory,
+        documentRef,
+      });
+      currentView = { name: 'experimentalHall', instance: hallView };
+      await hallView.render();
+      return;
+    }
+
+    if (viewName === 'tower' || viewName === 'torre') {
+      // Torre de Deliberación (SPEC-08, Tarea 6.4, RF-05.4).
+      // Vista exclusiva de Maestros y Administrador Supremo; RBAC con redirección.
+      const towerView = createMastersTowerView(appRoot, {
+        moderationClient,
+        store,
+        onSignatureIntent: async (spellId) => {
+          await moderationClient?.signSpell?.(spellId);
+        },
+        onObjectionIntent: async (spellId) => {
+          const modal = createObjectionModalComponent(appRoot, {
+            spellId,
+            documentRef,
+          });
+          const verdict = await modal.open();
+          if (verdict?.confirmed && verdict.reason) {
+            await moderationClient?.objectSpell?.(spellId, verdict.reason);
+          }
+        },
+        onAccessDenied: () => {
+          void navigate('library');
+        },
+        elementFactory,
+        documentRef,
+      });
+      currentView = { name: 'tower', instance: towerView };
+      await towerView.render();
+      return;
+    }
+
+    if (viewName === 'auditLog' || viewName === 'bitacora') {
+      // Bitácora de Auditoría Arcana (SPEC-03, Tarea 5.1).
+      // Consulta pública e inmutable de veredictos, firmas, vetos y decretos.
+      const logView = createAuditLogView(appRoot, {
+        auditClient,
+        elementFactory,
+        onNavigate: (target) => {
+          void navigate(target);
+        },
+      });
+      currentView = { name: 'auditLog', instance: logView };
+      await logView.render();
       return;
     }
 
@@ -689,10 +804,12 @@ export function createGrimoireApp(options = {}) {
 
     // Barra de navegación persistente (RF-02.1). Nace con la bandera VIVA
     // del store (checkSession() puede haber resuelto antes del primer
-    // pintado) y se mantiene sincronizada con cada cambio de vínculo.
+    // pintado) y se mantiene sincronizada con cada cambio de vínculo y rol.
     navbarSessionFlag = store.getState().isAuthenticated === true;
+    let navbarRole = store.getState().userRole;
     navbar = createNavbarComponent(navRoot, {
       isAuthenticated: navbarSessionFlag,
+      userRole: navbarRole,
       onNavigate: (viewName) => navigate(viewName),
       onReservedAction: (action) => handleReservedAction(action),
       elementFactory,
@@ -701,16 +818,36 @@ export function createGrimoireApp(options = {}) {
 
     unsubscribeSessionWatch = store.subscribe((nextState) => {
       const nextFlag = nextState.isAuthenticated === true;
-      if (nextFlag === navbarSessionFlag) return;
+      const nextRole = nextState.userRole;
+      if (nextFlag === navbarSessionFlag && nextRole === navbarRole) return;
       navbarSessionFlag = nextFlag;
-      navbar?.setSession(nextFlag);
+      navbarRole = nextRole;
+      navbar?.setSession(nextFlag, nextRole);
     });
 
-    // Enrutado inicial: la ruta por defecto del santuario es la portada.
+    /** Resuelve la vista correspondiente a un hash de navegación (#/...). */
+    function resolveViewFromHash(rawHash) {
+      if (typeof rawHash !== 'string') return null;
+      const hash = rawHash.trim();
+      if (hash.startsWith(SPELL_HASH_PREFIX)) return null;
+      return HASH_TO_VIEW_MAP[hash] ?? null;
+    }
+
+    // Escucha activa de navegación por hash en la ventana (Atrás/Adelante y enlaces directos).
+    windowHashListener = function handleWindowHashChange() {
+      const targetView = resolveViewFromHash(windowRef?.location?.hash);
+      if (targetView !== null && targetView !== currentView.name) {
+        void navigate(targetView);
+      }
+    };
+    windowRef?.addEventListener?.('hashchange', windowHashListener);
+
+    // Enrutado inicial: la ruta por defecto del santuario es la portada,
+    // salvo que la URL porte un hash de vista válido (#/biblioteca, #/atrio, #/torre, #/codex, #/bitacora).
     // Un hash directo #hechizo-slug montará la portada de fondo mientras el
-    // historyManager (resolveInitialHash) despliega la ficha por su cuenta
-    // (criterio 6.1, plan 4.3).
-    await navigate('landing');
+    // historyManager (resolveInitialHash) despliega la ficha por su cuenta (plan 4.3).
+    const initialViewFromHash = resolveViewFromHash(windowRef?.location?.hash);
+    await navigate(initialViewFromHash ?? 'landing');
   }
 
   /**
@@ -722,6 +859,10 @@ export function createGrimoireApp(options = {}) {
     destroyCurrentView();
     errorView?.destroy?.();
     unsubscribeSessionWatch?.();
+    if (windowHashListener !== null && typeof windowRef?.removeEventListener === 'function') {
+      windowRef.removeEventListener('hashchange', windowHashListener);
+      windowHashListener = null;
+    }
     navbar?.destroy?.();
     detailModal?.destroy?.();
     accessModal?.destroy?.();
