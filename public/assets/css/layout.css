@@ -265,10 +265,15 @@ body {
   .site-nav__links {
     display: none;
 
-    /* Al abrirse: panel vertical sobre la cabecera, ancho completo. */
+    /* Al abrirse: panel vertical sobre la cabecera, ancho completo y scroll contenido. */
     position: absolute;
     top: 100%;
     inset-inline: 0;
+    max-height: calc(100vh - 100%);
+    max-height: calc(100dvh - 100%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     flex-direction: column;
     align-items: stretch;
     padding: var(--space-ink-2) var(--space-ink-3) var(--space-ink-3);

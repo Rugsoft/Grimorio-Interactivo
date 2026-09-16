@@ -133,7 +133,7 @@
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
   opacity: 0.35;
-  transition: opacity 0.25s ease, stroke-width 0.25s ease;
+  transition: opacity 0.25s ease;
   pointer-events: none;
 }
 

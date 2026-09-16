@@ -194,10 +194,11 @@
   gap: var(--space-ink-2) var(--space-ink-3);
   align-items: center;
   padding: var(--space-ink-3);
-  border-left: 4px solid var(--standard-tint);
+  border: 1px solid var(--standard-tint);
   border-radius: var(--radius-seal);
   background-color: var(--color-bg-obsidian-surface);
   color: var(--color-text-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--standard-tint) 15%, transparent);
 }
 
 .clan-standard__glyph {

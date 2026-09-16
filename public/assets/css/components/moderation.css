@@ -434,8 +434,8 @@
   padding: var(--space-ink-3);
   background: var(--moderation-parchment);
   border: 1px solid var(--moderation-warning-ink);
-  border-left-width: 4px;
   border-radius: var(--radius-scroll);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--moderation-warning-ink) 12%, transparent);
 }
 
 .spell-correction__verdict-field {

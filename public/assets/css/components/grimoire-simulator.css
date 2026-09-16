@@ -293,7 +293,8 @@
 .combat-dummy__health-fill {
   height: 100%;
   background-image: linear-gradient(90deg, var(--color-gold-arcane-dim, var(--color-gold-arcane)) 0%, var(--color-gold-arcane) 100%);
-  transition: width 200ms ease;
+  transition: transform 200ms ease, opacity 200ms ease;
+  will-change: transform;
 }
 .combat-dummy__barrier-badge {
   align-self: flex-start;

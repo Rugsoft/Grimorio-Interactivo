@@ -810,7 +810,8 @@
   width: var(--convalescence-progress, 0%);
   height: 100%;
   background-color: var(--color-gold-arcane);
-  transition: width 600ms ease-out;
+  transition: transform 600ms ease-out, opacity 300ms ease;
+  will-change: transform;
 }
 
 /* La franja del aviso respeta el menos movimiento (accesibilidad, RNF-03). */
