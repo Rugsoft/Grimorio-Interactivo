@@ -9,11 +9,16 @@
  *       del maniquí (ángulo de velocidad ≈ ángulo origen→objetivo).
  *   [3] cone: dispersión angular cónica dentro de θ₀ ± 25° con velocidad
  *       radial decreciente.
- *   [4] line: haz colimado de alta velocidad transversal horizontal.
+ *   [4] line: haz colimado de alta velocidad sobre el eje origen →
+ *       blanco que atraviesa al maniquí y continúa de largo.
  *   [5] sphere: deflagración radial omnidireccional centrada en el blanco
  *       (posiciones en el centro, ángulos cubriendo [0, 2π)).
- *   [6] Contrato del pool: techo de 200 respetado ante ráfagas enormes y
- *       geometría desconocida rechazada con error controlado.
+ *   [6] Contrato del pool: techo de 200 respetado ante ráfagas enormes;
+ *       geometría desconocida degrada a proyectil directo sin emitir
+ *       errores (corrector de impacto).
+ *   [7] Vuelo balístico diferido (corrector de impacto): singleTarget,
+ *       touch y line cruzan el blanco exactamente al agotar su vuelo
+ *       puro, sin desvíos por gravedad ni parábola.
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): Canvas 2D nativo, cero dependencias.
@@ -156,7 +161,7 @@ console.log('[3] cone — abanico angular θ ∈ [θ₀ − 25°, θ₀ + 25°]'
   assert(uniqueAngles.size > 5, `el abanico cubre múltiples direcciones (${uniqueAngles.size} ángulos distintos)`);
 }
 
-console.log('[4] line — haz colimado transversal horizontal');
+console.log('[4] line — haz colimado sobre el eje origen → blanco');
 
 {
   const pool = new ParticlePool();
@@ -166,15 +171,16 @@ console.log('[4] line — haz colimado transversal horizontal');
   const particles = pool.getParticles().filter((p) => p.isAlive());
   assert(particles.length === 16, '16 partículas del haz activas');
 
+  const beamAngle = Math.atan2(TARGET.y - ORIGIN.y, TARGET.x - ORIGIN.x);
   const ctx = createFakeCtx();
   pool.updateAndRender(ctx, 0.5);
-  let horizontalBeam = true;
+  let alignedBeam = true;
   for (const p of particles) {
-    const dx = Math.abs(p.getX() - ORIGIN.x);
-    const dy = Math.abs(p.getY() - ORIGIN.y);
-    if (dy > dx * 0.15 + 2) horizontalBeam = false; // estela esencialmente horizontal
+    const travel = Math.atan2(p.getY() - ORIGIN.y, p.getX() - ORIGIN.x);
+    // Estela esencialmente paralela al rumbo: el haz atraviesa al maniquí.
+    if (angleDelta(travel, beamAngle) > Math.PI / 12) alignedBeam = false; // ±15°
   }
-  assert(horizontalBeam, 'el haz cruza transversalmente en horizontal (dispersión vertical < 15%)');
+  assert(alignedBeam, 'el haz viaja sobre el eje origen → blanco (dispersión < 15°)');
 
   // Alta velocidad: en 0.5 s deben recorrer una distancia notable.
   const minTravel = Math.min(...particles.map((p) => Math.abs(p.getX() - ORIGIN.x)));
@@ -220,21 +226,45 @@ console.log('[6] Contrato del pool: techo, validación y Dogma Vanilla');
   assert(pool.getActiveCount() === 200, 'una ráfaga de 500 jamás supera el techo de 200 activas');
   assert(pool.getSize() === 200, 'el pool conserva su tamaño canónico');
 
-  // Geometría desconocida: rechazo controlado, sin emisión fantasma.
-  const before = pool.getActiveCount();
-  let threw = false;
-  try {
-    pool.emitSpell('meteorShower', ORIGIN, TARGET, { color: '#ffffff', count: 5, life: 1 });
-  } catch (error) {
-    threw = error instanceof RangeError || error instanceof TypeError;
-  }
-  assert(threw, 'una geometría desconocida lanza un error controlado');
-  assert(pool.getActiveCount() === before, 'ninguna partícula se emite con geometría inválida');
+  // Geometría desconocida (corrector de impacto): degrada a proyectil
+  // directo sin lanzar — la vista jamás queda disuelta en silencio.
+  const emittedDegraded = pool.emitSpell('meteorShower', ORIGIN, TARGET, { color: '#ffffff', count: 5, life: 1, random: mulberry32(79) });
+  assert(emittedDegraded === 5, 'una geometría desconocida degrada a proyectil directo (5 emisiones)');
 
   // Las partículas emitidas viven con el color elemental pedido.
   const colored = new ParticlePool();
   colored.emitSpell('singleTarget', ORIGIN, TARGET, { color: '#d2b48c', count: 5, life: 2, random: mulberry32(91) });
   assert(colored.getParticles().every((p) => !p.isAlive() || p.color === '#d2b48c'), 'las partículas portan el color elemental indicado');
+}
+
+console.log('[7] Vuelo balístico diferido: el proyectil cruza el blanco (corrector de impacto)');
+
+{
+  // El proyectil singleTarget con gravedad de parábola DIFERIDA debe
+  // cruzar el blanco exactamente al agotar su vuelo puro.
+  const originT7 = { x: 0, y: 200 };
+  const pool = new ParticlePool();
+  pool.emitSpell('singleTarget', originT7, TARGET, {
+    color: '#ffa500', count: 8, speed: 200, size: 3, life: 5, random: mulberry32(97),
+  });
+  const particles = pool.getParticles().filter((p) => p.isAlive());
+  assert(particles.every((p) => p.getDeferral() > 0), 'todo proyectil porta su vuelo balístico diferido');
+
+  // Integra aproximándose al blanco (distancia nominal 500 px / velocidad ~200 px/s ≈ 2.5 s).
+  const ctx = createFakeCtx();
+  pool.updateAndRender(ctx, 1.8);
+  const midFlight = particles.map((p) => Math.hypot(p.getX() - TARGET.x, p.getY() - TARGET.y));
+
+  pool.updateAndRender(ctx, 0.6); // t=2.4s: alcanza la vecindad inmediata del blanco
+  const beforeCross = particles.map((p) => Math.hypot(p.getX() - TARGET.x, p.getY() - TARGET.y));
+  assert(Math.max(...beforeCross) < 60, `antes del cruce todos vuelan pegados al rumbo (máx. ${Math.max(...beforeCross).toFixed(1)} px del blanco)`);
+  assert(beforeCross.every((d, i) => d < midFlight[i]), 'el proyectil AVANZA hacia el blanco en vuelo puro');
+
+  // Tras cruzar (t > 2.5s), estallan los moduladores diferidos y la
+  // gravedad de parábola toma el mando curvando la estela hacia abajo.
+  pool.updateAndRender(ctx, 0.8);
+  const past = particles.map((p) => p.getY());
+  assert(Math.max(...past) > TARGET.y + 20, 'post-cruce la gravedad diferida curva la estela (identidad visual conservada)');
 }
 
 console.log('== RESUMEN ==');

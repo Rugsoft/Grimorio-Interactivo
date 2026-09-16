@@ -9,6 +9,16 @@
  * (trayectorias por geometría) y los perfiles elementales con escalado
  * por Círculo Arcano.
  *
+ * Corrector de defecto (conjuros que no impactaban en el maniquí):
+ *   - Las afinidades huérfanas del canon ('none', 'air' y desconocidas)
+ *     degradan a emisión neutra en lugar de lanzar `RangeError`, que
+ *     derivaba en invocaciones silenciosamente fallidas.
+ *   - Los proyectiles (singleTarget/touch/line) vuelan balísticamente
+ *     puros hasta cruzar el blanco: los moduladores elementales
+ *     (gravedad, ondas, arcos, vórtices) estallan AL CRUZAR el maniquí,
+ *     de modo que el conjuro llega siempre a su destino sin sacrificar
+ *     su carácter visual (RF-03.1/03.2).
+ *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): Canvas 2D nativo; cero librerías o CDNs.
  *   - Artículo V: identificadores en inglés camelCase, comentarios en
@@ -42,6 +52,10 @@ export const CIRCLE_BRIGHTNESS_SCALE = { 1: 1, 2: 1.15, 3: 1.3, 4: 1.5, 5: 1.75 
  * Partícula mágica individual con cinemática simple (cinemática de
  * velocidad + aceleración) y fundido lineal por tiempo de vida.
  * Sus métodos mutan estado interno: el pool la reutiliza sin crear nuevas.
+ *
+ * Vuelo balístico diferido (corrector de impacto): los proyectiles viajan
+ * a rumbo exacto durante `deferral` segundos y, al cruzar el blanco,
+ * estallan los impulsos diferidos y toma el mando su aceleración.
  */
 export class Particle {
   constructor() {
@@ -65,6 +79,12 @@ export class Particle {
     this.life = 0;
     this.maxLife = 0;
     this.alive = false;
+    // Vuelo balístico diferido: segundos de vuelo puro restantes y
+    // moduladores elementales que estallan al cruzar el blanco.
+    this.deferral = 0;
+    this.deferredDrag = 1;
+    this.deferredImpulseX = 0;
+    this.deferredImpulseY = 0;
   }
 
   /**
@@ -85,6 +105,10 @@ export class Particle {
     this.life = life;
     this.maxLife = life;
     this.alive = true;
+    // El vuelo balístico diferido no sobrevive a la reutilización FIFO:
+    // cada encendido parte de cinemática continua salvo que `emit()`
+    // conceda un nuevo diferido (primitivos, sin asignación de objetos).
+    this.deferral = 0;
   }
 
   /** ¿Sigue viva dentro de su tiempo de vida? */
@@ -112,17 +136,37 @@ export class Particle {
     return this.alpha;
   }
 
+  /** Segundos de vuelo balístico puro restantes (solo lectura). */
+  getDeferral() {
+    return this.deferral;
+  }
+
   /**
    * Integra la cinemática durante `dt` segundos y calcula el fundido.
    * Al agotarse la vida, la partícula se apaga.
+   *
+   * Con vuelo balístico diferido (deferral > 0) la partícula viaja a
+   * velocidad constante y sin aceleraciones — rumbo exacto al blanco —;
+   * al cruzarlo estallan los moduladores elementales diferidos y la
+   * aceleración continua (ax/ay) toma el mando (RF-03.1/03.2).
    */
   update(dt) {
     if (!this.alive) {
       return;
     }
-    // Aceleración primero: la velocidad del cuadro ya la incluye.
-    this.vx += this.ax * dt;
-    this.vy += this.ay * dt;
+    if (this.deferral > 0) {
+      // Vuelo balístico puro: cinemática de velocidad constante.
+      this.deferral -= dt;
+      if (this.deferral <= 0) {
+        // Cruce del blanco: estallan los moduladores diferidos.
+        this.vx = this.vx * this.deferredDrag + this.deferredImpulseX;
+        this.vy = this.vy * this.deferredDrag + this.deferredImpulseY;
+      }
+    } else {
+      // Aceleración primero: la velocidad del cuadro ya la incluye.
+      this.vx += this.ax * dt;
+      this.vy += this.ay * dt;
+    }
     this.x += this.vx * dt;
     this.y += this.vy * dt;
 
@@ -253,6 +297,19 @@ export const ELEMENTAL_PROFILES = {
 }
 
 /**
+ * Alias de afinidad elemental (corrector de defecto): el canon real del
+ * santuario comprende las 8 afinidades (SPEC-06, matriz elemental), pero el
+ * catálogo porta datos históricos o variantes léxicas ('air', 'shadow', 'arcane', 'ice').
+ * Se normalizan antes de resolver el perfil; afinidad 'none' o vacía emite maná neutro.
+ */
+const ELEMENT_ALIASES = Object.freeze({
+  air: 'wind',
+  shadow: 'darkness',
+  arcane: 'pureArcane',
+  ice: 'water',
+});
+
+/**
  * PRNG determinista (mulberry32). Permite arneses reproducibles y evita
  * depender de Math.random en los tests (el motor acepta un generador
  * externo y degrada a Math.random en producción).
@@ -270,7 +327,8 @@ function createDefaultRandom() {
  *     gravedad suave) desde el origen hacia el corazón del maniquí.
  *   - cone: abanico angular θ ∈ [θ₀ − 25°, θ₀ + 25°] con velocidad radial
  *     decreciente (más ancho el ángulo, más débil el impulso).
- *   - line: haz colimado horizontal de alta velocidad con estela densa.
+ *   - line: haz colimado de alta velocidad sobre el eje origen → blanco
+ *     que atraviesa al maniquí y continúa de largo.
  *   - sphere: deflagración radial omnidireccional centrada en el blanco
  *     con aceleración hacia el exterior.
  */
@@ -305,18 +363,28 @@ export const SPELL_GEOMETRIES = {
   },
   line(random, origin, target, options) {
     const particles = [];
-    // El haz cruza transversalmente en horizontal (RF-03.2): se emite en
-    // la dirección del objetivo proyectada al eje X, con mínima estela.
-    const direction = target.x >= origin.x ? 1 : -1;
+    // Corrector (RF-03.2): el haz colimado viaja SOBRE el eje origen →
+    // blanco, atravesando al maniquí y continuando de largo — jamás un
+    // haz horizontal a la altura del origen que cruza por debajo del
+    // torso. Con mínima estela perpendicular al rumbo.
+    const baseAngle = Math.atan2(target.y - origin.y, target.x - origin.x);
+    const distance = Math.hypot(target.x - origin.x, target.y - origin.y);
     for (let i = 0; i < options.count; i++) {
       const speed = options.speed * (0.85 + random() * 0.15);
+      const perpX = -Math.sin(baseAngle);
+      const perpY = Math.cos(baseAngle);
+      const trail = (random() - 0.5) * 8; // núcleo colimado estrecho
       particles.push({
-        x: origin.x + (random() - 0.5) * 8, // núcleo colimado estrecho
-        y: origin.y + (random() - 0.5) * 8,
-        vx: direction * speed,
-        vy: (random() - 0.5) * options.speed * 0.08, // estela vertical mínima
+        x: origin.x + perpX * trail,
+        y: origin.y + perpY * trail,
+        vx: Math.cos(baseAngle) * speed,
+        vy: Math.sin(baseAngle) * speed,
         ax: 0,
         ay: 0,
+        deferredFlightMs: distance / speed, // vuelo puro hasta el cruce
+        deferredDrag: 1,
+        deferredImpulseX: 0,
+        deferredImpulseY: 0,
       });
     }
     return particles;
@@ -344,10 +412,16 @@ export const SPELL_GEOMETRIES = {
 /**
  * Ráfaga de proyectiles directos hacia el blanco. Con `parabolic` añade
  * una gravedad suave que curva el vuelo sin desviar el rumbo neto.
+ *
+ * Corrector (trayectorias fieles al blanco): cada proyectil porta su
+ * tiempo de vuelo puro (`deferredFlightMs` = distancia / velocidad) para
+ * que el pool le conceda vuelo balístico exacto hasta cruzar el blanco;
+ * la gravedad de la parábola se difiere a ese cruce (ax/ay la portan).
  */
 function buildProjectileBurst(random, origin, target, options, { parabolic }) {
   const particles = [];
   const baseAngle = Math.atan2(target.y - origin.y, target.x - origin.x);
+  const distance = Math.hypot(target.x - origin.x, target.y - origin.y);
   for (let i = 0; i < options.count; i++) {
     const speed = options.speed * (0.9 + random() * 0.2);
     const jitter = (random() - 0.5) * 0.06; // mínima dispersión de foco
@@ -359,6 +433,10 @@ function buildProjectileBurst(random, origin, target, options, { parabolic }) {
       vy: Math.sin(angle) * speed,
       ax: 0,
       ay: parabolic ? 60 : 0, // gravedad suave de parábola (px/s²)
+      deferredFlightMs: distance / speed, // vuelo puro hasta el cruce
+      deferredDrag: 1,
+      deferredImpulseX: 0,
+      deferredImpulseY: 0,
     });
   }
   return particles;
@@ -403,9 +481,28 @@ export class ParticlePool {
    * SI el pool está saturado, ENTONCES la sobrescritura FIFO fuerza la
    * extinción inmediata de la partícula más antigua (RF-03.4).
    */
-  emit(x, y, vx, vy, color, size, life, ax = 0, ay = 0) {
+  /**
+   * Emite una partícula reutilizando el hueco circular más antiguo.
+   * SI el pool está saturado, ENTONCES la sobrescritura FIFO fuerza la
+   * extinción inmediata de la partícula más antigua (RF-03.4).
+   *
+   * La décima admisión (`deferred`, opcional) activa el vuelo balístico
+   * diferido: la partícula viaja a rumbo exacto durante `deferral`
+   * segundos y, al cruzar el blanco, estallan los moduladores diferidos
+   * (impulsos instantáneos) y toma el mando la aceleración diferida
+   * (`deferredAx`/`deferredAy`) — cinemática elemental post-impacto.
+   */
+  emit(x, y, vx, vy, color, size, life, ax = 0, ay = 0, deferred = null) {
     const particle = this.pool[this.headIndex];
     particle.init(x, y, vx, vy, color, size, life, ax, ay);
+    if (deferred !== null) {
+      particle.deferral = deferred.deferral ?? 0;
+      particle.deferredDrag = deferred.deferredDrag ?? 1;
+      particle.deferredImpulseX = deferred.deferredImpulseX ?? 0;
+      particle.deferredImpulseY = deferred.deferredImpulseY ?? 0;
+      particle.ax = deferred.deferredAx ?? 0;   // aceleración post-cruce
+      particle.ay = deferred.deferredAy ?? 0;
+    }
     this.headIndex = (this.headIndex + 1) % this.maxParticles;
     if (this.activeCount < this.maxParticles) {
       this.activeCount++;
@@ -497,20 +594,30 @@ export class ParticlePool {
    * @param {{x: number, y: number}} target - corazón del maniquí.
    * @param {object} [options] - `count` (nº base de partículas), `speed`,
    *   `size`, `life` (s), `color` (solo sin elemento), `element` (una de
-   *   las 8 afinidades), `circle` (1-5) y `random` (PRNG inyectable).
+   *   las 8 afinidades, con alias `air`), `circle` (1-5) y `random`
+   *   (PRNG inyectable). Las afinidades sin perfil degradan a maná
+   *   neutro; las geometrías desconocidas degradan a `singleTarget`.
    * @returns {number} partículas emitidas en esta invocación.
    */
   emitSpell(geometry, origin, target, options = {}) {
     const profile = SPELL_GEOMETRIES[geometry];
     if (typeof profile !== 'function') {
-      throw new RangeError(`Geometría de hechizo desconocida: ${geometry}`);
+      // Corrector: las columnas area_type llevan CHECK en la base, pero la
+      // vista jamás debe morir ante un dato imprevisto — degrada a proyectil directo.
+      return this.emitSpell('singleTarget', origin, target, options);
     }
     // Validación elemental temprana (antes de emitir nada).
     let elementProfile = null;
-    if (options.element !== undefined) {
-      elementProfile = ELEMENTAL_PROFILES[options.element];
-      if (!elementProfile) {
-        throw new RangeError(`Afinidad elemental desconocida: ${options.element}`);
+    if (options.element !== undefined && options.element !== null) {
+      if (options.element === 'none' || options.element === '') {
+        options = { ...options, element: undefined };
+      } else {
+        const canonicalElement = ELEMENT_ALIASES[options.element] ?? options.element;
+        elementProfile = ELEMENTAL_PROFILES[canonicalElement] ?? null;
+        if (elementProfile === null) {
+          throw new RangeError(`Afinidad elemental desconocida: ${options.element}`);
+        }
+        options = { ...options, element: canonicalElement };
       }
     }
     if (options.circle !== undefined) {
@@ -596,6 +703,22 @@ export class ParticlePool {
       const color = elemental
         ? elemental.palette[Math.floor(settings.random() * elemental.palette.length)]
         : settings.color;
+
+      // Corrector (trayectorias fieles al blanco, RF-03.2): los proyectiles
+      // que DEBEN alcanzar el maniquí (singleTarget, touch, line) vuelan
+      // balísticamente puros hasta cruzarlo; los moduladores elementales
+      // (gravedad, vórtice, succión) y los impulsos instantáneos (ondas,
+      // arcos de plasma) estallan AL CRUZAR el blanco — las ascuas suben,
+      // las olas ondean y los arcos estremezcan DESPUÉS del impacto.
+      const deferral = p.deferredFlightMs ?? 0;
+      if (deferral > 0) {
+        this.emit(
+          p.x, p.y, vx, vy, color, size, settings.life,
+          0, 0, // aceleración nula durante el vuelo puro
+          { deferral, deferredDrag: p.deferredDrag ?? 1, deferredImpulseX: p.deferredImpulseX ?? 0, deferredImpulseY: p.deferredImpulseY ?? 0, deferredAx: ax, deferredAy: ay },
+        );
+        continue;
+      }
 
       this.emit(p.x, p.y, vx, vy, color, size, settings.life, ax, ay);
     }
