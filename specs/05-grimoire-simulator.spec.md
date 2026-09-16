@@ -152,6 +152,12 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
   * **Rótulo de Control de Masas (Oro rúnico):** Brota en la cúspide de la cabeza del maniquí con un retardo de 150 ms (ej. `¡Aturdido!`, `¡Enraizado!`).
 * **RF-05.3 [Ubicuo]:**  
   El sistema DEBERÁ disponer de un panel de **Bitácora de Pruebas** que registre los últimos cinco (5) impactos (marca temporal, nombre del conjuro, desglose de efectos y coste de maná consumido), **preservando dicho historial en el almacenamiento local del navegador (`localStorage`)** para su consulta entre sesiones de prueba.
+* **RF-05.4 [Dirigido por Eventos]:**  
+  CUANDO un conjuro con proyectiles vuele hacia el maniquí, el sistema DEBERÁ despachar el impacto en el instante exacto en que las partículas alcancen el **radio de impacto ceremonial de veinticuatro (24) píxeles** alrededor del corazón del maniquí, de modo que la reacción física, el descuento de PV y los textos flotantes coincidan visualmente con el contacto real de la estela arcana (RF-02.4 y RF-05.2).
+  * La estimación del tiempo de vuelo DEBERÁ operar únicamente como **respaldo de garantía**: SI el bucle de renderizado se interrumpe (suspensión por visibilidad, regulación de rendimiento u otra causa), ENTONCES el impacto se despachará igualmente al reanudarse una vez vencido dicho plazo.
+  * Cada invocación DEBERÁ producir exactamente un (1) impacto: NI la detección por proximidad NI el respaldo temporal podrán duplicar el golpe sobre el maniquí.
+* **RF-05.5 [No Deseado / Excepción]:**  
+  SI la invocación de un conjuro falla por una causa imprevista del motor de manifestación, ENTONCES el sistema DEBERÁ anunciar el fallo con solemnidad por la región viva accesible (RF-06.4) sin propagar excepciones silenciosas, dejando el banco de pruebas operativo para un nuevo intento (degradación grácil).
 
 ---
 
@@ -222,6 +228,8 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
 * [ ] El botón «Restaurar Maniquí» resetea la salud a 500 PV, disipa barreras y limpia la bitácora.
 * [ ] El motor de partículas modula fielmente las 8 Afinidades Elementales, 4 geometrías y los 5 Círculos Arcanos.
 * [ ] El techo de 200 partículas simultáneas se administra mediante una cola circular FIFO sin fugas de memoria.
+* [ ] El impacto se despacha exactamente cuando las partículas cruzan el radio ceremonial del maniquí (24 px), una única vez por invocación, con respaldo temporal que garantiza el golpe ante interrupciones del renderizado.
+* [ ] Un fallo imprevisto de la invocación se anuncia por la región viva sin excepciones silenciosas y el banco de pruebas queda operativo.
 * [ ] El sello «Escuchar Cántico» declama la fórmula ceremonial íntegramente en noble castellano (`es-ES`).
 * [ ] El sello «Micrófono» reconoce el nombre o palabras clave del conjuro con tolerancia fonética y degradación grácil ante falta de soporte.
 * [ ] Los textos flotantes ante efectos mixtos brotan con escalonamiento espacial y temporal para evitar superposiciones ilegibles.
@@ -244,3 +252,4 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
 * **[RESUELTO — Hallazgo 8] Duración de Control de Masas:** Permanencia activa en el maniquí durante cuatro (4) segundos con disipación suave.
 * **[RESUELTO — Hallazgo 9] Reciclado FIFO de Partículas:** Tope de 200 partículas gestionado por reciclado en cola circular, garantizando 60 FPS estables sin picos de *Garbage Collection*.
 * **[RESUELTO — Hallazgo 10] Soberanía Lingüística en la Voz:** Fórmulas sagradas y dicción íntegramente en noble castellano (`es-ES`), garantizando naturalidad fonética, dicción solemne y cumplimiento estricto del Artículo V.
+* **[RESUELTO — Hallazgo 11] Sincronía Física del Impacto y Blindaje de la Invocación (RF-05.4 / RF-05.5):** El despacho del impacto se formaliza por **detección de proximidad** al radio ceremonial de 24 px alrededor del corazón del maniquí, con el tiempo de vuelo estimado relegado a respaldo de garantía ante interrupciones del renderizado; los proyectiles dirigidos vuelan balísticamente puros hasta el cruce del blanco, las afinidades elementales fuera del canon se normalizan (o degradan a maná neutro) sin interrumpir la manifestación, y todo fallo imprevisto de la invocación se anuncia con solemnidad sin promesas silenciosas. Verificado por los arneses del lienzo arcánico (proximidad y respaldo), la vista del simulador y los perfiles elementales del motor.
