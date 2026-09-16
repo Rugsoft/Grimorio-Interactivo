@@ -72,7 +72,7 @@ body {
    --------------------------------------------------------------------- */
 
 .site-header {
-  position: fixed;          /* Persistencia: no se desplaza con el contenido. */
+  position: sticky;         /* Persistencia: permanece al tope en scroll sin superponerse ni ocultar el contenido. */
   top: 0;                   /* Anclaje al tope superior del viewport. */
   inset-inline: 0;          /* Ocupa todo el ancho en cualquier pantalla. */
   z-index: 50;              /* Sobre el contenido; MUY por debajo de la pila de modales (plan 4.2: 100/200). */
@@ -83,14 +83,14 @@ body {
 }
 
 .site-nav {
-  max-width: 1200px;
+  max-width: var(--container-tomo-max, 1280px);
   margin-inline: auto;
   padding: var(--space-ink-2) var(--space-ink-4);
 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-ink-3);
+  gap: var(--space-ink-2);
   min-height: var(--touch-target-min);
 }
 
@@ -100,6 +100,8 @@ body {
   font-size: var(--font-size-ink-large);
   text-decoration: none;
   letter-spacing: var(--letter-spacing-seal);
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: color var(--transition-arcane), text-shadow var(--transition-arcane);
 }
 
@@ -109,11 +111,17 @@ body {
   text-shadow: var(--shadow-gold-glow);
 }
 
-/* Lista de enlaces: escritorio muestra fila; móvil colapsa (ver media query). */
+.site-nav__session {
+  flex-shrink: 0;
+}
+
+/* Lista de enlaces: escritorio muestra fila flexible; móvil colapsa (ver media query). */
 .site-nav__links {
   display: flex;
   align-items: center;
-  gap: var(--space-ink-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-ink-1) var(--space-ink-2);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -123,7 +131,9 @@ body {
   display: inline-flex;
   align-items: center;
   min-height: var(--touch-target-min);   /* Zona táctil mínima (RNF-04). */
-  padding: 0 var(--space-ink-3);
+  padding: 0 var(--space-ink-2);
+  font-size: 0.92rem;
+  white-space: nowrap;
 
   color: var(--color-text-light-muted);
   text-decoration: none;
