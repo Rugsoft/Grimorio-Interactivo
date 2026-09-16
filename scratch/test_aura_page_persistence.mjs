@@ -606,8 +606,10 @@ flyToImpact(surface);
 const refreshedEvents = eventsOf(surface, 'combo:aura-refreshed');
 assertCondition(refreshedEvents.length === 1, 'el mismo elemento emite `combo:aura-refreshed` (RF-02.4)');
 assertCondition(refreshedEvents[0]?.detail?.element === 'lightning', 'el refresco porta el elemento vigente');
+// Corrector de impacto: el refresco por proximidad detona a mitad de vuelo;
+// los cuadros residuales de flyToImpact envejecen la ventana ~340 ms.
 assertCondition(
-  surface.view.getState().elementalAura.remainingMs >= 4900,
+  surface.view.getState().elementalAura.remainingMs >= 4400,
   'la ventana se reinicia a 5 s sin detonar combo (RF-02.4)',
 );
 assertCondition(

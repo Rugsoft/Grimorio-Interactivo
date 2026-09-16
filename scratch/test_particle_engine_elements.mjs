@@ -271,6 +271,57 @@ console.log('[5] Contrato: techo FIFO y combinación con geometrías');
   assert(spear.getActiveCount() === 6, 'proyectil telúrico sobre singleTarget opera con normalidad');
 }
 
+console.log('[6] Normalización de afinidades huérfanas (corrector de impacto)');
+
+{
+  // Alias del canon: variantes léxicas e históricas del catálogo emiten
+  // con el perfil del elemento canónico (paleta del canon, no neutra).
+  const ALIASES = { air: 'wind', shadow: 'darkness', arcane: 'pureArcane', ice: 'water' };
+  for (const [alias, canonical] of Object.entries(ALIASES)) {
+    const pool = new ParticlePool();
+    let threwAlias = false;
+    try {
+      pool.emitSpell('sphere', ORIGIN, TARGET, {
+        color: '#ffffff', count: 6, life: 5, element: alias, random: mulberry32(7),
+      });
+    } catch { threwAlias = true; }
+    assert(threwAlias === false, `la afinidad histórica '${alias}' emite sin RangeError`);
+    assert(pool.getActiveCount() === 6, `'${alias}' emite con el perfil de '${canonical}'`);
+
+    const emittedColors = pool.getParticles()
+      .filter((p) => p.isAlive())
+      .map((p) => p.color);
+    const canonicalPalette = ELEMENTAL_PROFILES[canonical].palette;
+    assert(emittedColors.every((c) => canonicalPalette.includes(c)), `'${alias}' usa la paleta canónica de '${canonical}'`);
+  }
+
+  // Degradación neutra: 'none' y vacía emiten maná neutro (color pedido).
+  for (const orphan of ['none', '']) {
+    const pool = new ParticlePool();
+    let threwOrphan = false;
+    try {
+      pool.emitSpell('sphere', ORIGIN, TARGET, {
+        color: '#f0f8ff', count: 6, life: 5, element: orphan, random: mulberry32(9),
+      });
+    } catch { threwOrphan = true; }
+    assert(threwOrphan === false, `la afinidad '${orphan === '' ? 'vacía' : orphan}' emite sin RangeError (maná neutro)`);
+    assert(pool.getActiveCount() === 6, `'${orphan === '' ? 'vacía' : orphan}' emite el volumen pedido`);
+    const neutralColors = pool.getParticles()
+      .filter((p) => p.isAlive())
+      .map((p) => p.color);
+    assert(neutralColors.every((c) => c === '#f0f8ff'), `emisión neutra de '${orphan === '' ? 'vacía' : orphan}' respeta el color pedido`);
+  }
+
+  // Desconocida genuina: sigue blindada con RangeError y cero emisión.
+  const unknownPool = new ParticlePool();
+  let threwUnknown = false;
+  try {
+    unknownPool.emitSpell('sphere', ORIGIN, TARGET, { count: 6, life: 5, element: 'plasma' });
+  } catch (error) { threwUnknown = error instanceof RangeError; }
+  assert(threwUnknown, 'una afinidad genuinamente desconocida sigue lanzando RangeError');
+  assert(unknownPool.getActiveCount() === 0, 'sin emisión fantasma ante afinidad desconocida');
+}
+
 console.log('== RESUMEN ==');
 console.log(`Asertos superados: ${passed}, fallidos: ${failed}`);
 if (failed === 0) {

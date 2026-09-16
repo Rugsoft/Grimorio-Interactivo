@@ -283,6 +283,59 @@ console.log('[5] Invocación, vuelo e impacto sobre el maniquí (RF-03/RF-05.1)'
   assertCondition(impacts.length === 1, 'el impacto se despacha una única vez (sin duplicados)');
 }
 
+console.log('[6] Impacto por proximidad con respaldo temporal (corrector de impacto)');
+
+{
+  // a) Proximidad: una partícula dentro del radio del blanco despacha el
+  // impacto antes de que venza el temporizador (sincronía física-visual).
+  const scene = buildScene();
+  const { component, clock, raf, impacts } = scene;
+  component.start();
+
+  // Vuelo estimado ≈ 460 px / 260 px/s ≈ 1770 ms; con cuadros de 16 ms la
+  // partícula cruza el radio de 24 px del blanco antes del respaldo.
+  component.castSpell({ name: 'Sonda de proximidad', effects: SPELL.effects }, { geometry: 'singleTarget', origin: ORIGIN, target: TARGET, count: 4 });
+  clock.advance(16);
+  raf.tick(clock.now); // cuadro de integración: la partícula avanza
+  assertCondition(impacts.length === 0, 'sin partícula en el radio, todavía no hay impacto');
+
+  // Integra cuadro a cuadro hasta el cruce del radio (24 px) del blanco.
+  let proximityFrames = 0;
+  while (impacts.length === 0 && proximityFrames < 200) {
+    clock.advance(16);
+    raf.tick(clock.now);
+    proximityFrames += 1;
+  }
+  assertCondition(impacts.length === 1, 'la partícula que entra en el radio del blanco despacha el impacto (RF-05.1)');
+  assertCondition(
+    proximityFrames < 110,
+    `el impacto por proximidad llega antes del respaldo (${proximityFrames} cuadros × 16 ms ≈ ${proximityFrames * 16} ms < flightMs ≈ 1770 ms)`);
+  assertCondition(
+    impacts[0].targetCoordinates?.x === TARGET.x && impacts[0].targetCoordinates?.y === TARGET.y,
+    'con las coordenadas exactas del torso');
+
+  // b) Respaldo temporal: si el bucle se detiene a mitad de vuelo y se
+  // reanuda cuando el temporizador ya venció, el impacto se despacha
+  // aunque NINGUNA partícula haya alcanzado el radio del blanco.
+  const backup = buildScene();
+  const { component: backupComponent, clock: backupClock, raf: backupRaf, impacts: backupImpacts } = backup;
+  backupComponent.start();
+  backupComponent.castSpell({ name: 'Respaldo', effects: SPELL.effects }, { geometry: 'singleTarget', origin: ORIGIN, target: TARGET, count: 2 });
+  // Mitad de vuelo (~500 ms): las partículas van por el camino, lejos
+  // todavía del radio del blanco.
+  for (let f = 0; f < 31; f++) {
+    backupClock.advance(16);
+    backupRaf.tick(backupClock.now);
+  }
+  assertCondition(backupImpacts.length === 0, 'a mitad de vuelo el impacto aún no ha ocurrido');
+  backupComponent.stop();
+  backupClock.advance(2000); // el respaldo (≈ 1770 ms) vence en la pausa
+  backupComponent.start();
+  backupClock.advance(16);
+  backupRaf.tick(backupClock.now);
+  assertCondition(backupImpacts.length === 1, 'el respaldo temporal despacha el impacto aunque ninguna partícula haya llegado');
+}
+
 console.log('== RESUMEN ==');
 console.log(`Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);
 if (assertsFailed === 0) {

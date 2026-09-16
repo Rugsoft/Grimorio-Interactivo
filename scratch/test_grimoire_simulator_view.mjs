@@ -564,7 +564,11 @@ assertCondition(castEvents[0]?.detail?.spell?.name === 'Sello de Tormenta', 'el 
 assertCondition(casting.view.getState().activeParticles > 0, 'el lienzo emite partículas para el conjuro (RF-03)');
 assertCondition(casting.view.getState().dummy.health === healthBeforeCast, 'el impacto aún no ha ocurrido: las partículas viajan (RF-05.1)');
 
-casting.raf.run(140, 16);
+// Corrector de impacto: con la detección por proximidad la deflagración
+// esférica detona en el primer cuadro (nace sobre el blanco); los rótulos
+// escalonados (vida 1600 ms + retardo de control 150 ms) se muestrean
+// vivos antes de su expiración natural.
+casting.raf.run(60, 16);
 const dummyAfterImpact = casting.view.getState().dummy;
 assertCondition(dummyAfterImpact.health === 500 - 90, 'el impacto con barrera descontó 90 PV al maniquí (RF-02.4)');
 assertCondition(casting.view.getState().floatingTexts >= 3, 'el impacto mixto escalona sus rótulos: daño, barrera y control (RF-05.2)');

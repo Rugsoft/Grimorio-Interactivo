@@ -551,12 +551,20 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     const metrics = canvasMetrics();
     const origin = { x: metrics.width * CAST_ORIGIN_RATIO.x, y: metrics.height * CAST_ORIGIN_RATIO.y };
     const target = { x: metrics.width * CAST_TARGET_RATIO.x, y: metrics.height * CAST_TARGET_RATIO.y };
-    arcane.castSpell(spell, {
-      geometry: spell.areaType ?? 'singleTarget',
-      origin,
-      target,
-      count: 14,
-    });
+    try {
+      arcane.castSpell(spell, {
+        geometry: spell.areaType ?? 'singleTarget',
+        origin,
+        target,
+        count: 14,
+      });
+    } catch {
+      // Corrector de impacto: un fallo imprevisto del motor jamás debe
+      // morir en silencio como promesa rechazada — se anuncia con
+      // dignidad y el conjuro se da por fallido ante el adepto.
+      announce(`El conjuro «${spell.name}» se dispersó sin alcanzar el maniquí: inténtalo de nuevo.`);
+      return false;
+    }
     triggerTremor(spell.circle);
     return true;
   }

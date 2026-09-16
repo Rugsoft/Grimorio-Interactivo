@@ -138,7 +138,7 @@ INSERT INTO spells (id, slug, name, author_id, magic_school, elemental_affinity,
                     status, validation_signatures_count, signatures_count, is_genesis_sample,
                     created_at, updated_at, validated_at) VALUES
     ('spl_genesis_03', 'susurro-del-viento', 'Susurro del Viento',
-     'usr_custodio_primordial', 'divination', 'air', 'ritual',
+     'usr_custodio_primordial', 'divination', 'wind', 'ritual',
      5, 1, 'f4b1747d7b8b1ae04d99287bac31bc939d5815fea810a0f879dc553a0353a9ee', 'cln_primordial',
      'Llama a la corriente de aire cercana para que traiga fragmentos de conversaciones lejanas.',
      'El viento viaja y escucha; este conjuro le pide amablemente que repita. La corriente que responde trae palabras sueltas de lugares cercanos, como ecos arrastrados por un cañón. Los Custodios advierten: el viento susurra lo que oyó, no lo que el oyente desea oír.',

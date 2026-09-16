@@ -196,10 +196,28 @@ export function createArcaneCanvasComponent(options = {}) {
       });
     }
 
-    // Vuelos: al alcanzar el blanco, impacto único (RF-05.1).
+    // Vuelos: impacto único por proximidad o temporizador (RF-05.1).
+    // La detección por proximidad (24 px) sincroniza el impacto con la
+    // posición REAL de las partículas; el temporizador queda como
+    // respaldo para garantizar el golpe aunque ninguna partícula llegue.
     runtime.flights = runtime.flights.filter((flight) => {
       if (flight.dispatched) return false;
-      if (instant - flight.launchAt >= flight.flightMs) {
+      const flightElapsed = instant - flight.launchAt;
+      // Proximidad: alguna partícula viva dentro del radio del blanco.
+      if (pool.getActiveCount() > 0) {
+        const particles = pool.getParticles();
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          if (p.isAlive()
+            && Math.hypot(p.getX() - flight.target.x, p.getY() - flight.target.y) <= IMPACT_RADIUS_PX) {
+            flight.dispatched = true;
+            dispatchImpact(flight.spell, flight.target);
+            return false;
+          }
+        }
+      }
+      // Respaldo: vence el tiempo estimado de vuelo.
+      if (flightElapsed >= flight.flightMs) {
         flight.dispatched = true;
         dispatchImpact(flight.spell, flight.target);
         return false;

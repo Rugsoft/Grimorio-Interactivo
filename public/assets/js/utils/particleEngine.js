@@ -292,11 +292,6 @@ export const ELEMENTAL_PROFILES = {
 };
 
 /**
- * Partícula mágica individual con cinemática simple (cinemática de
-  return ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-}
-
-/**
  * Alias de afinidad elemental (corrector de defecto): el canon real del
  * santuario comprende las 8 afinidades (SPEC-06, matriz elemental), pero el
  * catálogo porta datos históricos o variantes léxicas ('air', 'shadow', 'arcane', 'ice').
