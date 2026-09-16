@@ -83,12 +83,47 @@ export function createCombatDummyComponent(options = {}) {
   statusLegend.setAttribute('role', 'status');
   statusLegend.setAttribute('aria-live', 'polite');
 
+  // Armazón visual del Maniquí Arcano de Entrenamiento (RF-02.1):
+  // armazón de madera noble y paja ceremonial con diana rúnica.
+  const mannequin = createNode('div');
+  mannequin.className = 'combat-dummy__mannequin';
+  mannequin.setAttribute('aria-hidden', 'true');
+
+  const dummyHead = createNode('div');
+  dummyHead.className = 'combat-dummy__head';
+
+  const dummyArms = createNode('div');
+  dummyArms.className = 'combat-dummy__arms';
+
+  const dummyTorso = createNode('div');
+  dummyTorso.className = 'combat-dummy__torso';
+
+  const dummyRune = createNode('div');
+  dummyRune.className = 'combat-dummy__core-rune';
+  dummyRune.textContent = '🜚';
+  dummyTorso.appendChild(dummyRune);
+
+  const dummyPost = createNode('div');
+  dummyPost.className = 'combat-dummy__post';
+
+  const dummyBase = createNode('div');
+  dummyBase.className = 'combat-dummy__base';
+
+  mannequin.appendChild(dummyHead);
+  mannequin.appendChild(dummyArms);
+  mannequin.appendChild(dummyTorso);
+  mannequin.appendChild(dummyPost);
+  mannequin.appendChild(dummyBase);
+
   figure.appendChild(healthBar);
   figure.appendChild(barrierBadge);
   figure.appendChild(statusLegend);
+  figure.appendChild(mannequin);
 
   function render() {
-    healthFill.style.setProperty('width', `${(state.health / state.maxHealth) * 100}%`);
+    const ratio = state.health / state.maxHealth;
+    healthFill.style.setProperty('width', `${ratio * 100}%`);
+    healthFill.style.setProperty('transform', `scaleX(${ratio})`);
     barrierBadge.textContent = state.barrier > 0 ? `[Barrera ${state.barrier}]` : '';
     const legends = {
       intact: 'Maniquí intacto',
@@ -100,6 +135,12 @@ export function createCombatDummyComponent(options = {}) {
     statusLegend.textContent = state.state === 'destroyed'
       ? legends.destroyed
       : `${legends[state.state] ?? ''} — ${state.health} / ${state.maxHealth} PV`;
+
+    if (state.state === 'destroyed') {
+      figure.classList?.add?.('combat-dummy--destroyed');
+    } else {
+      figure.classList?.remove?.('combat-dummy--destroyed');
+    }
   }
 
   /** Recalcula el estado derivado tras cada mutación (plan 3.2). */

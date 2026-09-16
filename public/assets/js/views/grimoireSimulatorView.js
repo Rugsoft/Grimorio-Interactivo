@@ -363,6 +363,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   const comboDetonationRandom = createDeterministicComboRandom(20260914);
   const floatingTexts = createFloatingCombatTextComponent({ ctx, clock });
   const arcane = createArcaneCanvasComponent({
+    canvas,
     ctx,
     document: doc,
     raf,

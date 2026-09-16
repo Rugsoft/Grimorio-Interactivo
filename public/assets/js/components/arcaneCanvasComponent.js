@@ -51,6 +51,7 @@ const IMPACT_RADIUS_PX = 24;
  * @returns {object} API del contenedor.
  */
 export function createArcaneCanvasComponent(options = {}) {
+  const canvas = options.canvas ?? options.ctx?.canvas ?? null;
   const ctx = options.ctx;
   const doc = options.document ?? (typeof document !== 'undefined' ? document : null);
   const raf = options.raf ?? ((cb) => requestAnimationFrame(cb));
@@ -165,6 +166,13 @@ export function createArcaneCanvasComponent(options = {}) {
     const dt = runtime.lastTimestamp ? Math.min((instant - runtime.lastTimestamp) / 1000, 0.05) : 0.016;
     runtime.lastTimestamp = instant;
 
+    // Limpia el lienzo en cada cuadro para evitar estelas congeladas o acumulación de trazos (RNF-01).
+    if (ctx && typeof ctx.clearRect === 'function') {
+      const w = canvas?.width ?? ctx.canvas?.width ?? 1200;
+      const h = canvas?.height ?? ctx.canvas?.height ?? 800;
+      ctx.clearRect(0, 0, w, h);
+    }
+
     // Integra y dibuja las partículas activas.
     if (ctx) {
       pool.updateAndRender(ctx, dt);
@@ -254,6 +262,18 @@ export function createArcaneCanvasComponent(options = {}) {
     start();
   }
 
+  /** Limpia el búfer del lienzo y desaloja proyectiles (plan 4.2). */
+  function clear() {
+    pool.reset();
+    runtime.flights = [];
+    runtime.staticFlashes = [];
+    if (ctx && typeof ctx.clearRect === 'function') {
+      const w = canvas?.width ?? ctx.canvas?.width ?? 1200;
+      const h = canvas?.height ?? ctx.canvas?.height ?? 800;
+      ctx.clearRect(0, 0, w, h);
+    }
+  }
+
   // RF-06.3: escucha nativa del cambio de visibilidad.
   if (doc && typeof doc.addEventListener === 'function') {
     doc.addEventListener('visibilitychange', () => {
@@ -269,6 +289,7 @@ export function createArcaneCanvasComponent(options = {}) {
     start,
     stop,
     castSpell,
+    clear,
     isRunning,
     getDensityScale,
     getActiveParticleCount,

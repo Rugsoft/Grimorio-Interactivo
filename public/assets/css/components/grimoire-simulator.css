@@ -260,16 +260,27 @@
 /* ---------------------------------------------------------------------
  * 4. Cámara de Conjuración: hueco del lienzo en la página derecha.
  * ------------------------------------------------------------------- */
-.grimoire-book__camera-slot,
-.arcane-canvas {
+.grimoire-book__camera-slot {
+  position: relative;
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 320px;
+  min-height: 380px;
   background-image: radial-gradient(ellipse at 70% 45%, var(--color-parchment-surface) 0%, var(--color-parchment-base) 72%);
   border: 1px solid var(--color-parchment-border);
   border-radius: 8px;
   overflow: hidden; /* sin desbordamientos del trazado */
+}
+
+.arcane-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 320px;
+  pointer-events: none;
+  z-index: 2;
 }
 
 /* ---------------------------------------------------------------------
@@ -279,35 +290,176 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
+  align-items: center;
+  gap: 6px;
+  width: 150px;
+  padding: 6px;
+  pointer-events: auto;
+  transition: transform var(--transition-arcane), opacity var(--transition-arcane);
 }
+
+.combat-dummy--hit {
+  animation: dummy-impact-shake 200ms ease-out;
+}
+
+@keyframes dummy-impact-shake {
+  0% { transform: scale(1) translate(0, 0); }
+  25% { transform: scale(0.96) translate(5px, -2px); }
+  50% { transform: scale(0.98) translate(-4px, 2px); }
+  75% { transform: scale(1.01) translate(2px, -1px); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+.combat-dummy--destroyed .combat-dummy__mannequin {
+  opacity: 0.15;
+  transform: scale(0.85) translateY(12px);
+  filter: blur(2px);
+  transition: opacity 400ms ease, transform 400ms ease, filter 400ms ease;
+}
+
 .combat-dummy__health-bar {
   position: relative;
-  height: 22px;
+  width: 100%;
+  height: 14px;
   background-color: var(--color-parchment-base);
   border: 1px solid var(--color-parchment-border);
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
 }
+
 .combat-dummy__health-fill {
   height: 100%;
   background-image: linear-gradient(90deg, var(--color-gold-arcane-dim, var(--color-gold-arcane)) 0%, var(--color-gold-arcane) 100%);
   transition: transform 200ms ease, opacity 200ms ease;
   will-change: transform;
 }
+
 .combat-dummy__barrier-badge {
-  align-self: flex-start;
-  padding: 3px 9px;
+  align-self: center;
+  padding: 2px 8px;
   font-family: var(--font-arcane-seal);
-  font-size: 0.82rem;
-  color: var(--mana-blue);
+  font-size: 0.78rem;
+  color: var(--mana-blue-readable);
   border: 1px solid var(--mana-blue);
   border-radius: 999px;
+  background-color: rgba(44, 74, 117, 0.4);
 }
+
 .combat-dummy__status-legend {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--color-text-light-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Armazón visual del Maniquí Arcano (RF-02.1): madera noble y paja ceremonial */
+.combat-dummy__mannequin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 110px;
+  height: 180px;
+  margin-top: 4px;
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.combat-dummy__head {
+  width: 34px;
+  height: 38px;
+  background: radial-gradient(circle at 40% 35%, var(--color-gold-bright), var(--color-gold-burnished));
+  border: 2px solid var(--color-bronze-ceremonial);
+  border-radius: 50% 50% 45% 45%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 2;
+}
+
+.combat-dummy__head::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: -2px;
+  right: -2px;
+  height: 5px;
+  background: var(--color-parchment-border);
+  border-radius: 2px;
+  border-bottom: 1px solid var(--color-gold-arcane);
+}
+
+.combat-dummy__arms {
+  width: 98px;
+  height: 10px;
+  background: linear-gradient(180deg, var(--color-bronze-ceremonial) 0%, var(--color-parchment-border) 100%);
+  border: 1px solid var(--color-parchment-base);
+  border-radius: 3px;
+  margin-top: -5px;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.combat-dummy__arms::before,
+.combat-dummy__arms::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  width: 14px;
+  height: 16px;
+  background: repeating-linear-gradient(90deg, var(--color-gold-bright), var(--color-gold-bright) 3px, var(--color-gold-burnished) 3px, var(--color-gold-burnished) 6px);
+  border-radius: 2px;
+  border: 1px solid var(--color-parchment-border);
+}
+.combat-dummy__arms::before { left: 3px; }
+.combat-dummy__arms::after { right: 3px; }
+
+.combat-dummy__torso {
+  width: 48px;
+  height: 64px;
+  background: repeating-linear-gradient(175deg, var(--color-gold-bright), var(--color-gold-bright) 5px, var(--color-gold-burnished) 5px, var(--color-gold-burnished) 10px);
+  border: 2px solid var(--color-bronze-ceremonial);
+  border-radius: 10px 10px 16px 16px;
+  margin-top: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.combat-dummy__core-rune {
+  font-family: var(--font-arcane-seal);
+  font-size: 1.2rem;
+  color: var(--color-gold-bright);
+  text-shadow: 0 0 8px var(--color-gold-arcane);
+  border: 2px dashed rgba(212, 169, 78, 0.6);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 18, 16, 0.65);
+}
+
+.combat-dummy__post {
+  width: 12px;
+  height: 48px;
+  background: linear-gradient(90deg, var(--color-bronze-ceremonial) 0%, var(--color-parchment-border) 100%);
+  border: 1px solid var(--color-parchment-base);
+  border-radius: 2px;
+  margin-top: -2px;
+  z-index: 1;
+}
+
+.combat-dummy__base {
+  width: 58px;
+  height: 8px;
+  background: linear-gradient(180deg, var(--color-bronze-ceremonial) 0%, var(--color-parchment-base) 100%);
+  border: 1px solid var(--color-parchment-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
 }
 
 /* ---------------------------------------------------------------------
@@ -408,8 +560,15 @@
 }
 
 .grimoire-simulator__dummy-host {
-  display: block;
-  margin-top: 8px;
+  position: absolute;
+  top: 50%;
+  left: 70%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 /* Conmutador del catálogo (RF-01.2): la opción activa invierte el sello. */
