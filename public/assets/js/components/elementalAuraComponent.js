@@ -1,33 +1,37 @@
 /**
  * elementalAuraComponent.js — Halo de aura elemental del maniquí (SPEC-06).
  *
- * Tarea 3.1 (TASKS-06): renderiza sobre el blanco imbuido el halo luminoso
- * pulsante del color heráldico del elemento activo (RF-02.2) y el anillo
- * rúnico circular que decrece durante la ventana de resonancia de cinco
- * segundos (RF-02.1), con refresco homogéneo (RF-02.4) y disipación suave
- * al expirar (RF-02.5). Al expirar de forma natural emite el evento
- * `combo:aura-expired {element}` del plan 4.1.
+ * Tarea 3.1 (TASKS-06): renderiza sobre el blanco la capa-luz perenne
+ * que abraza su silueta (RF-02.2 ratificado): en reposo pulsa en dorado
+ * arcano y, al imbuirse, se tiñe del color heráldico del elemento activo;
+ * al expirar la ventana de resonancia de cinco segundos regresa al dorado
+ * de reposo sin desaparecer. Un pequeño contador numérico declara los
+ * segundos enteros restantes (5 → 0), con refresco homogéneo (RF-02.4)
+ * y disipación suave al expirar (RF-02.5). Al expirar de forma natural
+ * emite el evento `combo:aura-expired {element}` del plan 4.1.
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): módulo ES nativo; SVG y Custom Properties
  *     nativas; documento, reloj, planificador de cuadros y bus de eventos
  *     llegan inyectados. Cero librerías.
  *   - Artículo II: los colores heráldicos se LEEN del Códice (matriz espejo
- *     de comboResolver.js); el componente no decide colores.
+ *     de comboResolver.js); el componente no decide colores. El dorado de
+ *     reposo no se hardcodea: vive en la CSS como respaldo de --aura-color.
  *   - Artículo IV: sin texto visible propio más allá de lo semántico
  *     (aria-hidden: el aura es decorativa; los anuncios los hacen otros).
  *   - Artículo V: identificadores en inglés camelCase; documentación en
  *     castellano.
  *
  * Estructura DOM (raíz .elemental-aura):
- *   <div class="elemental-aura elemental-aura--active elemental-aura--pulse" aria-hidden="true">
- *     <svg> … <circle class="elemental-aura__ring-progress"> … </svg>
+ *   <div class="elemental-aura elemental-aura--resting elemental-aura--pulse" aria-hidden="true">
+ *     <img class="elemental-aura__silhouette">
+ *     <span class="elemental-aura__countdown"></span>
  *   </div>
  * La variable CSS --aura-color porta el color heráldico; los estilos viven
  * en public/assets/css/components/elemental-codex.css.
  *
  * Cobertura: RF-02.1, RF-02.2, RF-02.4, RF-02.5, RNF-03 (movimiento
- * reducido: sin pulso decorativo; el anillo informativo permanece).
+ * reducido: sin pulso decorativo; el tinte y el contador permanecen).
  */
 
 import { ELEMENTAL_MATRIX_ELEMENTS } from '../utils/comboResolver.js';
@@ -35,12 +39,9 @@ import { ELEMENTAL_MATRIX_ELEMENTS } from '../utils/comboResolver.js';
 /** Ventana canónica de resonancia, en ms (RF-02.1). */
 export const AURA_RESONANCE_DURATION_MS = 5000;
 
-/** Radio canónico del anillo rúnico (viewBox 100×100). */
-const RING_RADIUS = 45;
-/** Longitud total del círculo (stroke-dasharray del anillo). */
-const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-/** Ticks del bucle de escena, en ms (≈60 fps sin exigir 60 reales). */
+/**
+ * Ticks del bucle de escena, en ms (≈60 fps sin exigir 60 reales).
+ */
 const FRAME_INTERVAL_MS = 16;
 
 /**
@@ -74,7 +75,13 @@ export function createElementalAuraComponent(options = {}) {
 
   /** @type {Element|null} Raíz del aura, montada por mount(). */
   let auraRoot = null;
-  /** Elemento, o null si el blanco está neutral. */
+  /** @type {Element|null} Capa-luz silueta que abraza la efigie (RF-02.2). */
+  let auraRootSilhouette = null;
+  /** @type {Element|null} Rótulo del contador numérico de la ventana. */
+  let auraRootCountdown = null;
+  /** Último segundo entero pintado (evita escrituras en vano por tick). */
+  let lastCountdownSeconds = -1;
+  /** Elemento, o null si el blanco está neutral (reposo dorado). */
   let activeElement = null;
   /** Instante de expiración de la ventana vigente. */
   let expiresAt = 0;
@@ -113,54 +120,35 @@ export function createElementalAuraComponent(options = {}) {
       return auraRoot;
     }
 
-    const svgNamespace = 'http://www.w3.org/2000/svg';
-    // Degradación grácil: los entornos sin soporte SVG (arneses sin DOM
-    // real) fabrican los nodos por la vía plana; el navegador siempre
-    // dispone de createElementNS y preserva el espacio de nombres.
-    const svgFactory = document.createElementNS?.bind(document)
-      ?? document.createElement.bind(document);
-    const svg = svgFactory(svgNamespace, 'svg');
-    svg.setAttribute('viewBox', '0 0 100 100');
-    svg.setAttribute('class', 'elemental-aura__svg');
+    // Capa-luz silueta (RF-02.2, criterio ratificado): la propia efigie
+    // del blanco clonada como resplandor que abraza sombrero, brazos y
+    // base (jamás una geometría circular). El tinte lo gobierna
+    // --aura-color: dorado arcano de reposo, heráldico al imbuirse.
+    const silhouette = document.createElement('img');
+    silhouette.setAttribute('src', 'assets/img/heretic-scarecrow.png');
+    silhouette.setAttribute('alt', '');
+    silhouette.setAttribute('draggable', 'false');
+    silhouette.setAttribute('class', 'elemental-aura__silhouette');
+    auraRootSilhouette = silhouette;
 
-    // Anillo de fondo (surco rúnico sobre el que decrece el progreso).
-    const ringTrack = svgFactory(svgNamespace, 'circle');
-    ringTrack.setAttribute('cx', '50');
-    ringTrack.setAttribute('cy', '50');
-    ringTrack.setAttribute('r', String(RING_RADIUS));
-    ringTrack.setAttribute('class', 'elemental-aura__ring-track');
-    svg.appendChild(ringTrack);
-
-    // Anillo de progreso: decrece consumiendo su trazo (RF-02.2).
-    const ringProgress = svgFactory(svgNamespace, 'circle');
-    ringProgress.setAttribute('cx', '50');
-    ringProgress.setAttribute('cy', '50');
-    ringProgress.setAttribute('r', String(RING_RADIUS));
-    ringProgress.setAttribute('class', 'elemental-aura__ring-progress');
-    ringProgress.setAttribute('stroke-dasharray', String(RING_CIRCUMFERENCE));
-    ringProgress.setAttribute('stroke-dashoffset', '0');
-    svg.appendChild(ringProgress);
-
-    // Halo pulsante (disco interior).
-    const halo = svgFactory(svgNamespace, 'circle');
-    halo.setAttribute('cx', '50');
-    halo.setAttribute('cy', '50');
-    halo.setAttribute('r', '38');
-    halo.setAttribute('class', 'elemental-aura__halo');
-    svg.appendChild(halo);
+    // Contador numérico de la ventana (RF-02.2 ratificado): segundos
+    // enteros restantes (5 → 0), actualizado por el bucle de escena.
+    const countdown = document.createElement('span');
+    countdown.setAttribute('class', 'elemental-aura__countdown');
+    countdown.textContent = '';
+    auraRootCountdown = countdown;
 
     auraRoot = document.createElement('div');
     auraRoot.setAttribute('class', 'elemental-aura');
     auraRoot.setAttribute('aria-hidden', 'true'); // Decorativa: los anuncios los hace la región viva.
-    auraRoot.appendChild(svg);
-    // La raíz nace oculta: se exhibe al imbuir.
-    auraRoot.setAttribute('hidden', '');
+    auraRoot.appendChild(silhouette);
+    auraRoot.appendChild(countdown);
 
     return auraRoot;
   }
 
   /**
-   * Pinta el estado de la ventana sobre la raíz (clases, color y anillo).
+   * Pinta el estado del aura sobre la raíz (clases, color y contador).
    */
   function render() {
     if (auraRoot === null) {
@@ -168,35 +156,46 @@ export function createElementalAuraComponent(options = {}) {
     }
 
     const remainingMs = getRemainingMs();
-    const progress = Math.max(0, Math.min(1, remainingMs / AURA_RESONANCE_DURATION_MS));
-    // Degradación grácil: entornos sin búsqueda por selectores (arneses sin
-    // DOM real) pierden solo el repintado del anillo; el estado elemental
-    // jamás depende de él.
-    if (typeof auraRoot.querySelector === 'function') {
-      const ringProgress = auraRoot.querySelector('.elemental-aura__ring-progress');
-      if (ringProgress !== null) {
-        ringProgress.setAttribute('stroke-dashoffset', String(RING_CIRCUMFERENCE * (1 - progress)));
-      }
+    const auraIsActive = activeElement !== null && remainingMs > 0;
+
+    // Estados exclusivos: --resting (perenne, dorado) vs --active (tinte
+    // heráldico). El cambio de clase dispara la transición suave del CSS.
+    // (add/remove y no toggle: contrato mínimo del DOM inyectable.)
+    if (auraIsActive) {
+      auraRoot.classList.add('elemental-aura--active');
+      auraRoot.classList.remove('elemental-aura--resting');
+    } else {
+      auraRoot.classList.remove('elemental-aura--active');
+      auraRoot.classList.add('elemental-aura--resting');
     }
 
-    if (activeElement !== null && remainingMs > 0) {
-      auraRoot.removeAttribute('hidden');
-      auraRoot.classList.add('elemental-aura--active');
-      auraRoot.classList.remove('elemental-aura--fading');
-      // RNF-03: sin pulso decorativo bajo movimiento reducido.
-      if (prefersReducedMotion()) {
-        auraRoot.classList.remove('elemental-aura--pulse');
-      } else {
-        auraRoot.classList.add('elemental-aura--pulse');
-      }
+    // RNF-03: sin pulso decorativo bajo movimiento reducido; el pulso
+    // acompaña tanto al reposo dorado (3.5 s, hermana de la efigie) como
+    // al tinte activo (1.6 s).
+    if (prefersReducedMotion()) {
+      auraRoot.classList.remove('elemental-aura--pulse');
+    } else {
+      auraRoot.classList.add('elemental-aura--pulse');
+    }
+
+    if (auraIsActive) {
       auraRoot.style.setProperty('--aura-color', heraldicColorOf(activeElement));
+
+      // Contador numérico (RF-02.2 ratificado): segundos enteros que
+      // restan (5 → 0). Se escribe solo cuando cambia la cifra para no
+      // manipular el DOM en cada tick del bucle de escena.
+      const secondsLeft = Math.max(0, Math.ceil(remainingMs / 1000));
+      if (secondsLeft !== lastCountdownSeconds && auraRootCountdown !== null) {
+        auraRootCountdown.textContent = String(secondsLeft);
+        lastCountdownSeconds = secondsLeft;
+      }
     } else if (activeElement === null) {
-      // Durante el desvanecimiento (clase --fading) la raíz permanece
-      // visible hasta que el CSS concluye la transición: no se oculta ni
-      // se despega la clase de desvanecimiento (RF-02.5, disolución suave).
-      if (!auraRoot.classList.contains('elemental-aura--fading')) {
-        auraRoot.setAttribute('hidden', '');
-        auraRoot.classList.remove('elemental-aura--active', 'elemental-aura--pulse');
+      // Reposo perenne (RF-02.2 ratificado): la capa-luz permanece en
+      // dorado arcano; el contador se apaga junto a la ventana.
+      auraRoot.style.setProperty('--aura-color', '');
+      lastCountdownSeconds = -1;
+      if (auraRootCountdown !== null) {
+        auraRootCountdown.textContent = '';
       }
     }
   }
@@ -221,13 +220,15 @@ export function createElementalAuraComponent(options = {}) {
     }
 
     if (now() >= expiresAt && !expiryAnnounced) {
-      // Expiración natural (RF-02.5): disolución suave y anuncio único.
+      // Expiración natural (RF-02.5): regreso suave al dorado de reposo
+      // (la capa-luz jamás desaparece) y anuncio único.
       expiryAnnounced = true;
       const expiredElement = activeElement;
       activeElement = null;
       if (auraRoot !== null) {
         auraRoot.classList.remove('elemental-aura--active', 'elemental-aura--pulse');
-        auraRoot.classList.add('elemental-aura--fading'); // El CSS la desvanece y la oculta al terminar.
+        auraRoot.classList.add('elemental-aura--resting'); // El CSS transiciona al dorado.
+        auraRoot.style.setProperty('--aura-color', '');
       }
       eventTarget.dispatchEvent(new CustomEvent('combo:aura-expired', { detail: { element: expiredElement } }));
       render();
@@ -256,6 +257,14 @@ export function createElementalAuraComponent(options = {}) {
     if (root.parentNode !== hostElement) {
       hostElement.appendChild(root);
     }
+    // Perenne (RF-02.2 ratificado): la capa-luz nace en reposo dorado y
+    // jamás se oculta; solo el tinte y el contador siguen a la ventana.
+    // El pulso dorado de reposo arranca con el propio montaje.
+    root.classList.add('elemental-aura--resting');
+    if (!prefersReducedMotion()) {
+      root.classList.add('elemental-aura--pulse');
+    }
+    root.removeAttribute('hidden');
     eventTarget.addEventListener('combo:aura-applied', onAuraApplied);
     eventTarget.addEventListener('combo:aura-refreshed', onAuraRefreshed);
   }
@@ -297,8 +306,9 @@ export function createElementalAuraComponent(options = {}) {
     activeElement = null;
     expiryAnnounced = true;
     if (auraRoot !== null) {
-      auraRoot.classList.remove('elemental-aura--active', 'elemental-aura--pulse', 'elemental-aura--fading');
-      auraRoot.setAttribute('hidden', '');
+      auraRoot.classList.remove('elemental-aura--active', 'elemental-aura--pulse');
+      auraRoot.classList.add('elemental-aura--resting'); // Regreso al dorado perenne.
+      auraRoot.style.setProperty('--aura-color', '');
     }
     stopSceneIfIdle();
   }
@@ -351,6 +361,9 @@ export function createElementalAuraComponent(options = {}) {
       auraRoot.remove();
     }
     auraRoot = null;
+    auraRootSilhouette = null;
+    auraRootCountdown = null;
+    lastCountdownSeconds = -1;
   }
 
   return {

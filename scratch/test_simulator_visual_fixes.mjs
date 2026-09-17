@@ -195,8 +195,12 @@ assertCondition(
 );
 
 assertCondition(
-  codexCss.includes('.elemental-aura') && codexCss.includes('width: 220px') && codexCss.includes('height: 220px'),
-  'El aura elemental (.elemental-aura) está acotada a dimensiones proporcionadas (220px × 220px) sobre el maniquí',
+  codexCss.includes('.elemental-aura') && codexCss.includes('width: clamp(120px, 14vw, 160px)'),
+  'El aura elemental (.elemental-aura) se dimensiona a la efigie (sin disco de 220px, RF-02.2 ratificado)',
+);
+assertCondition(
+  codexCss.includes('.elemental-aura__silhouette') && codexCss.includes('.elemental-aura__countdown'),
+  'El aura porta su silueta-luz y su contador numérico (RF-02.2 ratificado)',
 );
 
 assertCondition(

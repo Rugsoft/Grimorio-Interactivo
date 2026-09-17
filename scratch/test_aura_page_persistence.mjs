@@ -446,8 +446,9 @@ assertCondition(baseState.elementalAura.element === null, 'el maniquí nace neut
 assertCondition(baseState.elementalAura.active === false, 'la ventana de resonancia nace apagada');
 assertCondition(baseState.stunlockImmunity === false, 'el maniquí nace sin inmunidad anti-stunlock');
 assertCondition(Boolean(queryFirst(surface.host, 'elemental-aura')), 'el halo del aura se monta junto al maniquí');
-assertCondition(Boolean(queryFirst(surface.host, 'elemental-aura__halo')), 'el halo porta su disco luminoso SVG');
-assertCondition(Boolean(queryFirst(surface.host, 'elemental-aura__ring-progress')), 'el halo porta su anillo rúnico decreciente');
+assertCondition(Boolean(queryFirst(surface.host, 'elemental-aura__silhouette')), 'el aura porta su silueta-luz que abraza la efigie (RF-02.2 ratificado)');
+assertCondition(Boolean(queryFirst(surface.host, 'elemental-aura__countdown')), 'el aura porta su contador numérico de la ventana');
+assertCondition(queryFirst(surface.host, 'elemental-aura__ring-progress') === null, 'ninguna geometría circular sobrevive: el anillo rúnico está retirado (RF-02.2 ratificado)');
 
 // =====================================================================
 // [1] Imbuición (RF-02.1)

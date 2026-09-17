@@ -9,12 +9,12 @@
  *       consultas de estado, destroy).
  *   [2] Imbuición (RF-02.1/02.2): al aplicar un elemento, la raíz se
  *       exhibe con el color heráldico exacto en la variable CSS y el halo
- *       pulsante activo.
- *   [3] Anillo decreciente: el progreso del anillo rúnico decrece de forma
- *       proporcional al tiempo restante de la ventana de 5 s.
- *   [4] Expiración (RF-02.5): agotada la ventana, disolución suave (clase
- *       de desvanecimiento) y emisión ÚNICA de combo:aura-expired
- *       {element} sobre el bus (plan 4.1).
+ *       pulsante activo, con silueta-luz y contador numérico.
+ *   [3] Contador decreciente: el contador numérico marca los segundos
+ *       enteros restantes (5 → 0) conforme expira la ventana de 5 s.
+ *   [4] Expiración (RF-02.5): agotada la ventana, regreso suave al dorado
+ *       de reposo (clase --resting, la capa-luz jamás se oculta) y emisión
+ *       ÚNICA de combo:aura-expired {element} sobre el bus (plan 4.1).
  *   [5] Refresco homogéneo (RF-02.4): volver a aplicar el mismo elemento
  *       reinicia la ventana a 5 s sin evento de expiración fantasma.
  *   [6] Sobreescritura visual: aplicar otro elemento actualiza el color y
@@ -25,12 +25,13 @@
  *       combo:aura-refreshed gobierna el componente (plan 4.1) y destroy()
  *       da de baja las escuchas.
  *   [9] Movimiento reducido (RNF-03): con la media query activa, el halo
- *       se renderiza SIN la clase pulsante (el anillo informativo sigue).
- *  [10] Determinismo (RNF-01): mismos actos → mismos atributos del anillo.
+ *       se renderiza SIN la clase pulsante (el tinte y el contador siguen).
+ *  [10] Determinismo (RNF-01): mismos actos → mismos atributos del contador.
  *
- * Criterio «Hecho cuando» (Tarea 3.1): al aplicar un elemento, el maniquí
- * muestra el halo y la barra circular decreciente durante 5 s, refrescándose
- * si vuelve a impactar el mismo elemento y disolviéndose suavemente al expirar.
+ * Criterio «Hecho cuando» (Tarea 3.1): al aplicar un elemento, la capa-luz
+ * perenne se tiñe del color heráldico y el contador numérico declara los
+ * segundos restantes durante 5 s, refrescándose si vuelve a impactar el
+ * mismo elemento y regresando al dorado de reposo al expirar.
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): módulo ES nativo; documento, reloj,
@@ -190,7 +191,6 @@ function createFakeDocument() {
 }
 
 const MODULE_URL = new URL('../public/assets/js/components/elementalAuraComponent.js', import.meta.url).href;
-const RING_CIRCUMFERENCE = 2 * Math.PI * 45; // Radio rúnico canónico del anillo.
 
 /** Forja el componente montado en un anfitrión nuevo. */
 async function forgeComponent({ time = createFakeTime(), scheduler = createFakeFrameScheduler(), bus = createFakeEventBus(), reducedMotion = false } = {}) {
@@ -208,10 +208,10 @@ async function forgeComponent({ time = createFakeTime(), scheduler = createFakeF
   return { component, host, time, scheduler, bus, document };
 }
 
-/** Atributo del progreso del anillo (o null si no existe el círculo). */
-function ringOffsetOf(componentRoot) {
-  const circle = componentRoot.querySelector('.elemental-aura__ring-progress');
-  return circle === null ? null : circle.getAttribute('stroke-dashoffset');
+/** Texto del contador numérico de la ventana (o null si no existe). */
+function countdownTextOf(componentRoot) {
+  const counter = componentRoot.querySelector('.elemental-aura__countdown');
+  return counter === null ? null : counter.textContent;
 }
 
 console.log('== ARNÉS TDD — HALO DE AURA ELEMENTAL (Tarea 3.1, SPEC-06) ==');
@@ -256,12 +256,12 @@ console.log('\n[FASE 2] Imbuición del aura (RF-02.1, RF-02.2)');
   assertTruthy(component.getActiveElement() === 'fire' && component.isAuraActive() === true, 'El estado interno declara el elemento imbuydo');
   assertTruthy(component.getRemainingMs() === 5000, 'La ventana de resonancia comienza en 5000 ms');
 
-  const firstOffset = Number(ringOffsetOf(root));
-  assertTruthy(firstOffset === 0, `El anillo nace lleno (offset 0, medido ${firstOffset})`);
+  assertTruthy(root?.querySelector('.elemental-aura__silhouette') !== null, 'El halo porta su silueta-luz que abraza la efigie (sin geometría circular)');
+  assertTruthy(countdownTextOf(root) === '5', `El contador nace en 5 (medido ${countdownTextOf(root)})`);
 }
 
 // ---------------------------------------------------------------------------
-console.log('\n[FASE 3] Anillo rúnico decreciente (RF-02.2)');
+console.log('\n[FASE 3] Contador numérico decreciente (RF-02.2 ratificado)');
 // ---------------------------------------------------------------------------
 
 {
@@ -269,19 +269,19 @@ console.log('\n[FASE 3] Anillo rúnico decreciente (RF-02.2)');
   component.applyAura('water');
   scheduler.pump();
   const root = host.children[0];
-  const offsetAtStart = Number(ringOffsetOf(root));
+  const countAtStart = countdownTextOf(root);
 
   time.advance(2500);
   scheduler.pump();
-  const offsetAtHalf = Number(ringOffsetOf(root));
-  assertTruthy(offsetAtHalf > offsetAtStart, 'A mitad de ventana el offset crece (el anillo se consume)');
-  assertTruthy(Math.abs(offsetAtHalf - RING_CIRCUMFERENCE / 2) < 2, `A mitad de ventana el offset es medio círculo (±2, medido ${offsetAtHalf.toFixed(1)})`);
+  const countAtHalf = countdownTextOf(root);
+  assertTruthy(Number(countAtHalf) < Number(countAtStart), 'A mitad de ventana el contador decrece');
+  assertTruthy(countAtHalf === '3', `A mitad de ventana el contador marca 3 (ceil de 2.5 s, medido ${countAtHalf})`);
   assertTruthy(Math.abs(component.getRemainingMs() - 2500) <= 1, 'El resto de ventana consultable es ~2500 ms');
 
   time.advance(2000);
   scheduler.pump();
-  const offsetLate = Number(ringOffsetOf(root));
-  assertTruthy(offsetLate > offsetAtHalf, 'El anillo sigue decreciendo monótonamente');
+  const countLate = countdownTextOf(root);
+  assertTruthy(Number(countLate) < Number(countAtHalf), 'El contador sigue decreciendo monótonamente');
 }
 
 // ---------------------------------------------------------------------------
@@ -298,7 +298,11 @@ console.log('\n[FASE 4] Expiración y disolución suave (RF-02.5)');
 
   const root = host.children[0];
   assertTruthy(component.isAuraActive() === false, 'Agotada la ventana, el aura se disuelve del estado');
-  assertTruthy(root?.classList.contains('elemental-aura--fading') === true, 'La disolución es SUAVE: la raíz porta la clase de desvanecimiento');
+  assertTruthy(root?.classList.contains('elemental-aura--resting') === true, 'El regreso es SUAVE: la raíz vuelve al reposo dorado perenne');
+  assertTruthy(root?.classList.contains('elemental-aura--active') === false, 'La clase activa se retira al expirar');
+  assertTruthy(root?.getAttribute('hidden') === null, 'La capa-luz jamás se oculta: perenne (RF-02.2 ratificado)');
+  assertTruthy(countdownTextOf(root) === '', 'El contador se apaga junto a la ventana');
+  assertTruthy(root?.style._store.get('--aura-color') === '', 'El tinte heráldico se retira: la CSS muestra el dorado de reposo');
   const expiredEvents = bus.ofType('combo:aura-expired');
   assertTruthy(expiredEvents.length === 1, 'Se emite combo:aura-expired exactamente una vez');
   assertTruthy(expiredEvents[0]?.detail?.element === 'fire', 'El evento porta el elemento expirado');
@@ -348,7 +352,7 @@ console.log('\n[FASE 6] Sobreescritura visual con otro elemento');
   scheduler.pump();
   assertTruthy(component.getActiveElement() === 'light', 'El aura sobreescrita declara el nuevo elemento');
   assertTruthy(root?.style._store.get('--aura-color') === '#ffd700', 'El color heráldico se actualiza al del nuevo elemento (#ffd700, Luz)');
-  assertTruthy(root?.classList.contains('elemental-aura--fading') === false, 'La sobreescritura no desata disolución');
+  assertTruthy(root?.classList.contains('elemental-aura--active') === true, 'La sobreescritura mantiene el tinte activo sin pasar por reposo');
   assertTruthy(component.getRemainingMs() === 5000, 'La ventana se reinicia con la nueva aura');
 }
 
@@ -364,7 +368,7 @@ console.log('\n[FASE 7] Disipación manual inmediata');
 
   component.dissipate();
   assertTruthy(component.isAuraActive() === false, 'La disipación manual apaga el aura de inmediato');
-  assertTruthy(root?.classList.contains('elemental-aura--fading') === false, 'Sin clase de desvanecimiento: la retirada es inmediata');
+  assertTruthy(root?.classList.contains('elemental-aura--resting') === true, 'La retirada devuelve la capa-luz al reposo dorado perenne');
   assertTruthy(bus.ofType('combo:aura-expired').length === 0, 'Sin evento de expiración (no fue una expiración natural)');
   assertTruthy(scheduler.pendingRounds === 0, 'El bucle de cuadros queda apagado');
 
@@ -406,10 +410,11 @@ console.log('\n[FASE 9] Movimiento reducido (RNF-03)');
   assertTruthy(root?.classList.contains('elemental-aura--pulse') === false, 'Con movimiento reducido, el halo NO pulsa (sin clase de pulso)');
   assertTruthy(root?.classList.contains('elemental-aura--active') === true, 'El aura sigue activa y visible');
   time_then: {
-    // El anillo informativo sigue decreciendo sin animación decorativa.
+    // El tinte y el contador informativo siguen presentes sin animación.
     component.applyAura('wind');
     scheduler.pump();
-    assertTruthy(ringOffsetOf(root) !== null, 'El anillo rúnico informativo sigue presente');
+    assertTruthy(countdownTextOf(root) === '5', 'El contador informativo sigue presente');
+    assertTruthy(root?.querySelector('.elemental-aura__silhouette') !== null, 'La silueta-luz sigue presente');
   }
 }
 
@@ -424,11 +429,11 @@ console.log('\n[FASE 10] Determinismo (RNF-01)');
     forged.scheduler.pump();
     forged.time.advance(1250);
     forged.scheduler.pump();
-    return { offset: ringOffsetOf(forged.host.children[0]), remaining: forged.component.getRemainingMs() };
+    return { count: countdownTextOf(forged.host.children[0]), remaining: forged.component.getRemainingMs() };
   };
   const firstRun = await runScene();
   const secondRun = await runScene();
-  assertTruthy(firstRun.offset === secondRun.offset && firstRun.remaining === secondRun.remaining, 'Dos escenas idénticas producen idéntico anillo y resto de ventana');
+  assertTruthy(firstRun.count === secondRun.count && firstRun.remaining === secondRun.remaining, 'Dos escenas idénticas producen idéntico contador y resto de ventana');
 }
 
 // ---------------------------------------------------------------------------
@@ -444,5 +449,5 @@ if (failed > 0) {
   process.exit(1);
 }
 
-console.log('\nRESULTADO: ÉXITO — Halo pulsante, anillo decreciente, refresco y disolución suave (Tarea 3.1).');
+console.log('\nRESULTADO: ÉXITO — Silueta perenne dorada, tinte heráldico, contador decreciente y regreso solemne (Tarea 3.1).');
 process.exit(0);
