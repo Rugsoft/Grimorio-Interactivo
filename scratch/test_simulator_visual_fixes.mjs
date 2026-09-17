@@ -88,9 +88,9 @@ function byClass(node, className) {
 console.log('== VERIFICACIÓN: CORRECCIÓN DE FALLOS DEL SIMULADOR DE GRIMORIO ==\n');
 
 // ══════════════════════════════════════════════════════════════════════
-// FASE 1: Maniquí Arcano Visible con Armazón y Paja Ceremonial (RF-02.1)
+// FASE 1: Espantapájaros Herético como efigie del blanco (RF-02.1 ratificado)
 // ══════════════════════════════════════════════════════════════════════
-console.log('FASE 1: Maniquí Arcano Visible con Armazón y Paja Ceremonial (RF-02.1)');
+console.log('FASE 1: Espantapájaros Herético como efigie del blanco (RF-02.1)');
 
 const host1 = createFakeElement('div');
 const dummy1 = createCombatDummyComponent({
@@ -102,26 +102,11 @@ const figure = byClass(host1, 'combat-dummy__figure');
 assertCondition(figure !== null, 'El contenedor .combat-dummy__figure está presente');
 
 const mannequin = byClass(host1, 'combat-dummy__mannequin');
-assertCondition(mannequin !== null, 'El armazón visual .combat-dummy__mannequin está creado');
-assertCondition(mannequin?.getAttribute('aria-hidden') === 'true', 'El armazón visual es aria-hidden (decorativo respecto a la barra accesible)');
-
-const head = byClass(host1, 'combat-dummy__head');
-assertCondition(head !== null, 'La cabeza de paja ceremonial (.combat-dummy__head) está modelada');
-
-const arms = byClass(host1, 'combat-dummy__arms');
-assertCondition(arms !== null, 'Los brazos/travesaño de madera (.combat-dummy__arms) están modelados');
-
-const torso = byClass(host1, 'combat-dummy__torso');
-assertCondition(torso !== null, 'El torso de paja tejida (.combat-dummy__torso) está modelado');
-
-const coreRune = byClass(host1, 'combat-dummy__core-rune');
-assertCondition(coreRune !== null && coreRune.textContent === '🜚', 'El pecho porta la diana rúnica central 🜚');
-
-const post = byClass(host1, 'combat-dummy__post');
-assertCondition(post !== null, 'El poste de madera noble (.combat-dummy__post) está modelado');
-
-const base = byClass(host1, 'combat-dummy__base');
-assertCondition(base !== null, 'El pedestal base (.combat-dummy__base) está modelado');
+assertCondition(mannequin !== null, 'La efigie .combat-dummy__mannequin está creada');
+assertCondition(mannequin?.tagName === 'IMG', 'La efigie es una imagen local (elemento img)');
+assertCondition(mannequin?.getAttribute('src') === 'assets/img/heretic-scarecrow.png', 'La efigie se sirve del repositorio (assets/img/heretic-scarecrow.png, Artículo I)');
+assertCondition(mannequin?.getAttribute('aria-hidden') === 'true', 'La efigie es aria-hidden (decorativa respecto a la barra accesible)');
+assertCondition(String(mannequin?.getAttribute('alt') ?? '').length > 0, 'La imagen porta un alt ceremonial');
 
 // Destrucción (RF-02.5): disolución en paja arcana
 dummy1.applySpellImpact({ effects: { damage: DUMMY_MAX_HEALTH } });

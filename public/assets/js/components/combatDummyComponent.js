@@ -83,37 +83,16 @@ export function createCombatDummyComponent(options = {}) {
   statusLegend.setAttribute('role', 'status');
   statusLegend.setAttribute('aria-live', 'polite');
 
-  // Armazón visual del Maniquí Arcano de Entrenamiento (RF-02.1):
-  // armazón de madera noble y paja ceremonial con diana rúnica.
-  const mannequin = createNode('div');
+  // Efigie visual del blanco (RF-02.1, criterio ratificado): el
+  // Espantapájaros Herético llega como imagen local del repositorio
+  // (Artículo I: servida del propio santuario, cero peticiones externas).
+  // La máquina de estados, la barra de salud y los distintivos no cambian.
+  const mannequin = createNode('img');
   mannequin.className = 'combat-dummy__mannequin';
+  mannequin.setAttribute('src', 'assets/img/heretic-scarecrow.png');
+  mannequin.setAttribute('alt', 'Espantapájaros herético de entrenamiento: efigie ritual de paja y alfileres con runas incandescentes');
+  mannequin.setAttribute('draggable', 'false');
   mannequin.setAttribute('aria-hidden', 'true');
-
-  const dummyHead = createNode('div');
-  dummyHead.className = 'combat-dummy__head';
-
-  const dummyArms = createNode('div');
-  dummyArms.className = 'combat-dummy__arms';
-
-  const dummyTorso = createNode('div');
-  dummyTorso.className = 'combat-dummy__torso';
-
-  const dummyRune = createNode('div');
-  dummyRune.className = 'combat-dummy__core-rune';
-  dummyRune.textContent = '🜚';
-  dummyTorso.appendChild(dummyRune);
-
-  const dummyPost = createNode('div');
-  dummyPost.className = 'combat-dummy__post';
-
-  const dummyBase = createNode('div');
-  dummyBase.className = 'combat-dummy__base';
-
-  mannequin.appendChild(dummyHead);
-  mannequin.appendChild(dummyArms);
-  mannequin.appendChild(dummyTorso);
-  mannequin.appendChild(dummyPost);
-  mannequin.appendChild(dummyBase);
 
   figure.appendChild(healthBar);
   figure.appendChild(barrierBadge);
@@ -126,15 +105,29 @@ export function createCombatDummyComponent(options = {}) {
     healthFill.style.setProperty('transform', `scaleX(${ratio})`);
     barrierBadge.textContent = state.barrier > 0 ? `[Barrera ${state.barrier}]` : '';
     const legends = {
-      intact: 'Maniquí intacto',
-      shielded: 'Maniquí escudado',
-      damaged: 'Maniquí dañado',
-      ccIncapacitated: 'Maniquí atado por el conjuro',
-      destroyed: 'El armazón se disuelve en paja arcana…',
+      intact: 'Espantapájaros intacto',
+      shielded: 'Espantapájaros escudado',
+      damaged: 'Espantapájaros herido',
+      ccIncapacitated: 'Espantapájaros atado por el conjuro',
+      destroyed: 'La efigie se derrumba en paja arcana…',
     };
     statusLegend.textContent = state.state === 'destroyed'
       ? legends.destroyed
       : `${legends[state.state] ?? ''} — ${state.health} / ${state.maxHealth} PV`;
+
+    // Bandas de herida (RF-02.1): la efigie agosta sus tonos al caer la
+    // salud — vivo por encima del 50 %, agostado hasta el 20 %, en los
+    // huesos por debajo. La destrucción conserva su clase propia.
+    if (typeof figure.classList?.remove === 'function') {
+      figure.classList.remove('combat-dummy--wounded', 'combat-dummy--fading');
+      if (state.state !== 'destroyed') {
+        if (ratio < 0.2) {
+          figure.classList.add('combat-dummy--fading');
+        } else if (ratio < 0.5) {
+          figure.classList.add('combat-dummy--wounded');
+        }
+      }
+    }
 
     if (state.state === 'destroyed') {
       figure.classList?.add?.('combat-dummy--destroyed');

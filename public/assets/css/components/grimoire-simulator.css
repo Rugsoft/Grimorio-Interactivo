@@ -310,10 +310,13 @@
   100% { transform: scale(1) translate(0, 0); }
 }
 
+/* Derrumbe físico (RF-02.5): la efigie se desploma sobre su base,
+   gira y se desvanece; al regenerar vuelve erguida por la transición. */
 .combat-dummy--destroyed .combat-dummy__mannequin {
-  opacity: 0.15;
-  transform: scale(0.85) translateY(12px);
-  filter: blur(2px);
+  opacity: 0.12;
+  transform: rotate(14deg) translateY(26px) scale(0.92);
+  filter: blur(2px) grayscale(0.8);
+  animation: none;
   transition: opacity 400ms ease, transform 400ms ease, filter 400ms ease;
 }
 
@@ -352,114 +355,49 @@
   white-space: nowrap;
 }
 
-/* Armazón visual del Maniquí Arcano (RF-02.1): madera noble y paja ceremonial */
+/* ---------------------------------------------------------------------
+ * Efigie del Espantapájaros Herético (RF-02.1, criterio ratificado):
+ * imagen local sin caja fundida con el lienzo. Aura incandescente que
+ * respira, herida que agosta sus tonos por bandas de PV y derrumbe
+ * físico al disolverse (RF-02.5).
+ * ------------------------------------------------------------------- */
 .combat-dummy__mannequin {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 110px;
-  height: 180px;
+  display: block;
+  width: clamp(120px, 14vw, 160px);
+  height: auto;
   margin-top: 4px;
-  transition: opacity 300ms ease, transform 300ms ease;
+  user-select: none;
+  -webkit-user-drag: none;
+
+  /* Aura incandescente: fulgor dorado-carmesí de las runas rituales. */
+  filter: drop-shadow(0 0 10px rgba(212, 169, 78, 0.35))
+          drop-shadow(0 0 22px rgba(192, 86, 59, 0.18));
+
+  /* El derrumbe pivota sobre la base del poste. */
+  transform-origin: 50% 96%;
+  transition: opacity 300ms ease, transform 300ms ease, filter 300ms ease;
+
+  /* Respiración ceremonial de la efigie (SPEC-02 RF-01.2): ciclo de
+     3.5 s exclusivamente en el eje compositable. */
+  animation: scarecrowBreathing 3.5s ease-in-out infinite;
 }
 
-.combat-dummy__head {
-  width: 34px;
-  height: 38px;
-  background: radial-gradient(circle at 40% 35%, var(--color-gold-bright), var(--color-gold-burnished));
-  border: 2px solid var(--color-bronze-ceremonial);
-  border-radius: 50% 50% 45% 45%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  position: relative;
-  z-index: 2;
+@keyframes scarecrowBreathing {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(212, 169, 78, 0.35)) drop-shadow(0 0 22px rgba(192, 86, 59, 0.18)); }
+  50%      { filter: drop-shadow(0 0 16px rgba(212, 169, 78, 0.55)) drop-shadow(0 0 30px rgba(192, 86, 59, 0.30)); }
 }
 
-.combat-dummy__head::after {
-  content: '';
-  position: absolute;
-  top: 40%;
-  left: -2px;
-  right: -2px;
-  height: 5px;
-  background: var(--color-parchment-border);
-  border-radius: 2px;
-  border-bottom: 1px solid var(--color-gold-arcane);
+/* Bandas de herida: la efigie agosta sus tonos al descender la salud. */
+.combat-dummy--wounded .combat-dummy__mannequin {
+  filter: sepia(0.35) saturate(0.65) brightness(0.9)
+          drop-shadow(0 0 8px rgba(212, 169, 78, 0.25));
+  animation: none;
 }
 
-.combat-dummy__arms {
-  width: 98px;
-  height: 10px;
-  background: linear-gradient(180deg, var(--color-bronze-ceremonial) 0%, var(--color-parchment-border) 100%);
-  border: 1px solid var(--color-parchment-base);
-  border-radius: 3px;
-  margin-top: -5px;
-  position: relative;
-  z-index: 1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
-}
-
-.combat-dummy__arms::before,
-.combat-dummy__arms::after {
-  content: '';
-  position: absolute;
-  top: -3px;
-  width: 14px;
-  height: 16px;
-  background: repeating-linear-gradient(90deg, var(--color-gold-bright), var(--color-gold-bright) 3px, var(--color-gold-burnished) 3px, var(--color-gold-burnished) 6px);
-  border-radius: 2px;
-  border: 1px solid var(--color-parchment-border);
-}
-.combat-dummy__arms::before { left: 3px; }
-.combat-dummy__arms::after { right: 3px; }
-
-.combat-dummy__torso {
-  width: 48px;
-  height: 64px;
-  background: repeating-linear-gradient(175deg, var(--color-gold-bright), var(--color-gold-bright) 5px, var(--color-gold-burnished) 5px, var(--color-gold-burnished) 10px);
-  border: 2px solid var(--color-bronze-ceremonial);
-  border-radius: 10px 10px 16px 16px;
-  margin-top: -4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 2;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-}
-
-.combat-dummy__core-rune {
-  font-family: var(--font-arcane-seal);
-  font-size: 1.2rem;
-  color: var(--color-gold-bright);
-  text-shadow: 0 0 8px var(--color-gold-arcane);
-  border: 2px dashed rgba(212, 169, 78, 0.6);
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(20, 18, 16, 0.65);
-}
-
-.combat-dummy__post {
-  width: 12px;
-  height: 48px;
-  background: linear-gradient(90deg, var(--color-bronze-ceremonial) 0%, var(--color-parchment-border) 100%);
-  border: 1px solid var(--color-parchment-base);
-  border-radius: 2px;
-  margin-top: -2px;
-  z-index: 1;
-}
-
-.combat-dummy__base {
-  width: 58px;
-  height: 8px;
-  background: linear-gradient(180deg, var(--color-bronze-ceremonial) 0%, var(--color-parchment-base) 100%);
-  border: 1px solid var(--color-parchment-border);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+.combat-dummy--fading .combat-dummy__mannequin {
+  filter: grayscale(0.55) sepia(0.25) brightness(0.7)
+          drop-shadow(0 0 5px rgba(212, 169, 78, 0.15));
+  animation: none;
 }
 
 /* ---------------------------------------------------------------------
@@ -630,10 +568,16 @@
   .grimoire-book__element-option,
   .grimoire-book__filter-clear,
   .combat-dummy__health-fill,
+  .combat-dummy__mannequin,
   .grimoire-simulator__controls button {
     transition: none;
   }
-  .grimoire-simulator__stage--tremor {
+  .grimoire-simulator__stage--tremor,
+  .combat-dummy__mannequin {
     animation: none;
+  }
+  /* Sin derrumbe teatral: la efigie solo se desvanece con dignidad. */
+  .combat-dummy--destroyed .combat-dummy__mannequin {
+    transform: none;
   }
 }
