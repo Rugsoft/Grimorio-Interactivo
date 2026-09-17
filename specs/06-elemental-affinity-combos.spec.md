@@ -75,7 +75,7 @@ El objetivo de esta especificación es definir el **Códice de Afinidades Elemen
 * **RF-02.1 [Dirigido por Eventos]:**  
   CUANDO un conjuro con afinidad elemental específica impacte sobre un objetivo sin aura activa, el sistema DEBERÁ imbuir al blanco con un **Aura Elemental (`activeElementalAura`) visible durante una ventana de resonancia de exactamente cinco (5) segundos (`resonanceExpiresAt`)**.
 * **RF-02.2 [Estado]:**  
-  MIENTRAS un objetivo permanezca imbuido con un aura elemental, el sistema DEBERÁ mostrar un halo luminoso pulsante del color heráldico del elemento alrededor del blanco, acompañado de un indicador rúnico circular que decrece conforme expiran los cinco segundos.
+  MIENTRAS un objetivo permanezca imbuido con un aura elemental, el sistema DEBERÁ mostrar un halo luminoso pulsante del color heráldico del elemento que **abraza la silueta del blanco** (criterio ratificado): una capa-luz derivada de la propia efigie —imagen clonada con desenfoque y resplandor del color vigente— en lugar de cualquier geometría circular (prohibido el anillo o disco). La duración de la ventana la declara un **contador numérico** que marca los segundos enteros restantes (5 → 0); no existe indicador rúnico circular. La capa-luz es **perenne**: en reposo pulsa en **dorado arcano** y al imbuirse se tiñe del color heráldico del elemento entrante con transición suave, regresando al dorado al expirar la ventana.
 * **RF-02.3 [Ubicuo]:**  
   El sistema DEBERÁ **conservar activa el aura elemental y su temporizador decreciente de cinco (5) segundos al hojear las páginas del grimorio**, permitiendo probar combinaciones entre conjuros distribuidos en distintas páginas del libro.
 * **RF-02.4 [Dirigido por Eventos]:**  
@@ -195,7 +195,9 @@ El objetivo de esta especificación es definir el **Códice de Afinidades Elemen
 
 * [ ] El Códice de Afinidades presenta una Rueda Rúnica octogonal en escritorio y selector con acordeón táctil en móviles con los 8 elementos del santuario.
 * [ ] Al seleccionar un elemento en la Rueda, se iluminan sus enlaces compatibles y se expone la ficha de reacción con su nombre litúrgico y efectos.
-* [ ] Los conjuros elementales imbuyen un aura visible con halo circular de cinco (5) segundos de duración sobre el blanco.
+* [ ] Los conjuros elementales imbuyen un aura visible de cinco (5) segundos de duración sobre el blanco.
+* [ ] El halo abraza la silueta del blanco (sin geometría circular ni anillo rúnico), se tiñe del color heráldico del elemento al imbuirse y porta un contador numérico de segundos restantes (RF-02.2 ratificado).
+* [ ] La capa-luz del aura es perenne: pulsa en dorado arcano en reposo y regresa al dorado al expirar la ventana (RF-02.2 ratificado).
 * [ ] El aura elemental activa y sus 5 segundos se conservan intactos al hojear las páginas del grimorio.
 * [ ] Los impactos del mismo elemento reinician el contador de 5 segundos sin detonar reacción.
 * [ ] Los impactos de elementos no reactivos aplican su daño base íntegro y sobreescriben el aura con un nuevo contador de 5 s.
@@ -227,3 +229,4 @@ El objetivo de esta especificación es definir el **Códice de Afinidades Elemen
 * **[RESUELTO — Hallazgo 8] Adaptabilidad Móvil:** Rueda Rúnica octogonal en escritorio y Selector Radial con Acordeón Rúnico táctil en pantallas móviles.
 * **[RESUELTO — Hallazgo 9] Cola FIFO de Ráfagas:** Resolución determinista en cola secuencial para impactos casi simultáneos ($< 100\text{ ms}$) sin carreras.
 * **[RESUELTO — Hallazgo 10] Identificadores Técnicos en Inglés (Art. V):** Ratificados `arcaneVaporization`, `fluidElectrocution`, `vortexDeflagration`, `basalticFracture`, `petrifyingSwamp`, `glacialBlizzard`, `twilightCollapse`, `pureArcaneResonance`, `activeElementalAura`, `stunlockImmunityActive`.
+* **[RESUELTO — Hallazgo 11] Aura Contorneada, Perenne y Contador Numérico (RF-02.2, criterio ratificado):** El halo abraza la silueta del blanco: una capa-luz derivada de la propia efigie (imagen clonada con desenfoque y resplandor del color de `--aura-color`) acompaña sombrero, brazos y base del espantapájaros. La capa es **perenne**: en reposo pulsa en dorado arcano (hermana de la respiración ceremonial de la efigie) y, al impactar un conjuro elemental, se tiñe del color heráldico del elemento entrante con transición suave; al expirar la ventana regresa al dorado de reposo sin desaparecer. Toda geometría circular (anillo rúnico SVG) queda prohibida y retirada: la duración la declara exclusivamente el **contador numérico** (5 → 0), actualizado por el bucle de escena, visible solo con ventana viva. Bajo `prefers-reduced-motion` el pulso cesa pero el tinte y el contador permanecen.
