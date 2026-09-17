@@ -163,7 +163,7 @@ INSERT INTO spells (id, slug, name, author_id, magic_school, elemental_affinity,
                     status, validation_signatures_count, signatures_count, is_genesis_sample,
                     created_at, updated_at, validated_at) VALUES
     ('spl_draft_01', 'boceto-prohibido', 'Boceto Prohibido',
-     'usr_custodio_primordial', 'necromancy', 'shadow', 'action',
+     'usr_custodio_primordial', 'necromancy', 'darkness', 'action',
      22, 2, 'eacda1bf4cd34025332ef2f340a5f8b0c952b8a7d7bd35791a42aa720d8807c8', 'cln_primordial',
      'Rasgo inestable que arranca fragmentos de sombra ajenos sin forma aún definida.',
      'Conjuro sin concluir hallado entre las anotaciones de un aprendiz desaparecido. Las sombras convocadas obedecen a medias: se retuercen, susurran y se disuelven sin orden. Ningún Maestro ha querido firmar aún su estabilidad; su estudio se considera riesgo de Inestabilidad Arcana.',
