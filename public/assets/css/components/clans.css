@@ -176,23 +176,110 @@
   align-items: center;
   gap: var(--space-ink-2);
   min-height: var(--touch-target-min);
-  padding: var(--space-ink-1) var(--space-ink-3);
+  padding: 0;
 
-  border: var(--border-ink);
-  border-radius: var(--radius-seal);
-  background-color: var(--color-bg-obsidian-surface);
+  border: none;
+  border-radius: 0;
+  background: none;
   color: var(--color-text-secondary);
   font-family: var(--font-arcane-seal);
   font-size: var(--font-size-ink-small);
   letter-spacing: var(--letter-spacing-seal);
+
+  /* Ancla del menú desplegable arcano. */
+  position: relative;
 }
 
-.user-profile__alias {
+/* Conmutador del distintivo (#userProfileToggle): puerta del menú que
+   consume el Kit de Controles (SPEC-02 RF-08), variante de filo. */
+.user-profile > button {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-3);
+  box-sizing: border-box;
+
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+
+  transition: border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.user-profile > button:hover,
+.user-profile > button:focus-visible {
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.user-profile > button:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Menú desplegable (#userProfileMenu): pergamino de obsidiana que
+   emerge bajo el distintivo; oculto mientras aria-hidden lo declare. */
+.user-profile ul {
+  position: absolute;
+  top: calc(100% + var(--space-ink-1));
+  right: 0;
+  z-index: var(--z-modal-access);
+
+  min-width: 16rem;
+  margin: 0;
+  padding: var(--space-ink-2);
+  list-style: none;
+
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  box-shadow: var(--shadow-arcane);
+}
+
+.user-profile ul[aria-hidden='true'] {
+  display: none;
+}
+
+/* Opciones del menú: botones fantasma del Kit a ancho completo. */
+.user-profile ul button {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-3);
+  box-sizing: border-box;
+  text-align: left;
+
+  border: none;
+  border-radius: var(--radius-scroll);
+  background: none;
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  cursor: pointer;
+
+  transition: background-color var(--transition-arcane),
+              color var(--transition-arcane);
+}
+
+.user-profile ul button:hover,
+.user-profile ul button:focus-visible {
+  background-color: var(--color-bg-obsidian-surface);
   color: var(--color-gold-arcane);
 }
 
-.user-profile__role {
-  color: var(--color-text-muted);
+.user-profile ul button:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: -3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .user-profile > button,
+  .user-profile ul button {
+    transition: none;
+  }
 }
 
 /* ---------------------------------------------------------------------
