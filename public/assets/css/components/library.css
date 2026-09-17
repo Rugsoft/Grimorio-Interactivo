@@ -86,6 +86,30 @@
   background-color: var(--color-bg-obsidian-surface);
 }
 
+/* Escritorio ancho (>= 1024 px): el filtro arcano se despliega en
+   horizontal — el título abre la fila, las escuelas y los experimentales
+   fluyen envueltos en línea y el deslizador de maná cierra a ancho
+   completo, para no robar altura al catálogo. En pantallas estrechas
+   conserva la columna ergonómica (SPEC-02 RF-05.3). */
+@media (min-width: 1024px) {
+  .library-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-ink-2) var(--space-ink-4);
+  }
+
+  /* El título y el maná mandan su propia línea: basis completo. */
+  .library-filters__title,
+  .library-filter__mana-label {
+    flex-basis: 100%;
+  }
+
+  .library-filter__mana-label {
+    margin-top: var(--space-ink-1);
+  }
+}
+
 .library-filters__title {
   margin: 0;
   font-family: var(--font-arcane-title);

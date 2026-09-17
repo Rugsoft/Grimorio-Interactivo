@@ -36,6 +36,29 @@ const AREA_TYPES = Object.freeze(['singleTarget', 'cone', 'line', 'sphere']);
 const DURATION_TYPES = Object.freeze(['instant', 'concentration', 'sustained']);
 
 /**
+ * Rótulos en noble castellano para los valores técnicos del canon
+ * (Artículo V: los identificadores y valores del DTO permanecen en
+ * inglés; la interfaz visible habla castellano).
+ */
+const OPTION_LABELS = Object.freeze({
+  none: 'Ninguno',
+  slow: 'Ralentizar',
+  root: 'Inmovilizar',
+  stun: 'Aturdir',
+  touch: 'Toque',
+  short: 'Corto',
+  medium: 'Medio',
+  long: 'Largo',
+  singleTarget: 'Blanco único',
+  cone: 'Cono',
+  line: 'Línea',
+  sphere: 'Esfera',
+  instant: 'Instantánea',
+  concentration: 'Concentración',
+  sustained: 'Sostenida',
+});
+
+/**
  * Normaliza un valor de input numérico a entero >= 0 (defensa anti-tipos
  * sucios: 'treinta', -10, 10.5 → 0; 30, '30' → 30).
  *
@@ -140,7 +163,7 @@ export function createSpellFormControls(componentOptions = {}) {
     for (const optionValue of options) {
       const option = elementFactory('option');
       option.value = optionValue;
-      option.textContent = optionValue;
+      option.textContent = OPTION_LABELS[optionValue] ?? optionValue;
       select.appendChild(option);
     }
     // El valor inicial se asienta tras poblar las opciones (en el DOM real
@@ -190,7 +213,7 @@ export function createSpellFormControls(componentOptions = {}) {
       const label = elementFactory('label');
       label.className = 'spell-form-controls__radio-label';
       label.setAttribute('for', `spell-form-${name}-${optionValue}`);
-      label.textContent = optionValue;
+      label.textContent = OPTION_LABELS[optionValue] ?? optionValue;
 
       optionWrapper.appendChild(radio);
       optionWrapper.appendChild(label);
