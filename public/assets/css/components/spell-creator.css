@@ -87,9 +87,8 @@
 .spell-form-controls__select:focus-visible,
 .spell-form-controls__radio:focus-visible,
 .spell-form-controls__checkbox:focus-visible {
-  outline: 2px solid var(--color-gold-arcane);
+  outline: 3px solid var(--color-parchment-border-focus);
   outline-offset: 2px;
-  border-color: var(--color-parchment-border-focus);
 }
 
 /* Acciones del taller: sellos de oro sobre pergamino oscuro. */
@@ -149,6 +148,15 @@
   gap: 0.25rem;
 }
 
+/* Casillas de componentes: el sello y su rótulo comparten fila táctil
+   (el wrapper --checkbox hereda la columna de __field). */
+.spell-form-controls__field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--touch-target-min);
+}
+
 .spell-form-controls__group {
   display: flex;
   flex-wrap: wrap;
@@ -169,27 +177,106 @@
 
 .spell-form-controls__number,
 .spell-form-controls__select {
-  padding: 0.35rem var(--spacing-ink, 0.5rem);
+  /* Materia del Kit de Controles (SPEC-02, RF-08.3/08.4): el select
+     forja su flecha de oro (sin despliegue nativo) y comparte el
+     patrón canónico del Umbral con los inputs numéricos. */
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: var(--touch-target-min);
+  padding: 0.35rem var(--space-ink-5) 0.35rem var(--spacing-ink, 0.5rem);
+  box-sizing: border-box;
   color: var(--color-text-light);
-  background: var(--color-parchment-base);
+  background-color: var(--color-bg-grimoire);
   border: var(--border-ink);
   border-radius: var(--radius-scroll);
   font-family: var(--font-arcane-body);
   font-size: var(--font-size-ink-base);
+  cursor: pointer;
+
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-gold-arcane) 50%),
+                    linear-gradient(135deg, var(--color-gold-arcane) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 2px),
+                       calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
 }
 
+/* El input numérico jamás porta la flecha del select (materia propia). */
+.spell-form-controls__number {
+  cursor: text;
+  padding-right: var(--spacing-ink, 0.5rem);
+  background-image: none;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+
+/* Opciones en línea de cada grupo: fila táctil solemne. */
 .spell-form-controls__radio-option {
   display: flex;
   align-items: center;
   gap: 0.35rem;
+  min-height: var(--touch-target-min);
 }
 
 .spell-form-controls__radio,
 .spell-form-controls__checkbox {
-  width: 1.1rem;
-  height: 1.1rem;
-  accent-color: var(--color-gold-arcane);
+  /* Materia forjada del Kit de Controles (SPEC-02, RF-08.4): jamás
+     nativos. Sello de obsidiana con filo dorado y runa de validación. */
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
   cursor: pointer;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink-strong);
+
+  transition: background-color var(--transition-arcane),
+              border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.spell-form-controls__radio {
+  border-radius: 50%;
+}
+
+.spell-form-controls__checkbox {
+  border-radius: var(--radius-scroll);
+}
+
+.spell-form-controls__radio:hover,
+.spell-form-controls__checkbox:hover {
+  border-color: var(--color-gold-arcane);
+}
+
+.spell-form-controls__radio:checked,
+.spell-form-controls__checkbox:checked {
+  background-color: var(--color-bg-obsidian-elevated);
+  border-color: var(--color-valid-runes);
+  box-shadow: 0 0 8px var(--color-valid-runes);
+}
+
+.spell-form-controls__checkbox:checked::after {
+  content: var(--seal-verified-glyph, '✓');
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-valid-runes);
+}
+
+.spell-form-controls__radio:checked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background-color: var(--color-valid-runes);
 }
 
 .spell-form-controls__radio-label {
