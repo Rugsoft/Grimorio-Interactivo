@@ -85,6 +85,8 @@ Normar la experiencia interactiva en el taller de creación de conjuros, el mode
   * Componente Somático (`somatic`): $-10\%$ de reducción ($0.10$).
   * Componente Material (`material`): $-10\%$ de reducción ($0.10$).
   * *(La presencia simultánea de los tres componentes concede el descuento máximo acumulado del treinta por ciento: $30\%$).*
+* **RF-01.6 [Ubicuo, criterio ratificado]:**  
+  El sistema DEBERÁ validar la Afinidad Elemental declarada contra los ocho identificadores canónicos en inglés `camelCase` del Códice (`fire`, `water`, `lightning`, `earth`, `wind`, `light`, `darkness`, `pureArcane`), rechazando con error de dominio cualquier valor ajeno a esa lista. La afinidad `'shadow'` —hallazga en la semilla primordial de nigromancia— NO es canónica: su valor correcto es `'darkness'`. Esta validación garantiza que todo conjuro imbuya el aura de su color heráldico del Códice (SPEC-06, RF-02.2) sin caer en el fallback neutro.
 
 ### RF-02: La Ley Universal del Maná (Fórmula Determinista Ciega)
 * **RF-02.1 [Ubicuo]:**  
@@ -190,9 +192,16 @@ Normar la experiencia interactiva en el taller de creación de conjuros, el mode
 - [ ] Los conjuros validados quedan congelados contra edición o eliminación por su autor original.
 - [ ] Los nombres de conjuros son globalmente únicos en el santuario.
 - [ ] Se cumple estrictamente la dualidad lingüística y el velo arcano.
+- [ ] La afinidad elemental se valida contra los 8 identificadores canónicos del Códice y los valores ajenos son rechazados con error de dominio (RF-01.6 ratificado).
 
 ---
 
 ## 9. Dudas Abiertas
 
 * *(Ninguna)*: Todos los valores matemáticos, multiplicadores geométricos, ciclo de vida de borradores y salvaguardas antifraude han quedado formalmente fijados y blindados tras la revisión de control de calidad.
+
+---
+
+## 10. Registro de Hallazgos (QA)
+
+* **[RESUELTO — Hallazgo 1] Afinidad No Canónica en la Semilla Primordial (RF-01.6, criterio ratificado):** La auditoría del Códice de Combos (SPEC-06) detectó que el pergamino primordial de Nigromancia declaraba la afinidad `'shadow'`, valor ajeno a la matriz canónica de 8 elementos, para el cual el backend no exigía validación de dominio y el cliente renderizaría un aura neutra blanca en lugar del color heráldico. Ratificado: la lista de afinidades válidas son exactamente los 8 identificadores del Códice (`fire`, `water`, `lightning`, `earth`, `wind`, `light`, `darkness`, `pureArcane`); `'shadow'` se corrige a `'darkness'` en la semilla y el backend rechaza en adelante toda afinidad ajena con error de dominio. La neutralidad elemental del maná (RF-02.4) permanece intacta: la validación no altera el cálculo.
