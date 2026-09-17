@@ -80,9 +80,9 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
 
 ---
 
-### RF-02: Cámara de Conjuración y Maniquí de Entrenamiento
+### RF-02: Cámara de Conjuración y Espantapájaros de Entrenamiento
 * **RF-02.1 [Ubicuo]:**  
-  El sistema DEBERÁ disponer en la página derecha de un lienzo interactivo con un **Maniquí Arcano de Entrenamiento**, compuesto por un armazón de madera rúnica y paja ceremonial, provisto de una barra de resistencia ficticia de **500 puntos de salud base (PV)** y un indicador de absorción de barrera mágica.
+  El sistema DEBERÁ disponer en la página derecha de un lienzo interactivo con un **Espantapájaros Herético de Entrenamiento** (criterio ratificado): una efigie ritual de paja y alfileres, coronada por sombrero de brujo y grabada con runas incandescentes, servida como imagen local del propio repositorio (Artículo I: cero peticiones externas), provista de una barra de resistencia ficticia de **500 puntos de salud base (PV)** y un indicador de absorción de barrera mágica. La efigie DEBERÁ fundirse con el lienzo sin caja ni marco: aura incandescente que respira, herida que agosta sus tonos al descender la salud y derrumbe físico al disolverse. El punto de anclaje de los impactos (el pecho de la efigie) y el radio ceremonial de impacto permanecen inmutables.
 * **RF-02.2 [Ubicuo]:**  
   El sistema DEBERÁ operar la Cámara de Conjuración bajo la modalidad de **Banco de Pruebas Aislado (Sandbox Ilimitado)**: el usuario podrá invocar conjuros indefinidamente sin consumir maná de una reserva personal, sin tiempos de espera punitivos y sin alterar el estado permanente del santuario.
 * **RF-02.3 [Ubicuo]:**  
@@ -93,7 +93,7 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
   * **Curación:** Incrementa los PV de salud hasta un **techo máximo inmutable de 500 PV** (sin sobrecuración); si el maniquí ya goza de 500 PV, el impacto muestra la leyenda flotante `[Salud Plena]` sin alterar el marcador.
   * **Barrera:** Aplica un escudo de absorción temporal bajo la **regla de renovación por mayor valor** (la barrera más potente reemplaza a la de menor cuantía, sin apilamiento acumulativo infinito).
 * **RF-02.5 [Dirigido por Eventos]:**  
-  CUANDO la salud del maniquí llegue a cero (0 PV), el sistema DEBERÁ disolver el armazón en una nube de paja arcana y **regenerar automáticamente el maniquí intacto a sus 500 PV originales tras dos (2) segundos**.
+  CUANDO la salud del maniquí llegue a cero (0 PV), el sistema DEBERÁ **derrumbar la efigie** —el espantapájaros se desploma sobre su base y se desvanece— y **regenerar automáticamente el espantapájaros intacto, erguido de nuevo a sus 500 PV originales tras dos (2) segundos**.
 * **RF-02.6 [Dirigido por Eventos]:**  
   CUANDO el usuario pulse el botón ceremonial de **«Restaurar Maniquí»**, el sistema DEBERÁ restablecer al instante los 500 PV de salud, disipar todas las barreras y estados alterados, y limpiar la bitácora de impactos de la sesión.
 
@@ -222,6 +222,7 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
 * [ ] La navegación permite hojear páginas de forma acotada (sin bucles infinitos) y exhibe pergamino virgen ante filtros vacíos.
 * [ ] Los visitantes acceden al Tomo Canónico (validados) y los autores autenticados pueden conmutar a «Mis Ensayos Arcanos» (drafts y experimentales).
 * [ ] El maniquí rúnico dispone de 500 PV de salud base y barra de absorción de barrera mágica.
+* [ ] El blanco de entrenamiento es el Espantapájaros Herético (RF-02.1): efigie ritual servida como imagen local, sin caja, con aura incandescente, herida que agosta sus tonos al descender la salud y derrumbe con regeneración erguida (RF-02.5).
 * [ ] El estado de salud y daño del maniquí se conserva al pasar de página entre distintos conjuros.
 * [ ] La curación está acotada a 500 PV (`[Salud Plena]`) y las barreras se renuevan por el valor más alto (sin apilamiento infinito).
 * [ ] Al llegar a 0 PV, el maniquí se disuelve y regenera automáticamente a 500 PV en dos (2) segundos.
@@ -253,3 +254,4 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
 * **[RESUELTO — Hallazgo 9] Reciclado FIFO de Partículas:** Tope de 200 partículas gestionado por reciclado en cola circular, garantizando 60 FPS estables sin picos de *Garbage Collection*.
 * **[RESUELTO — Hallazgo 10] Soberanía Lingüística en la Voz:** Fórmulas sagradas y dicción íntegramente en noble castellano (`es-ES`), garantizando naturalidad fonética, dicción solemne y cumplimiento estricto del Artículo V.
 * **[RESUELTO — Hallazgo 11] Sincronía Física del Impacto y Blindaje de la Invocación (RF-05.4 / RF-05.5):** El despacho del impacto se formaliza por **detección de proximidad** al radio ceremonial de 24 px alrededor del corazón del maniquí, con el tiempo de vuelo estimado relegado a respaldo de garantía ante interrupciones del renderizado; los proyectiles dirigidos vuelan balísticamente puros hasta el cruce del blanco, las afinidades elementales fuera del canon se normalizan (o degradan a maná neutro) sin interrumpir la manifestación, y todo fallo imprevisto de la invocación se anuncia con solemnidad sin promesas silenciosas. Verificado por los arneses del lienzo arcánico (proximidad y respaldo), la vista del simulador y los perfiles elementales del motor.
+* **[RESUELTO — Hallazgo 12] Efigie del Espantapájaros Herético (RF-02.1 / RF-02.5, criterio ratificado):** El armazón CSS de divs del Maniquí Arcano se sustituye por la efigie ritual de la imagen local `public/assets/img/heretic-scarecrow.png` (PNG con transparencia servido del propio repositorio, Artículo I). La efigie se funde con el lienzo sin caja: aura incandescente ceremonial que respira, bandas de herida que agostan sus tonos por tramos de PV, derrumbe físico sobre su base al llegar a 0 PV y regeneración erguida a los 2 s. El punto de anclaje de impactos (pecho) y el radio ceremonial de 24 px permanecen inmutables: ni el motor de partículas ni la máquina de estados cambian.
