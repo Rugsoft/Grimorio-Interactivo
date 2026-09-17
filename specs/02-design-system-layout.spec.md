@@ -127,6 +127,22 @@ Establecer las directrices de diseño visual, la jerarquía tipográfica noble, 
 
 ---
 
+### RF-08: Kit de Controles Interactivos Forjados (Criterio Ratificado)
+* **RF-08.1 [Ubicuo]:**
+  El sistema DEBERÁ vestir la totalidad de sus controles interactivos (`button`, `input`, `select`, `textarea`, `checkbox`, `radio` y `input[type=range]`) con el **Kit de Controles Interactivos** (`public/assets/css/components/controls.css`): jamás se expondrá el aspecto nativo del navegador ni se inventarán estilos divergentes por módulo.
+* **RF-08.2 [Ubicuo]:**
+  El kit DEBERÁ definir una base solemne `.button` con variantes `--primary` (oro macizo con tinta de sello), `--secondary` (filo dorado sobre obsidiana) y `--ghost` (texto dorado sin fondo), y todo botón nuevo DEBERÁ consumir esa base o las clases de módulo que el propio kit ampare.
+* **RF-08.3 [Ubicuo]:**
+  Los campos de texto, selectores y áreas de descripción DEBERÁN seguir el patrón canónico de los formularios del Umbral (fondo de obsidiana profunda, filo de tinta dorada, foco visible con anillo de oro arcano), unificando los patrones divergentes existentes (ej. inputs de pergamino del Panel de Gobierno).
+* **RF-08.4 [Ubicuo]:**
+  Las casillas (`checkbox`), opciones (`radio`) y deslizadores (`range`) DEBERÁN forjarse con `appearance: none` y materia del grimorio: indicador de verificación en runa de validación (`--color-valid-runes`), pulgar de oro arcano sobre carril de obsidiana y estados bloqueados con textura de piedra desgastada (RF-06.2).
+* **RF-08.5 [Ubicuo]:**
+  Todo control del kit DEBERÁ conservar la zona táctil mínima de 44x44 px (RF-05.4), el foco visible por teclado, el contraste mínimo de 4.5:1 (RF-01.3) y el respeto a `prefers-reduced-motion` en sus transiciones y animaciones.
+* **RF-08.6 [Ubicuo]:**
+  El sistema DEBERÁ mantener cobertura estilística total: toda clase emitida por el código JavaScript de vistas y componentes DEBERÁ contar con una regla CSS en las hojas del proyecto, verificada por un guard de cobertura automatizado (`scratch/test_css_coverage.mjs`) que impida la reincidencia de controles huérfanos.
+* **RF-08.7 [Ubicuo]:**
+  Las hojas del kit y de los módulos que consumen controles DEBERÁN escribir exclusivamente tokens de `tokens.css` (cero literales de color), en conformidad con la disciplina de tokens vigente.
+
 ### RF-07: El Sello Rúnico Forjado y la Heráldica Determinista
 * **RF-07.1 [Ubicuo]:**  
   El sistema DEBERÁ declarar la materia del sello como tokens de diseño (disco de tinta, muescas marfil, oro antiguo de casa viva, oro vivo del regente, bronce de casa disuelta y cera de brasa) y vestir todo sello exclusivamente con ellos, sin un solo literal de color en las hojas que lo consumen.
@@ -190,9 +206,17 @@ Establecer las directrices de diseño visual, la jerarquía tipográfica noble, 
 - [ ] El contraste visual de texto supera 4.5:1 sobre fondos texturizados fundidos en bases sólidas.
 - [ ] El escalado al 200% y el modo de impresión en pergamino claro de bajo consumo funcionan de forma armoniosa.
 - [ ] El blasón de cada casa y el sello de cada linaje se forjan como Sello Rúnico determinista: el identificador técnico jamás se imprime, el estado se declara por metal y forma, y la etiqueta accesible nombra casa, linaje y honor en castellano.
+- [ ] La totalidad de botones, campos, casillas, opciones, selectores y deslizadores visten el Kit de Controles Interactivos (RF-08): sin estilos nativos expuestos, con foco visible, táctil de 44 px y `prefers-reduced-motion` respetado.
+- [ ] El guard de cobertura CSS verifica que toda clase emitida por las vistas y componentes cuenta con su regla CSS, sin huérfanos.
 
 ---
 
 ## 9. Dudas Abiertas
 
 * *(Ninguna)*: Todas las ambigüedades dimensionales, solapamientos conceptuales, cadencias de pulso y adaptaciones a soportes monocromáticos han quedado resueltas y blindadas tras la revisión QA.
+
+---
+
+## 10. Registro de Resoluciones de Calidad
+
+* **Hallazgo 1 — Controles huérfanos fuera del canon (ratificado):** La auditoría de cobertura cruzada entre las clases emitidas por `public/assets/js/` y las hojas del proyecto detectó controles interactivos sin vestir (checkboxes, radio grupos, selects, deslizadores de maná, botones de la Bitácora, ficha técnica, clanes y portal) que renderizaban con estilos nativos del navegador, rompiendo la solemnidad del grimorio. **Resolución:** se ratifica el RF-08 (Kit de Controles Interactivos) con hoja compartida `controls.css`, vestido de los módulos huérfanos (biblioteca, bitácora, clanes, ficha técnica) y un guard de cobertura automatizado que impide reincidencias. Los contrastes del kit se validaron con `scratch/verify_design_tokens.php` y la coherencia visual se verificó con los arneses de `scratch/`.
