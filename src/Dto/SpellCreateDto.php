@@ -21,7 +21,8 @@
  * Diseño:
  *   - fromArray() deserializa el payload plano del Endpoint 2 del plan
  *     (plan 2.2) y compone el DTO cuantitativo interno; la validación de
- *     dominio matemático vive en el DTO interno (una sola fuente de verdad).
+ *     dominio matemático vive en el DTO interno (una sola fuente de verdad)
+ *     y la afinidad elemental se valida contra el Códice aquí (RF-01.6).
  *   - El nombre es obligatorio y no puede quedar en blanco: la unicidad
  *     canónica la garantiza la base de datos (UNIQUE), no el DTO.
  */
@@ -36,9 +37,24 @@ namespace Grimorio\Dto;
 final readonly class SpellCreateDto
 {
     /**
+     * Afinidades elementales canónicas del Códice (SPEC-04, RF-01.6
+     * criterio ratificado; espejo de la matriz de SPEC-06). Toda afinidad
+     * ajena a esta lista es rechazada con error de dominio: sin ella, el
+     * cliente renderizaría un aura neutra blanca en vez del color
+     * heráldico del elemento (SPEC-06, Hallazgo 12). `'shadow'` NO es
+     * canónica: su valor correcto es `'darkness'`.
+     *
+     * @var list<string>
+     */
+    public const CANONICAL_AFFINITIES = [
+        'fire', 'water', 'lightning', 'earth', 'wind', 'light', 'darkness', 'pureArcane',
+    ];
+
+    /**
      * Forja el DTO de creación validando los metadatos narrativos.
      *
-     * @throws InvalidArgumentException Si el nombre queda en blanco.
+     * @throws InvalidArgumentException Si el nombre queda en blanco o la
+     *         afinidad elemental es ajena al Códice (RF-01.6).
      */
     public function __construct(
         public string $name,
@@ -51,6 +67,16 @@ final readonly class SpellCreateDto
         // El nombre canónico es la identidad visible del conjuro (RF-01.1).
         if (trim($this->name) === '') {
             throw new \InvalidArgumentException('Todo conjuro exige un nombre digno de ser inscrito en el grimorio.');
+        }
+
+        // Afinidad canónica (RF-01.6): la validación de dominio vive aquí,
+        // fuente única de verdad, antes de que el conjuro toque la base.
+        if (!in_array($this->elementalAffinity, self::CANONICAL_AFFINITIES, true)) {
+            throw new \InvalidArgumentException(
+                'La afinidad elemental declarada es ajena al Códice: solo se admiten '
+                . implode(', ', self::CANONICAL_AFFINITIES)
+                . '.'
+            );
         }
     }
 
