@@ -601,3 +601,120 @@
     transition: none;
   }
 }
+
+/* ---------------------------------------------------------------------
+   10. Ficha técnica del conjuro y filtros reales de la Torre
+   (Cobertura del Kit de Controles Interactivos — SPEC-02, RF-08)
+
+   La auditoría detectó que las clases emitidas por
+   spellDetailModalComponent y mastersTowerComponent carecían de reglas:
+   los selects de la Torre renderizaban nativos y el botón de firma de
+   la ficha técnica carecía de materia ceremonial.
+   --------------------------------------------------------------------- */
+
+/* Selects canónicos de la Torre de Maestros (RF-08.4): forjados con
+   appearance:none, flecha rúnica de oro y obsidiana profunda. */
+.masters-tower__filter-element,
+.masters-tower__filter-school,
+.masters-tower__filter-min-signatures {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-5) var(--space-ink-2) var(--space-ink-3);
+  box-sizing: border-box;
+  cursor: pointer;
+
+  color: var(--moderation-text);
+  background-color: var(--color-bg-obsidian-deep);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-gold-arcane) 50%),
+                    linear-gradient(135deg, var(--color-gold-arcane) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 2px),
+                       calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+
+  transition: border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.masters-tower__filter-element:focus-visible,
+.masters-tower__filter-school:focus-visible,
+.masters-tower__filter-min-signatures:focus-visible {
+  outline: none;
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+/* Insignias de la ficha técnica: fila de sellos de escuela, maná y estado. */
+.spell-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+  margin-bottom: var(--space-ink-3);
+}
+
+/* Botón de firma del Maestro: acción primaria del Kit (RF-08.2). */
+.spell-detail__sign {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+
+  background-color: var(--color-gold-arcane);
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+  color: var(--color-ink);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+
+  transition: background-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.spell-detail__sign:hover,
+.spell-detail__sign:focus-visible {
+  background-color: var(--magic-primary);
+  box-shadow: var(--shadow-gold-glow);
+  outline: none;
+}
+
+.spell-detail__sign:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.spell-detail__sign:disabled {
+  background-color: var(--color-stone-disabled);
+  border-color: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Advertencia solemne bajo el botón de firma (requisitos incumplidos). */
+.spell-detail__sign-warning {
+  margin: var(--space-ink-2) 0 0;
+  color: var(--color-unstable-seal);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+}
+
+/* El botón de reserva ya viste .rescue-button; esta regla solo le da
+   margen ceremonial dentro de la ficha. */
+.spell-detail__reserve {
+  margin-top: var(--space-ink-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .masters-tower__filter-element,
+  .masters-tower__filter-school,
+  .masters-tower__filter-min-signatures,
+  .spell-detail__sign {
+    transition: none;
+  }
+}

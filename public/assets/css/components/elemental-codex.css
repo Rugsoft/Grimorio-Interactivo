@@ -336,3 +336,76 @@
     animation: none;
   }
 }
+
+/* ---------------------------------------------------------------------
+   Cobertura del guard (SPEC-02, RF-08.6): vista del Códice Elemental
+   --------------------------------------------------------------------- */
+
+/* Raíz de la vista y estados de rescate del Códice: contenedor solemne
+   con estados de carga y extravío vestidos con la materia del grimorio. */
+.elemental-codex-view {
+  display: grid;
+  gap: var(--space-ink-3);
+  justify-items: center;
+  padding-block: var(--space-ink-4);
+}
+
+.elemental-codex-view__wheel-host {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+}
+
+.elemental-codex-view__loading,
+.elemental-codex-view__failure {
+  display: grid;
+  gap: var(--space-ink-2);
+  justify-items: center;
+  padding: var(--space-ink-5) var(--space-ink-4);
+  color: var(--color-text-light-muted);
+  text-align: center;
+}
+
+.elemental-codex-view__failure-legend {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+}
+
+.elemental-codex-view__retry {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  background: none;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane),
+              border-color var(--transition-arcane);
+}
+
+.elemental-codex-view__retry:hover,
+.elemental-codex-view__retry:focus-visible {
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-gold-arcane);
+}
+
+.elemental-codex-view__retry:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Modo acordeón móvil de la Rueda Elemental (responsive < 768 px). */
+.elemental-wheel--mobile {
+  display: grid;
+  gap: var(--space-ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elemental-codex-view__retry {
+    transition: none;
+  }
+}

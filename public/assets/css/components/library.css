@@ -1,0 +1,329 @@
+/* =====================================================================
+   library.css — Biblioteca de Conjuros, Portal y Vista de Extravío
+   =====================================================================
+   Viste los módulos huérfanos de SPEC-01: el buscador y los filtros de
+   la Biblioteca, la rejilla del catálogo, el Portal con su hero de
+   consagración y la vista de extravío con sus botones de rescate.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro, sin preprocesadores.
+     - Artículo IV: solemnidad de grimorio — pergamino, oro y obsidiana.
+     - Artículo V: clases en inglés kebab-case; comentarios en castellano.
+
+   Disciplina de tokens (SPEC-02 RF-08.7): solo var(--token). Los
+   controles consumen el Kit Interactivo (controls.css, RF-08).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Biblioteca: título, buscador y rejilla del catálogo
+   --------------------------------------------------------------------- */
+
+.library-view__title {
+  margin: 0 0 var(--space-ink-4);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  color: var(--color-gold-arcane);
+}
+
+/* Buscador arcano: campo del Kit Interactivo con presencia de tomo. */
+.library-view__search {
+  width: min(100%, 32rem);
+  margin-bottom: var(--space-ink-4);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  box-sizing: border-box;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+
+  transition: border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.library-view__search::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.library-view__search:focus-visible {
+  outline: none;
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.library-view__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-ink-4);
+}
+
+/* Mensajes de rescate de la biblioteca (fallo de catálogo). */
+.library-view__error {
+  text-align: center;
+  padding: var(--space-ink-5) var(--space-ink-4);
+  color: var(--color-text-light-muted);
+}
+
+.library-view__error-retry {
+  margin-top: var(--space-ink-3);
+}
+
+/* ---------------------------------------------------------------------
+   2. Filtros de la Biblioteca: escuelas, experimentales y tope de maná
+   --------------------------------------------------------------------- */
+
+.library-filters {
+  display: grid;
+  gap: var(--space-ink-3);
+  margin-bottom: var(--space-ink-5);
+  padding: var(--space-ink-4);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+}
+
+.library-filters__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+/* Fila de filtros: casillas con su etiqueta legible y táctil. */
+.library-filter__school-label,
+.library-filter__experimental-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-ink-2);
+  min-height: var(--touch-target-min);
+  cursor: pointer;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  color: var(--color-text-secondary);
+}
+
+/* Las casillas visten el Kit Interactivo: sello con runa de validación. */
+.library-filter__school,
+.library-filter__experimental-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+
+  transition: background-color var(--transition-arcane),
+              border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.library-filter__school:hover,
+.library-filter__experimental-checkbox:hover {
+  border-color: var(--color-gold-arcane);
+}
+
+.library-filter__school:focus-visible,
+.library-filter__experimental-checkbox:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.library-filter__school:checked,
+.library-filter__experimental-checkbox:checked {
+  background-color: var(--color-bg-obsidian-elevated);
+  border-color: var(--color-valid-runes);
+  box-shadow: 0 0 8px var(--color-valid-runes);
+}
+
+.library-filter__school:checked::after,
+.library-filter__experimental-checkbox:checked::after {
+  content: var(--seal-verified-glyph, '✓');
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-valid-runes);
+}
+
+.library-filter__school-name,
+.library-filter__experimental {
+  color: var(--color-text-secondary);
+}
+
+/* Deslizador de tope de maná: carril de obsidiana, pulgar de oro. */
+.library-filter__mana-label {
+  display: grid;
+  gap: var(--space-ink-1);
+  min-height: var(--touch-target-min);
+  cursor: pointer;
+}
+
+.library-filter__max-mana {
+  appearance: none;
+  -webkit-appearance: none;
+  width: min(100%, 24rem);
+  height: var(--touch-target-min);
+  box-sizing: border-box;
+  cursor: pointer;
+
+  background: linear-gradient(
+    var(--color-bg-obsidian-deep),
+    var(--color-bg-obsidian-deep)
+  ) center / 100% 6px no-repeat;
+  background-color: transparent;
+  border: none;
+}
+
+.library-filter__max-mana::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-gold-arcane);
+  border: 2px solid var(--color-gold-arcane-dim);
+  box-shadow: var(--shadow-gold-glow);
+  cursor: pointer;
+}
+
+.library-filter__max-mana::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-gold-arcane);
+  border: 2px solid var(--color-gold-arcane-dim);
+  box-shadow: var(--shadow-gold-glow);
+  cursor: pointer;
+}
+
+.library-filter__max-mana::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-deep);
+}
+
+.library-filter__max-mana:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.library-filter__max-mana-value {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-text-muted);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+}
+
+/* ---------------------------------------------------------------------
+   3. Portal: vista de inicio y hero de consagración (SPEC-01)
+   --------------------------------------------------------------------- */
+
+.landing-view {
+  display: grid;
+  gap: var(--space-ink-5);
+  padding-block: var(--space-ink-5);
+}
+
+.landing-view__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-ink-4);
+}
+
+.landing-view__featured,
+.landing-view__regent {
+  padding: var(--space-ink-4);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-primary);
+}
+
+.landing-view__error {
+  text-align: center;
+  padding: var(--space-ink-5) var(--space-ink-4);
+  color: var(--color-text-light-muted);
+}
+
+.landing-view__error-retry {
+  margin-top: var(--space-ink-3);
+}
+
+/* Hero del portal: apertura solemne con llamada a la consagración. */
+.landing-hero {
+  display: grid;
+  gap: var(--space-ink-3);
+  justify-items: center;
+  padding: var(--space-ink-6) var(--space-ink-4);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  text-align: center;
+}
+
+.landing-hero__cta {
+  margin-top: var(--space-ink-2);
+}
+
+/* ---------------------------------------------------------------------
+   4. Vista de extravío: mensajes y botones de rescate
+   --------------------------------------------------------------------- */
+
+.error-view {
+  display: grid;
+  gap: var(--space-ink-3);
+  justify-items: center;
+  padding: var(--space-ink-6) var(--space-ink-4);
+  text-align: center;
+  color: var(--color-text-light-muted);
+}
+
+.error-view__reset,
+.error-view__retry,
+.error-view__return {
+  margin-top: var(--space-ink-2);
+}
+
+/* ---------------------------------------------------------------------
+   5. Menos movimiento: las transiciones del módulo se aquietan (RF-08.5)
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .library-view__search,
+  .library-filter__school,
+  .library-filter__experimental-checkbox,
+  .library-filter__max-mana {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   6. Cobertura del guard (SPEC-02, RF-08.6): raíz de la Biblioteca
+   --------------------------------------------------------------------- */
+
+/* Raíz de la vista: el Tomo Central acota la biblioteca; el grid de
+   tarjetas respira con el margen del copista. */
+.library-view {
+  display: grid;
+  gap: var(--space-ink-3);
+}
+
+.library-view__load-more {
+  display: grid;
+  justify-items: center;
+  padding-block: var(--space-ink-3);
+}

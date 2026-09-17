@@ -1,0 +1,352 @@
+/* =====================================================================
+   controls.css — Kit de Controles Interactivos (SPEC-02, RF-08)
+   =====================================================================
+   Toda la materia de los controles vive AQUÍ: botones, campos de texto,
+   casillas, opciones, selectores y deslizadores. Ningún módulo inventa
+   estilos divergentes; ningún control expone el aspecto nativo.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro, appearance:none forjado a mano.
+     - Artículo IV: solemnidad de grimorio — obsidiana, oro arcano y tinta.
+     - Artículo V: clases en inglés kebab-case; comentarios en castellano.
+
+   Disciplina de tokens (RF-08.7): solo var(--token); ningún color crudo.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Botones: base solemne y variantes ceremoniales (RF-08.2)
+   --------------------------------------------------------------------- */
+
+.button {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  background-color: transparent;
+  color: var(--color-gold-arcane);
+
+  transition: background-color var(--transition-arcane),
+              border-color var(--transition-arcane),
+              color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+/* Variante primaria: oro macizo con tinta de sello (acción principal). */
+.button--primary {
+  background-color: var(--color-gold-arcane);
+  border-color: var(--color-gold-arcane-dim);
+  color: var(--color-ink);
+}
+
+/* Variante secundaria: filo dorado sobre obsidiana (acción complementaria). */
+.button--secondary {
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-gold-arcane);
+}
+
+/* Variante fantasma: solo texto dorado (acciones de rescate y cancelación). */
+.button--ghost {
+  border: none;
+  background: none;
+  color: var(--color-gold-arcane);
+}
+
+.button:hover,
+.button:focus-visible {
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.button--primary:hover,
+.button--primary:focus-visible {
+  background-color: var(--magic-primary);
+  color: var(--color-ink);
+}
+
+.button--secondary:hover,
+.button--secondary:focus-visible {
+  background-color: var(--color-surface-raised);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Control deshabilitado: piedra desgastada e inerte (RF-06.2). */
+.button:disabled {
+  background-color: var(--color-stone-disabled);
+  border-color: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------
+   2. Campos de texto, buscadores y áreas de descripción (RF-08.3)
+   --------------------------------------------------------------------- */
+
+/* Patrón canónico del Umbral: fondo de obsidiana profunda, filo de tinta
+   dorada y foco con anillo de oro arcano. Los formularios de acceso ya
+   visten este patrón (components.css); el kit lo consagra como canon. */
+.controls-input,
+.controls-textarea {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  box-sizing: border-box;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: var(--line-height-parchment);
+
+  transition: border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.controls-textarea {
+  min-height: calc(var(--touch-target-min) * 2);
+  resize: vertical;
+}
+
+.controls-input::placeholder,
+.controls-textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.controls-input:focus-visible,
+.controls-textarea:focus-visible {
+  outline: none;
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.controls-input:disabled,
+.controls-textarea:disabled {
+  background-color: var(--color-stone-disabled);
+  border-color: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------
+   3. Casillas y opciones forjadas: checkbox y radio (RF-08.4)
+   --------------------------------------------------------------------- */
+
+.controls-checkbox,
+.controls-radio {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink-strong);
+
+  transition: background-color var(--transition-arcane),
+              border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+/* Zona táctil completa sin inflar el glifo: el área de clic la da la
+   etiqueta contenedora; la caja visible mantiene proporción de sello. */
+.controls-checkbox,
+.controls-radio {
+  position: relative;
+}
+
+.controls-checkbox {
+  border-radius: var(--radius-scroll);
+}
+
+.controls-radio {
+  border-radius: 50%;
+}
+
+.controls-checkbox:hover,
+.controls-radio:hover {
+  border-color: var(--color-gold-arcane);
+}
+
+.controls-checkbox:focus-visible,
+.controls-radio:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Verificación: runa de validación grabada en el centro del sello. */
+.controls-checkbox:checked,
+.controls-radio:checked {
+  background-color: var(--color-bg-obsidian-elevated);
+  border-color: var(--color-valid-runes);
+  box-shadow: 0 0 8px var(--color-valid-runes);
+}
+
+.controls-checkbox:checked::after {
+  content: var(--seal-verified-glyph, '✓');
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-valid-runes);
+}
+
+.controls-radio:checked::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background-color: var(--color-valid-runes);
+}
+
+.controls-checkbox:disabled,
+.controls-radio:disabled {
+  background-color: var(--color-stone-disabled);
+  border-color: var(--color-stone-disabled);
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------
+   4. Selectores: select con flecha rúnica (RF-08.4)
+   --------------------------------------------------------------------- */
+
+.controls-select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-5) var(--space-ink-2) var(--space-ink-3);
+  box-sizing: border-box;
+  cursor: pointer;
+
+  background-color: var(--color-bg-grimoire);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+
+  /* Flecha de despliegue grabada: triángulo de oro bajo el filo. */
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-gold-arcane) 50%),
+                    linear-gradient(135deg, var(--color-gold-arcane) 50%, transparent 50%);
+  background-position: calc(100% - 18px) calc(50% - 2px),
+                       calc(100% - 12px) calc(50% - 2px);
+  background-size: 6px 6px;
+  background-repeat: no-repeat;
+
+  transition: border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane);
+}
+
+.controls-select:focus-visible {
+  outline: none;
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.controls-select:disabled {
+  background-color: var(--color-stone-disabled);
+  border-color: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+  cursor: not-allowed;
+}
+
+/* Las opciones heredan la tinta sobre pergamino en el desplegable nativo. */
+.controls-select option {
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-light);
+}
+
+/* ---------------------------------------------------------------------
+   5. Deslizador de maná: input[type=range] (RF-08.4)
+   --------------------------------------------------------------------- */
+
+.controls-range {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: var(--touch-target-min);
+  box-sizing: border-box;
+  cursor: pointer;
+
+  /* Carril de obsidiana dibujado en el propio control (sin pseudo-elemento). */
+  background: linear-gradient(
+    var(--color-bg-obsidian-deep),
+    var(--color-bg-obsidian-deep)
+  ) center / 100% 6px no-repeat;
+  background-color: transparent;
+  border: none;
+}
+
+/* Pulgar de oro arcano:Webkit y Firefox, con reserva táctil completa. */
+.controls-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-gold-arcane);
+  border: 2px solid var(--color-gold-arcane-dim);
+  box-shadow: var(--shadow-gold-glow);
+  cursor: pointer;
+  margin-top: 0;
+}
+
+.controls-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--color-gold-arcane);
+  border: 2px solid var(--color-gold-arcane-dim);
+  box-shadow: var(--shadow-gold-glow);
+  cursor: pointer;
+}
+
+.controls-range::-moz-range-track {
+  height: 6px;
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-deep);
+}
+
+.controls-range:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.controls-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------------------
+   6. Menos movimiento: las transiciones del kit se aquietan (RF-08.5)
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .controls-input,
+  .controls-textarea,
+  .controls-checkbox,
+  .controls-radio,
+  .controls-select {
+    transition: none;
+  }
+}

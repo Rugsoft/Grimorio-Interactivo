@@ -1,0 +1,241 @@
+/* =====================================================================
+   clans.css — Salas de Clan, Ranking de Dominio y Distintivo de Sesión
+   =====================================================================
+   Viste las vistas de linajes huérfanas (SPEC-07): la ficha de clan
+   (clan-view), el ranking de clanes (clans-view) y el distintivo de
+   sesión de la cabecera (user-profile).
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro, rejillas nativas.
+     - Artículo IV: solemnidad de grimorio — obsidiana, oro y pergaminos.
+     - Artículo V: clases en inglés kebab-case; comentarios en castellano.
+
+   Disciplina de tokens (SPEC-02 RF-08.7): solo var(--token).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Ficha de clan (clan-view): identidad, feudos y censo
+   --------------------------------------------------------------------- */
+
+.clan-view {
+  display: grid;
+  gap: var(--space-ink-4);
+  padding-block: var(--space-ink-4);
+}
+
+.clan-view__identity,
+.clan-view__banner,
+.clan-view__facts,
+.clan-view__government,
+.clan-view__legacy,
+.clan-view__affiliation {
+  padding: var(--space-ink-4);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+}
+
+.clan-view__identity > :first-child {
+  margin-top: 0;
+}
+
+.clan-view__facts,
+.clan-view__legacy-list,
+.clan-view__members,
+.clan-view__roster {
+  display: grid;
+  gap: var(--space-ink-2);
+}
+
+.clan-view__legacy-list,
+.clan-view__members,
+.clan-view__roster {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Miembro del censo: ficha de pergamino oscuro con filo de tinta. */
+.clan-view__roster-item,
+.clan-view__spell {
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-parchment);
+  color: var(--color-ink);
+}
+
+/* Ocupancia del feudo: barra ceremonial de oro sobre obsidiana. */
+.clan-view__occupancy {
+  width: min(100%, 24rem);
+  height: var(--space-ink-2);
+  overflow: hidden;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-deep);
+}
+
+.clan-view__occupancy-fill {
+  display: block;
+  width: var(--occupancy-fill, 0%);
+  height: 100%;
+  background-color: var(--color-gold-arcane);
+}
+
+/* Rescates de la ficha (fallo de datos del clan). */
+.clan-view__error,
+.clans-view__error,
+.clan-banner__error-retry {
+  text-align: center;
+  padding: var(--space-ink-4);
+  color: var(--color-text-light-muted);
+}
+
+.clan-view__error-retry,
+.clans-view__error-retry {
+  margin-top: var(--space-ink-3);
+}
+
+/* ---------------------------------------------------------------------
+   2. Ranking de clanes (clans-view): clasificación del Dominio semanal
+   --------------------------------------------------------------------- */
+
+.clans-view {
+  display: grid;
+  gap: var(--space-ink-4);
+  padding-block: var(--space-ink-4);
+}
+
+.clans-view__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: var(--space-ink-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Tarjeta de clan del ranking: escudo de obsidiana con filo heráldico. */
+.clans-view__card {
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-primary);
+}
+
+.clans-view__ranking {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-arcane-body);
+  font-variant-numeric: var(--font-variant-mana-numbers);
+}
+
+.clans-view__ranking-header {
+  border-bottom: var(--border-ink-strong);
+}
+
+.clans-view__ranking-header-row th {
+  padding: var(--space-ink-2) var(--space-ink-3);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  text-align: left;
+  color: var(--color-gold-arcane);
+}
+
+.clans-view__ranking-name {
+  font-family: var(--font-arcane-title);
+  color: var(--color-text-primary);
+}
+
+.clans-view__ranking-position {
+  font-family: var(--font-arcane-seal);
+  color: var(--color-gold-bright);
+}
+
+.clans-view__ranking-domain {
+  color: var(--color-text-secondary);
+}
+
+.clans-view__roster {
+  display: grid;
+  gap: var(--space-ink-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ---------------------------------------------------------------------
+   3. Distintivo de sesión (user-profile): identidad del mago vinculado
+   --------------------------------------------------------------------- */
+
+.user-profile {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-ink-2);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-1) var(--space-ink-3);
+
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+.user-profile__alias {
+  color: var(--color-gold-arcane);
+}
+
+.user-profile__role {
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------------
+   4. Menos movimiento (RF-08.5)
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .clan-view__occupancy-fill {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   5. Cobertura del guard (SPEC-02, RF-08.6)
+   --------------------------------------------------------------------- */
+
+/* Raíces de las vistas de moderación de linajes: contenedores solemnes
+   que solo aportan respiración vertical (las tarjetas visten moderation.css). */
+.experimental-hall-view,
+.masters-tower-view {
+  display: grid;
+  gap: var(--space-ink-3);
+  padding-block: var(--space-ink-4);
+}
+
+/* Componentes verbales/somáticos/materiales de la ficha técnica. */
+.spell-detail__components {
+  margin: var(--space-ink-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-ink-1);
+}
+
+.spell-detail__component-line {
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+}
+
+/* Sello Rúnico forjado: presencia y degradación sobria del SVG. */
+.rune-seal {
+  display: inline-block;
+  width: clamp(72px, 12vw, 96px);
+  height: auto;
+}
