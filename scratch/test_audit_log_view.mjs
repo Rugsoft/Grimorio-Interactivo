@@ -181,8 +181,10 @@ assertCondition(findByText(mount1, 'HeiterElSabio').length > 0, 'La identidad de
 assertCondition(findByText(mount1, 'SupremoArquitecto').length > 0, 'La identidad del admin actuante es visible');
 
 // Acciones y objetivos por fila.
-assertCondition(findByText(mount1, 'SIGN_VALIDATE').length > 0, 'Las acciones canónicas se muestran (SIGN_VALIDATE)');
-assertCondition(findByText(mount1, 'ADMIN_VETO').length > 0, 'Los vetos del Admin Supremo se muestran (ADMIN_VETO)');
+assertCondition(findByText(mount1, 'Firma de Validación').length > 0, 'Las acciones canónicas se muestran en noble castellano (Firma de Validación)');
+assertCondition(findByText(mount1, 'Veto del Admin Supremo').length > 0, 'Los vetos del Admin Supremo se muestran (Veto del Admin Supremo)');
+assertCondition(findByText(mount1, 'Maestro del Cónclave').length > 0, 'El rol del actuante se declara en castellano (Maestro del Cónclave)');
+assertCondition([...mount1.querySelectorAll('[data-action-type="SIGN_VALIDATE"]')].length > 0, 'El código técnico viaja como data-action-type para trazabilidad');
 assertCondition(findByText(mount1, 'spl_llamas_frieren').length > 0, 'El objetivo de cada veredicto se muestra (targetEntityId)');
 
 // CRITERIO: las justificaciones íntegras son legibles.

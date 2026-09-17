@@ -119,6 +119,22 @@ export function createAuditLogView(mountRoot, options = {}) {
     return labels[actionType] ?? String(actionType);
   }
 
+  /**
+   * Rótulo en noble castellano del rol del actuante (Art. V: los roles
+   * técnicos del DTO permanecen en inglés; la bitácora los declara en
+   * la lengua del santuario).
+   */
+  function roleLabel(actorRole) {
+    const labels = {
+      lector: 'Lector del Tomo',
+      editor: 'Editor Arcano',
+      master: 'Maestro del Cónclave',
+      supremeAdmin: 'Admin Supremo',
+      system: 'Custodio Automático del Santuario',
+    };
+    return labels[actorRole] ?? String(actorRole);
+  }
+
   /** Etiqueta de la entidad objetivo. */
   function targetLabel(entityType) {
     const labels = {
@@ -179,7 +195,7 @@ export function createAuditLogView(mountRoot, options = {}) {
     clanFilterInput.setAttribute('id', 'auditClanFilter');
     clanFilterInput.setAttribute('type', 'text');
     clanFilterInput.setAttribute('name', 'clanId');
-    clanFilterInput.setAttribute('placeholder', 'Filtrar por linaje (ej. cln_astral)');
+    clanFilterInput.setAttribute('placeholder', 'Filtrar por linaje del santuario');
     clanFilterInput.setAttribute('aria-label', 'Filtrar la bitácora por linaje');
     // Conserva el valor entre re-renders (el filtro es estado de la vista).
     if (currentClanId !== null) {
@@ -227,16 +243,16 @@ export function createAuditLogView(mountRoot, options = {}) {
 
         // Identidad del actuante (alias público en el instante de la acción).
         appendTextElement(bodyRow, 'td', 'audit-log__actor', String(entry.actorAlias ?? 'Anónimo del pasado'));
-        // Rol técnico activo.
-        appendTextElement(bodyRow, 'td', 'audit-log__role', String(entry.actorRole ?? ''));
-        // Acción canónica: etiqueta solemne + código técnico (trazabilidad
-        // exacta con el catálogo del backend y la bitácora pública).
-        appendTextElement(
-          bodyRow,
-          'td',
-          'audit-log__action',
-          `${actionLabel(entry.actionType)} (${String(entry.actionType ?? '')})`,
-        );
+        // Rol técnico activo, declarado en noble castellano.
+        appendTextElement(bodyRow, 'td', 'audit-log__role', roleLabel(entry.actorRole ?? ''));
+        // Acción canónica: rótulo solemne en castellano. El código
+        // técnico viaja como atributo data para la trazabilidad con el
+        // catálogo del backend sin mancillar la lengua visible (Art. V).
+        const actionCell = track(elementFactory('td'));
+        actionCell.className = 'audit-log__action';
+        actionCell.textContent = actionLabel(entry.actionType);
+        actionCell.setAttribute('data-action-type', String(entry.actionType ?? ''));
+        bodyRow.appendChild(actionCell);
         // Objetivo: sello de entidad + identificador.
         appendTextElement(
           bodyRow,

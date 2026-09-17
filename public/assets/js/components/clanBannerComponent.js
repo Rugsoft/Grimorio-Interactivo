@@ -236,8 +236,12 @@ export function createClanBannerComponent(mountRoot, options = {}) {
     lineageParagraph.setAttribute('data-lineage', String(regentClanDto.lineageType ?? ''));
 
     if (lineage.elementGlyph !== null) {
-      const glyph = appendTextElement(article, 'span', 'clan-banner__element-glyph', lineage.elementGlyph);
-      // Glifo ornamental: su significado ya viaja en el párrafo del linaje.
+      // Sello ornamental del elemento: su significado ya viaja en el
+      // párrafo del linaje, así que el código técnico (`rune-aqua`) jamás
+      // se deletrea (RF-07.3): se graba como atributo data para la
+      // trazabilidad y el rótulo visible nombra el elemento en castellano.
+      const glyph = appendTextElement(article, 'span', 'clan-banner__element-glyph', lineage.elementName ?? '');
+      glyph.setAttribute('data-glyph', lineage.elementGlyph);
       glyph.setAttribute('aria-hidden', 'true');
     }
 

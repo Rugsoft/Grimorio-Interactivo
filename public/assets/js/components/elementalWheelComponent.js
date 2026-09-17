@@ -299,7 +299,13 @@ export function createElementalWheelComponent(options = {}) {
       label.setAttribute('text-anchor', 'middle');
       label.setAttribute('class', 'elemental-wheel__glyph-label');
       // RNF-03: la sigla del glifo distingue por geometría además del color.
-      label.textContent = element.glyph.replace('rune-', '').slice(0, 3).toUpperCase();
+      // La sigla es un latinismo del canon alquímico (ignis, aqua, fulgur…)
+      // derivado del glifo canónico del backend; jamás se expone el id técnico.
+      const GLYPH_INITIALS = Object.freeze({
+        fire: 'IG', water: 'AQ', lightning: 'FU', earth: 'TE',
+        wind: 'VE', light: 'LV', darkness: 'TN', pureArcane: 'AR',
+      });
+      label.textContent = GLYPH_INITIALS[element.id] ?? element.glyph.replace('rune-', '').slice(0, 2).toUpperCase();
       glyph.appendChild(label);
 
       glyph.addEventListener('mouseenter', () => {
