@@ -21,6 +21,11 @@
  *
  * Diseño: el componente recibe el <nav> raíz por inyección (testeable sin
  * navegador) y delega SIEMPRE en callbacks — nunca abre modales por su cuenta.
+ *
+ * SPEC-09 (Tarea 3.3, RF-04.3): los enlaces declaran SECCIONES del santuario,
+ * no identidad — el rótulo «Peregrino sin Linaje» y la heráldica del jurado
+ * viven en el distintivo de sesión (userProfileBadge), que es quien consume
+ * el sobre data.user con su campo lineage.
  */
 
 /** Enlaces persistentes de la cabecera (orden del plan, RF-02.1). */

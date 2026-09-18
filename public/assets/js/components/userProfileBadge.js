@@ -19,8 +19,33 @@
  *     orquestador (mismo contrato que navbarComponent, Tarea 4.1 TASKS-01).
  *   - Accesibilidad (RNF-03): aria-haspopup/aria-expanded/aria-label con el
  *     alias, cierre por Escape y por selección de opción, foco al distintivo.
- *   - Usuario sin linaje: se muestra solo el alias (nunca un clan fantasma).
+ *   - Usuario sin linaje: identidad de peregrino iniciático (SPEC-09,
+ *     RF-04.3) — el rótulo solemne «Peregrino sin Linaje» declara el estado,
+ *     sin clan fantasma y sin heráldica; tras jurar, el sello del linaje
+ *     usa la MISMA representación heráldica que SPEC-07 (runeSealComponent).
+ *
+ * SPEC-09 (Tarea 3.3): el import del sello heráldico es de DATOS (líneas y
+ * constantes del canon compartido con SPEC-07), no de DOM — el interior del
+ * SVG se forja en su propio documento.
  */
+
+import {
+  createRuneSeal,
+  RUNE_SEAL_STATES,
+} from './runeSealComponent.js';
+
+/** Índice local de los 8 Linajes Canónicos (espejo del canon de SPEC-07;
+ *  misma heráldica: rulingElement y nombre ceremonial por clave). */
+const LINEAGE_INDEX = new Map(Object.entries({
+  primordialFlame: { name: 'Linaje de la Llama Primordial', rulingElement: 'fire' },
+  celestialTides: { name: 'Linaje de las Mareas Celestiales', rulingElement: 'water' },
+  eternalTempest: { name: 'Linaje de la Tempestad Eterna', rulingElement: 'lightning' },
+  worldRoots: { name: 'Linaje de las Raíces del Mundo', rulingElement: 'earth' },
+  dawnWinds: { name: 'Linaje de los Vientos del Alba', rulingElement: 'wind' },
+  solarCrown: { name: 'Linaje de la Corona Solar', rulingElement: 'light' },
+  abyssalShadows: { name: 'Linaje de las Sombras Abisales', rulingElement: 'darkness' },
+  aetherWeavers: { name: 'Linaje de los Tejedores del Éter', rulingElement: 'pureArcane' },
+}));
 
 /** Opciones canónicas del menú desplegable arcano (RF-02.4, RF-07.1). */
 const MENU_OPTIONS = Object.freeze([
@@ -29,6 +54,12 @@ const MENU_OPTIONS = Object.freeze([
   { action: 'dissolve', label: 'Disolver este vínculo' },
   { action: 'dissolveAll', label: 'Disolver todos mis vínculos' },
 ]);
+
+/** Rótulo solemne del peregrino iniciático (SPEC-09, RF-04.3). */
+const PILGRIM_LEGEND = 'Peregrino sin Linaje';
+
+/** Rótulo neutro ante un linaje ajeno al catálogo local (degradación). */
+const UNKNOWN_LINEAGE_LEGEND = 'Linaje jurado';
 
 /**
  * Búsqueda recursiva de un descendiente por atributo id (compatible con
@@ -41,6 +72,18 @@ function findDescendantById(root, elementId) {
     if (found) return found;
   }
   return null;
+}
+
+/**
+ * Búsqueda recursiva de descendientes que porten una clase (compatible con
+ * el DOM simulado del arnés).
+ */
+function findDescendantsByClass(root, className, found = []) {
+  for (const child of root.children ?? []) {
+    if (child.classList?.contains?.(className)) found.push(child);
+    findDescendantsByClass(child, className, found);
+  }
+  return found;
 }
 
 /**
@@ -160,7 +203,7 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   /**
    * Forja el distintivo de perfil con su menú desplegable arcano.
    *
-   * @param {object} user Sobre data.user: { id, alias, role, clanId, clanName }.
+   * @param {object} user Sobre data.user: { id, alias, role, clanId, clanName, lineage }.
    */
   function buildBadge(user) {
     withdrawThresholdButton();
@@ -170,22 +213,46 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     badgeElement.setAttribute('class', 'user-profile');
     badgeRoot.appendChild(badgeElement);
 
-    // Distintivo con alias y clan (RF-07.1). Sin linaje real no hay clan
-    // fantasma: solo el alias (RF-01.1).
+    // Identidad del linaje (SPEC-09, RF-04.3): peregrino sin heráldica o
+    // linajado con su sello. La bandera vive en el INSTANTE de la forja.
+    const oathLineage = typeof user.lineage === 'string' && user.lineage !== ''
+      ? user.lineage
+      : null;
+    const lineageProfile = oathLineage !== null ? LINEAGE_INDEX.get(oathLineage) ?? null : null;
+
     toggleButton = documentRef.createElement?.('button');
     toggleButton.setAttribute('id', 'userProfileToggle');
     toggleButton.setAttribute('type', 'button');
     toggleButton.setAttribute('aria-haspopup', 'true');
     toggleButton.setAttribute('aria-expanded', 'false');
-    const ariaLabel = user.clanId !== '' && typeof user.clanName === 'string' && user.clanName !== ''
-      ? `Sesión de ${user.alias} del linaje ${user.clanName}. Abrir el menú arcano`
-      : `Sesión de ${user.alias}. Abrir el menú arcano`;
-    toggleButton.setAttribute('aria-label', ariaLabel);
-    toggleButton.textContent = user.clanId !== '' && user.clanName
+    const hasClan = user.clanId !== '' && typeof user.clanName === 'string' && user.clanName !== '';
+    // El rótulo visible: alias + clan (SPEC-07), o alias + estado solemne.
+    const displayLegend = hasClan
       ? `${user.alias} — ${user.clanName}`
-      : user.alias;
+      : oathLineage !== null
+        ? `${user.alias} — ${lineageProfile?.name ?? UNKNOWN_LINEAGE_LEGEND}`
+        : `${user.alias} — ${PILGRIM_LEGEND}`;
+    const ariaLabel = `${displayLegend}. Abrir el menú arcano`;
+    toggleButton.setAttribute('aria-label', ariaLabel);
+    toggleButton.textContent = displayLegend;
     toggleButton.addEventListener('click', toggleMenu);
     badgeElement.appendChild(toggleButton);
+
+    // La heráldica del linaje jurado (SPEC-09, RF-04.3): el MISMO sello
+    // forjado por SPEC-07 para la ficha del linaje (role: 'lineage').
+    if (oathLineage !== null) {
+      const seal = createRuneSeal({
+        houseName: String(user.alias ?? ''),
+        coatOfArms: `rune_lineage_${oathLineage}`,
+        rulingElement: String(lineageProfile?.rulingElement ?? ''),
+        lineageName: String(lineageProfile?.name ?? UNKNOWN_LINEAGE_LEGEND),
+        state: RUNE_SEAL_STATES.ACTIVE,
+        role: 'lineage',
+        document: documentRef,
+      });
+      seal.setAttribute('class', 'user-profile__seal');
+      badgeElement.appendChild(seal);
+    }
 
     // Menú desplegable arcano con las opciones canónicas (RF-02.4).
     menuElement = documentRef.createElement?.('ul');

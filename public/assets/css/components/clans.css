@@ -326,3 +326,16 @@
   width: clamp(72px, 12vw, 96px);
   height: auto;
 }
+
+/* Sello del linaje jurado en el distintivo de sesión (SPEC-09, RF-04.3):
+   la MISMA heráldica que SPEC-07 forja para las casas, a escala de insignia.
+   El peregrino no porta sello: su identidad se declara en rótulo (tinta). */
+.user-profile__seal {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+
+  /* La carga y el anillo ya viven en tokens.css: aquí solo presencia. */
+  pointer-events: none;
+}

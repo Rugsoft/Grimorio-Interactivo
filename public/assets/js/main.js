@@ -922,6 +922,18 @@ export function createGrimoireApp(options = {}) {
       navbar?.setSession(nextFlag, nextRole);
     });
 
+    // Identidad de sesión (SPEC-09, Tarea 3.3 — RF-04.3): el badge es la
+    // VISTA del store, no un receptor suelto. La suscripción repinta el
+    // distintivo en CADA mutación de sesión (consecración, vinculación,
+    // juramento sellado, disolución), sin recarga y sin duplicar el
+    // repintado manual que el orquestador ya hacía en puntos dispersos.
+    // setSession de set de store es idempotente a nivel de componente:
+    // setUser reconstruye solo si el sobre cambia de identidad.
+    unsubscribeSessionWatch = store.subscribe((nextState) => {
+      const sessionUser = nextState.currentUser;
+      sessionBadge?.setUser(sessionUser);
+    });
+
     /** Resuelve la vista correspondiente a un hash de navegación (#/...). */
     function resolveViewFromHash(rawHash) {
       if (typeof rawHash !== 'string') return null;

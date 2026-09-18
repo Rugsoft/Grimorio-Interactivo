@@ -79,7 +79,7 @@
   * **Hecho cuando:** Un peregrino que pide `#/creador` acaba en la ceremonia con su ruta retenida; tras sellar, aterriza en `#/creador`; un linajado navega sin un solo round-trip adicional y el Supremo jamás es retenido.
   * **Verificación:** `scratch/test_lineage_retention_nav.mjs`
 
-- [ ] **Tarea 3.3: Identidad del peregrino (`userProfileBadge.js`, `navbarComponent.js`)**
+- [x] **Tarea 3.3: Identidad del peregrino (`userProfileBadge.js`, `navbarComponent.js`)**
   * **Alcance:** Rótulo «Peregrino sin Linaje» (sin heráldica) para `lineage: null` y blasón del linaje jurado (heráldica compartida con SPEC-07) tras el juramento; textos castellanos, `textContent` puro (sin `innerHTML`).
   * **Cubre:** `RF-04.3`, `RNF-02`
   * **Hecho cuando:** El badge del peregrino muestra el rótulo solemne sin blasón y el del linajado muestra su heráldica, ambos sin llamadas extra ni XSS posible.

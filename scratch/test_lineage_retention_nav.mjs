@@ -69,7 +69,15 @@ function createFakeElement(tagName) {
       },
     },
   });
-  element.setAttribute = (name, value) => { element.attributes[name] = String(value); };
+  // Comportamiento DOM real: className viaja a classList; class/className
+  // son vistas del mismo dato (el sello forjado viaja con setAttribute('class',…)).
+  element.setAttribute = (name, value) => {
+    element.attributes[name] = String(value);
+    if (name === 'class') {
+      element.classes = new Set(String(value).split(/\s+/).filter(Boolean));
+      element.className = String(value);
+    }
+  };
   element.getAttribute = (name) => element.attributes[name] ?? null;
   element.removeAttribute = (name) => { delete element.attributes[name]; };
   element.hasAttribute = (name) => Object.prototype.hasOwnProperty.call(element.attributes, name);
@@ -128,6 +136,7 @@ const fakeWindow = {
   document: {
     getElementById: () => null,
     createElement: createFakeElement,
+    createElementNS: (namespace, tagName) => createFakeElement(tagName),
     createDocumentFragment: () => createFakeElement('fragment'),
     querySelector: () => null,
     querySelectorAll: () => [],
@@ -335,6 +344,104 @@ fakeWindow.dispatchEvent({
 });
 await new Promise((resolve) => setTimeout(resolve, 0));
 assertCondition(store.getState().currentView === 'landing' && store.getState().userLineage === 'abyssalShadows', 'Sin ruta retenida, el retorno es al portal de inicio (RF-03.1)');
+
+// --- FASE E: La identidad del peregrino y del jurado (RF-04.3, Tarea 3.3) ---
+console.log('\nFASE E: El badge declara peregrino sin heráldica y linajado con su sello\n');
+
+/** Localiza un descendiente por atributo id (mismo contrato que el badge). */
+function findBadgeById(root, elementId, found = []) {
+  for (const child of root.children ?? []) {
+    if (child.getAttribute?.('id') === elementId) found.push(child);
+    findBadgeById(child, elementId, found);
+  }
+  return found;
+}
+
+/** Nodos hoja cuyo texto contiene la aguja (sin claves técnicas impresas). */
+function findLeafByText(root, needle, found = []) {
+  if (typeof root.textContent === 'string' && root.textContent.includes(needle) && (root.children ?? []).length === 0) {
+    found.push(root);
+  }
+  for (const child of root.children ?? []) findLeafByText(child, needle, found);
+  return found;
+}
+
+/** Descendientes que portan una clase (el sello viaja con .user-profile__seal). */
+function findBadgeByClass(root, className, found = []) {
+  for (const child of root.children ?? []) {
+    if (child.classList?.contains?.(className)) found.push(child);
+    findBadgeByClass(child, className, found);
+  }
+  return found;
+}
+
+// La peregrina de la Fase D (última sesión forjada) quedó en landing con su
+// linaje jurado. Forjamos sesiones limpias sobre el badge VIVO de la SPA:
+// el mismo badgeRoot que se montó en el orquestador.
+const sessionBadgeRoot = badgeRoot;
+assertCondition(sessionBadgeRoot !== null, 'El badgeRoot de la cabecera está montado en la SPA real');
+
+if (sessionBadgeRoot !== null) {
+  // 1) El peregrino: rótulo solemne, SIN heráldica y SIN clan fantasma.
+  app.store.setSession({ id: 'usr_p', alias: 'Peregrina del Velo', role: 'editor', lineage: null });
+  const pilgrimBadge = findBadgeById(sessionBadgeRoot, 'userProfileBadge')[0] ?? null;
+  assertCondition(pilgrimBadge !== null, 'El badge del peregrino se forja con sesión activa');
+  assertCondition(
+    findLeafByText(sessionBadgeRoot, 'Peregrina del Velo — Peregrino sin Linaje').length === 1,
+    'El rótulo visible declara «Peregrino sin Linaje» (RF-04.3)',
+  );
+  assertCondition(
+    findBadgeByClass(sessionBadgeRoot, 'user-profile__seal').length === 0,
+    'El peregrino NO porta heráldica (sin sello)',
+  );
+  const pilgrimToggle = findBadgeById(badgeRoot, 'userProfileToggle')[0] ?? null;
+  assertCondition(
+    (pilgrimToggle?.getAttribute('aria-label') ?? '').includes('Peregrino sin Linaje'),
+    'El aria-label del peregrino declara su estado solemne (lectores de pantalla)',
+  );
+
+  // 2) La jurada: rótulo con nombre ceremonial y sello heráldico SPEC-07.
+  app.store.setSession({ id: 'usr_j', alias: 'Jurada de la Marea', role: 'editor', lineage: 'celestialTides' });
+  assertCondition(
+    findLeafByText(sessionBadgeRoot, 'Jurada de la Marea — Linaje de las Mareas Celestiales').length === 1,
+    'El rótulo del linajado porta el nombre ceremonial del linaje jurado',
+  );
+  const seals = findBadgeByClass(sessionBadgeRoot, 'user-profile__seal');
+  assertCondition(seals.length === 1, 'El linajado porta EXACTAMENTE un sello heráldico (representación SPEC-07)');
+  assertCondition(
+    seals[0]?.getAttribute?.('data-heraldic-charge') === 'tide',
+    'El sello forja la carga del linaje rector (Mareas Celestiales → tide)',
+  );
+  assertCondition(
+    (seals[0]?.getAttribute?.('aria-label') ?? '').includes('Linaje de las Mareas Celestiales'),
+    'El sello porta su etiqueta accesible ceremonial (sin clave técnica)',
+  );
+
+  // 3) Degradación digna: linaje fuera del índice local, sello con carga
+  //    de respaldo y rótulo neutro, jamás clave técnica al usuario.
+  app.store.setSession({ id: 'usr_x', alias: 'Viajera del Yermo', role: 'editor', lineage: 'lineajePerdido' });
+  const straySeals = findBadgeByClass(badgeRoot, 'user-profile__seal');
+  assertCondition(
+    findLeafByText(sessionBadgeRoot, 'Viajera del Yermo — Linaje jurado').length === 1
+      && straySeals.length === 1
+      && straySeals[0]?.getAttribute?.('data-heraldic-charge') === 'ouroboros',
+    'Un linaje fuera del índice local degrada a rótulo neutro y sello de respaldo (sin clave técnica)',
+  );
+
+  // 4) El oath:sealed repinta el badge de peregrina a jurada SIN recarga.
+  app.store.setSession({ id: 'usr_p', alias: 'Peregrina del Velo', role: 'editor', lineage: null });
+  assertCondition(findBadgeByClass(sessionBadgeRoot, 'user-profile__seal').length === 0, 'De vuelta a peregrina: sin sello (re-render idempotente)');
+  fakeWindow.dispatchEvent({
+    type: 'oath:sealed',
+    detail: { lineage: 'solarCrown', retainedRoute: null },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const promotedSeals = findBadgeByClass(badgeRoot, 'user-profile__seal');
+  assertCondition(
+    promotedSeals.length === 1 && promotedSeals[0]?.getAttribute?.('data-heraldic-charge') === 'sun',
+    'El oath:sealed promueve la identidad al instante: sello con la carga del Sol (RF-01.7)',
+  );
+}
 
 assertCondition(uncaughtErrors === 0, `Ninguna excepción escapó sin control (${uncaughtErrors} cazadas)`);
 
