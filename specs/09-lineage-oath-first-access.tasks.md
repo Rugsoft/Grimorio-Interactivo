@@ -125,7 +125,7 @@
   * **Hecho cuando:** El asiento del juramento aparece en la Bitácora pública con su rótulo castellano, y el aserto que cruza catálogo ↔ vista sigue en verde.
   * **Verificación:** `scratch/test_lineage_oath_service.php` + batería de bitácora existente
 
-- [ ] **Tarea 5.3: Batería de regresión cruzada y verificación manual (protocolo del §6.3 del plan)**
+- [x] **Tarea 5.3: Batería de regresión cruzada y verificación manual (protocolo del §6.3 del plan)**
   * **Alcance:** Ejecutar la batería completa (los 8 arneses nuevos + los existentes de auth/clanes/bitácora que tocan `users`) y el protocolo manual de 7 puntos del plan (registro nuevo, retención por URL, modal completo, reingreso, doble pestaña, fallo de canon simulado, teclado y movimiento reducido).
   * **Cubre:** DoD completo de la SPEC-09 (sección 8)
   * **Hecho cuando:** 0 fallos en toda la batería, las 8 casillas del DoD de la spec pueden marcarse con evidencia, y la consola del navegador queda limpia durante ceremonia, fallo simulado y navegación bloqueada.

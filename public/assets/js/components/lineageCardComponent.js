@@ -114,7 +114,21 @@ export function createLineageCardComponent(lineageProfile, componentOptions = {}
   // El estandarte es DATO del DTO (no decoración): viaja como Custom Property
   // y la hoja de estilos lo viste; jamás un literal de color en la forja.
   bannerElement.setAttribute('style', `--lineage-banner: ${String(lineage.bannerColor ?? 'transparent')}`);
-  bannerElement.textContent = String(lineage.rulingElement ?? '');
+  // La afinidad rectora se declara en noble castellano (Art. V): la clave
+  // técnica del canon jamás se imprime al adepto; sin clave conocida, se
+  // degrada con la clave misma antes que con un nombre inventado.
+  const RULING_ELEMENT_LABELS = {
+    fire: 'Fuego',
+    water: 'Agua / Escarcha',
+    lightning: 'Rayo',
+    earth: 'Tierra',
+    wind: 'Viento',
+    light: 'Luz',
+    darkness: 'Oscuridad',
+    pureArcane: 'Arcano Puro',
+  };
+  const rulingElementKey = String(lineage.rulingElement ?? '');
+  bannerElement.textContent = RULING_ELEMENT_LABELS[rulingElementKey] ?? rulingElementKey;
   bodyElement.appendChild(bannerElement);
 
   const condensedElement = elementFactory('p');

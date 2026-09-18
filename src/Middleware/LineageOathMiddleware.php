@@ -87,6 +87,10 @@ final class LineageOathMiddleware
             '/api/v1/grimoire/spells',
             '/api/v1/elements/matrix',
             '/api/v1/audit/log',
+            // El Salón del Dominio es contemplación pública (SPEC-07,
+            // RF-06.1: se lee sin vínculo arcano); el estandarte del Clan
+            // Regente del portal no puede quedar rehén del juramento.
+            '/api/v1/dominion/leaderboard',
         ],
         'POST' => [
             '/api/v1/lineage/oath',

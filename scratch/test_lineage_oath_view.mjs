@@ -194,7 +194,8 @@ assertCondition(cardFlame.element.getAttribute('tabindex') === '0', 'La tarjeta 
 assertCondition(cardFlame.element.getAttribute('aria-expanded') === 'false', 'Nace contraída (aria-expanded=false)');
 assertCondition(findLeafByText(cardFlame.element, 'Linaje de la Llama Primordial').length === 1, 'Declara el nombre solemne');
 assertCondition(findLeafByText(cardFlame.element, CANON[0].doctrineCondensed).length === 1, 'Declara la doctrina condensada'); // La íntegra (oculta) comparte prefijo: debe excluirse por hidden.
-assertCondition(findLeafByText(cardFlame.element, 'fire').length >= 1, 'Declara la afinidad rectora');
+assertCondition(findLeafByText(cardFlame.element, 'Fuego').length >= 1, 'Declara la afinidad rectora en noble castellano');
+assertCondition(findLeafByText(cardFlame.element, 'fire').length === 0, 'La clave técnica del elemento jamás se imprime al adepto (Art. V)');
 const flameSeal = findByClass(cardFlame.element, 'lineage-card__seal')[0] ?? null;
 assertCondition(flameSeal !== null && flameSeal.getAttribute('data-heraldic-charge') === 'flame', 'Porta el sello heráldico de SPEC-07 (carga flame)');
 assertCondition(

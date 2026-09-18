@@ -234,6 +234,10 @@ if (preg_match_all("/'(#[a-z\/]*)'\s*=>\s*'[a-zA-Z]+'/s", $middlewareSource, $ma
     $middlewareHashes = $matches[1];
 }
 assertCondition(count($middlewareHashes) >= 9, 'El middleware replica el mapa canónico de hashes (' . count($middlewareHashes) . ' vistas)');
+// La ceremonia (#/juramento) es deep-linkable pero jamás retenible: jurar
+// desde la ceremonia no retiene la ceremonia (saneamiento del plan §2.2).
+// Se excluye del cruce como excepción documentada de la SPEC-09.
+$spaNativeHashes = array_values(array_diff($spaNativeHashes, ['#/juramento']));
 $diferencia = array_diff($spaNativeHashes, $middlewareHashes);
 assertCondition($diferencia === [], 'Todo hash de la SPA está cubierto por el middleware (diferencia: ' . implode(', ', $diferencia) . ')');
 

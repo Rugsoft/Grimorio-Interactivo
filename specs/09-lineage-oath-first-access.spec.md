@@ -180,18 +180,18 @@ Hoy, la consagración (registro, SPEC-03) exige elegir ese vínculo dentro de un
 
 ## 8. Criterios de Finalización y Aceptación
 
-* [ ] El formulario de registro solicita únicamente alias, correo y frase de paso (sin desplegable de linajes), conforme a la SPEC-03 enmendada.
-* [ ] Todo usuario autenticado sin linaje — nuevo o legado — aterriza en la ceremonia y permanece retenido mientras su linaje sea nulo, sin límite de sesiones.
-* [ ] La retención es de sustancia: el backend rechaza con `LINEAGE_OATH_REQUIRED` toda operación no permitida de una cuenta sin linaje, incluyendo llamadas directas a la API.
-* [ ] Las ocho tarjetas heráldicas muestran nombre, blasón, estandarte, elemento rector y doctrina condensada; la expansión revela la doctrina íntegra y el texto del juramento.
-* [ ] El juramento exige modal solemne de doble confirmación con advertencia de perpetuidad visible e ineludible.
-* [ ] El juramento sellado vincula la cuenta de forma permanente con registro en la Bitácora de Auditoría, resuelve idempotentemente los reenvíos y serializa los concurrentes.
-* [ ] Tras jurar, el adepto aterriza en la ruta retenida en su sesión o, en su defecto, en el portal de inicio.
-* [ ] El cierre de sesión sin jurar conserva la cuenta y devuelve a la ceremonia en el reingreso; la identidad visible del peregrino declara «Peregrino sin Linaje».
-* [ ] Ninguna vista o endpoint posterior permite cambio o revocación del linaje jurado.
-* [ ] La designación de Maestro exige linaje jurado previo.
-* [ ] La ceremonia respeta WCAG 2.1 AA (teclado, contraste, ARIA con foco atrapado en el modal, movimiento reducido) y el Velo Arcano de SPEC-02.
-* [ ] La consola queda limpia (sin errores) durante toda la ceremonia, el fallo de carga simulado y la navegación bloqueada.
+* [x] El formulario de registro solicita únicamente alias, correo y frase de paso (sin desplegable de linajes), conforme a la SPEC-03 enmendada.
+* [x] Todo usuario autenticado sin linaje — nuevo o legado — aterriza en la ceremonia y permanece retenido mientras su linaje sea nulo, sin límite de sesiones.
+* [x] La retención es de sustancia: el backend rechaza con `LINEAGE_OATH_REQUIRED` toda operación no permitida de una cuenta sin linaje, incluyendo llamadas directas a la API.
+* [x] Las ocho tarjetas heráldicas muestran nombre, blasón, estandarte, elemento rector y doctrina condensada; la expansión revela la doctrina íntegra y el texto del juramento.
+* [x] El juramento exige modal solemne de doble confirmación con advertencia de perpetuidad visible e ineludible.
+* [x] El juramento sellado vincula la cuenta de forma permanente con registro en la Bitácora de Auditoría, resuelve idempotentemente los reenvíos y serializa los concurrentes.
+* [x] Tras jurar, el adepto aterriza en la ruta retenida en su sesión o, en su defecto, en el portal de inicio.
+* [x] El cierre de sesión sin jurar conserva la cuenta y devuelve a la ceremonia en el reingreso; la identidad visible del peregrino declara «Peregrino sin Linaje».
+* [x] Ninguna vista o endpoint posterior permite cambio o revocación del linaje jurado.
+* [x] La designación de Maestro exige linaje jurado previo.
+* [x] La ceremonia respeta WCAG 2.1 AA (teclado, contraste, ARIA con foco atrapado en el modal, movimiento reducido) y el Velo Arcano de SPEC-02.
+* [x] La consola queda limpia (sin errores) durante toda la ceremonia, el fallo de carga simulado y la navegación bloqueada.
 
 ---
 

@@ -93,6 +93,10 @@ export const HASH_TO_VIEW_MAP = Object.freeze({
   '#/atrio': 'experimentalHall',
   '#/torre': 'tower',
   '#/bitacora': 'auditLog',
+  // La ceremonia del primer acceso es una ruta real del enrutador
+  // (deep-linkable, decisión §5.9 del plan): el error LINEAGE_OATH_REQUIRED
+  // del backend y el desvío del interceptor conducen a este hash.
+  '#/juramento': 'juramento',
 });
 
 /** Mapeo canónico de vista a hash de URL. */
@@ -106,6 +110,7 @@ export const VIEW_TO_HASH_MAP = Object.freeze({
   experimentalHall: '#/atrio',
   tower: '#/torre',
   auditLog: '#/bitacora',
+  juramento: '#/juramento',
 });
 
 /**
@@ -681,7 +686,9 @@ export function createGrimoireApp(options = {}) {
     }
     const retainedIntent = store.getState().pendingIntent;
     store.clearPendingIntent();
-    // Restauración de la intención: solo acciones con vista propia.
+    // Restauración de la intención: solo acciones con vista propia. La
+    // guarda del interceptor (resolveOathRetention) decide en cada desvío:
+    // si la cuenta es peregrina, la vista pedida conduce a la ceremonia.
     if (retainedIntent?.action === 'openCreator') {
       void navigate('creator');
     } else if (retainedIntent?.action === 'openGrimoire') {
@@ -692,6 +699,10 @@ export function createGrimoireApp(options = {}) {
       // Postulación retenida en el umbral (RF-01.5): ya con vínculo, la ficha
       // de la casa vuelve a montarse con su gesto de ingreso disponible.
       void navigate('clan', { clanId: retainedIntent.targetSlug });
+    } else if (store.getState().userLineage === null) {
+      // Peregrino sin intención retenida (registro nuevo o vínculo legado
+      // renovado): aterriza en la ceremonia (RF-01.2, DoD de SPEC-09).
+      void navigate('juramento');
     }
   }
 
