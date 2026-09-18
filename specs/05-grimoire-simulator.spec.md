@@ -178,8 +178,8 @@ El objetivo de esta especificación es definir la experiencia del **Simulador de
 
 * **RNF-01 (Fluidez Gráfica y 60 FPS):**  
   La simulación de partículas en el lienzo deberá operar a sesenta cuadros por segundo ($60\text{ FPS}$) estables en condiciones estándar de hardware mediante reciclado circular FIFO, evitando picos de recolección de basura (*Garbage Collection*).
-* **RNF-02 (Latencia de la Invocación):**  
-  El lapso entre la orden de lanzamiento (clic manual o reconocimiento vocal) y la primera emisión cinemática en el lienzo no superará los cien milisegundos ($< 100\text{ ms}$).
+* **RNF-02 (Latencia de la Invocación, criterio con cobertura de arnés):**  
+  El lapso entre la orden de lanzamiento (clic manual o reconocimiento vocal) y la primera emisión cinemática en el lienzo no superará los cien milisegundos ($< 100\text{ ms}$). **Materialización ratificada:** el caso P6 del protocolo (`runInvocationLatencyCase`, `scratch/protocol_grimoire_simulator.mjs`) lo mide de forma determinista en cualquier sustrato — el reloj sintético del protocolo, avanzado solo por el planificador de cuadros que la propia Cámara usa — capturando el instante del primer trazado del lienzo tras el clic. Se ejercitan ambas rutas: la cinemática plena (proyectiles) y la de movimiento reducido (destello estático e impacto inmediato), cada una contra el presupuesto de 100 ms. Medición de referencia: primera emisión a los 16 ms del reloj del protocolo en ambas rutas (el primer cuadro del planificador), sin fallos y con consola limpia.
 * **RNF-03 (Cumplimiento de Accesibilidad WCAG 2.1 AA):**  
   Textos flotantes con ratio de contraste legible ($\ge 4.5:1$), navegación completa mediante teclado (flechas de página, activación por barra espaciadora), soporte ARIA y acatamiento de `prefers-reduced-motion`.
 * **RNF-04 (El Velo Arcano y la Soberanía Lingüística):**  

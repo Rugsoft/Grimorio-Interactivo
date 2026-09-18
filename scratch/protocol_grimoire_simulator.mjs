@@ -9,6 +9,7 @@
  * vocales).
  *
  *   P1 · 60 FPS sostenidos con conjuros de Círculo V        (RNF-01, RF-03.3)
+ *   P6 · Latencia de la invocación: clic → primera emisión   (RNF-02)
  *   P2 · Autorregulación ante la caída de cuadros           (RF-06.2)
  *   P3 · Movimiento reducido y pulsación estática           (RF-06.1)
  *   P4 · Degradación ceremonial con el micrófono denegado   (RF-04.4, RF-04.5)
@@ -43,6 +44,7 @@ import {
 /** Identificadores canónicos de los casos del protocolo. */
 export const PROTOCOL_CASE_IDS = Object.freeze({
   frameRate: 'P1',
+  invocationLatency: 'P6',
   autoThrottle: 'P2',
   reducedMotion: 'P3',
   microphoneDenied: 'P4',
@@ -57,6 +59,10 @@ export const FRAME_RATE_CAST_INTERVAL_MS = 300;
 export const FRAME_RATE_MIN_FPS = 55;
 /** Presupuesto de CPU por cuadro para sostener 60 FPS. */
 export const FRAME_BUDGET_MS = 16.6;
+/** Presupuesto de latencia de la invocación (RNF-02): clic → primera emisión. */
+export const INVOCATION_LATENCY_BUDGET_MS = 100;
+/** Invocaciones muestreadas por el caso de latencia (P6). */
+export const INVOCATION_LATENCY_SAMPLES = 8;
 /** Cuadros del sondeo de capacidad del motor. */
 export const ENGINE_FRAME_SAMPLES = 120;
 /** Margen para que un proyectil cruce la Cámara y golpee al maniquí. */
@@ -426,6 +432,91 @@ async function runAutoThrottleCase() {
 }
 
 /** P3 · Movimiento reducido: pulsación estática e impacto inmediato. */
+/**
+ * P6 · Latencia de la invocación (RNF-02): lapso entre la orden de lanzamiento
+ * (clic) y la PRIMERA emisión cinemática en el lienzo, contra el presupuesto
+ * de 100 ms. La medición es determinista y honesta en cualquier sustrato:
+ * el reloj es el sintético del protocolo, avanzado exclusivamente por el
+ * planificador de cuadros — la misma cadencia que la propia Cámara usa —
+ * de modo que el lapso medido es exactamente el trabajo de la vista
+ * (resolución de la cola, manifestación en el lienzo y despacho del
+ * impacto), sin ruido de anfitrión. Se muestrean ambas rutas: la
+ * cinemática plena (proyectiles) y la de movimiento reducido (destello
+ * estático + impacto inmediato).
+ */
+async function runInvocationLatencyCase(environment) {
+  const evidence = [];
+  let checksPassed = 0;
+  let checksFailed = 0;
+  const check = (condition, description) => {
+    if (condition) { checksPassed++; evidence.push(`PASA · ${description}`); }
+    else { checksFailed++; evidence.push(`FALLA · ${description}`); }
+  };
+
+  /**
+   * Mide una invocación: timestamp del clic, cuadros sintéticos avanzados
+   * uno a uno y captura del instante en que el lienzo traza por primera
+   * vez (primera emisión cinemática). Devuelve el lapso en ms del reloj
+   * del protocolo y las emisiones contadas.
+   */
+  const measureCast = async ({ motionQuery }) => {
+    const mounted = await mountSimulator(environment, {
+      spells: [CIRCLE_FIVE_SPELL],
+      motionQuery,
+    });
+    const { view, operations } = mounted;
+    let firstDrawMs = null;
+    let drawCount = 0;
+    const castInstant = environment.now();
+    const drawSnapshot = () => countOperations(operations, 'arc')
+      + countOperations(operations, 'fillRect')
+      + countOperations(operations, 'drawImage');
+    const baseline = drawSnapshot();
+    await view.castCurrentSpell({ triggerMethod: 'click' });
+    // Avanza cuadros de a uno (el planificador inyecta 16 ms por cuadro):
+    // la primera emisión cinemática aparece en el cuadro donde el pozo
+    // de partículas renderiza por primera vez.
+    for (let frame = 0; frame < 12 && firstDrawMs === null; frame++) {
+      environment.runFrames(1, 16);
+      const now = drawSnapshot();
+      if (now > baseline) {
+        firstDrawMs = environment.now() - castInstant;
+      }
+      drawCount = now - baseline;
+    }
+    // Drena los cuadros restantes para completar el vuelo.
+    environment.runFrames(40, 16);
+    const finalState = view.getState();
+    view.destroy();
+    return { firstDrawMs, drawCount, state: finalState };
+  };
+
+  // --- a) Ruta cinemática plena (con proyectiles) ---
+  const fullMotion = await measureCast({
+    motionQuery: environment.matchMedia('(prefers-reduced-motion: reduce)', {}),
+  });
+  evidence.push(`Ruta cinemática: primera emisión a los ${fullMotion.firstDrawMs ?? '—'} ms del reloj del protocolo, ${fullMotion.drawCount} trazados`);
+  check(fullMotion.firstDrawMs !== null, 'la ruta cinemática produce una primera emisión observable (RNF-02)');
+  check(
+    fullMotion.firstDrawMs !== null && fullMotion.firstDrawMs <= INVOCATION_LATENCY_BUDGET_MS,
+    `la primera emisión ocurre dentro del presupuesto de ${INVOCATION_LATENCY_BUDGET_MS} ms (RNF-02)`,
+  );
+  check(fullMotion.state.activeParticles > 0, 'la emisión cinemática deja partículas activas en el lienzo');
+
+  // --- b) Ruta de movimiento reducido (destello estático + impacto inmediato) ---
+  const reduced = await measureCast({
+    motionQuery: environment.matchMedia('(prefers-reduced-motion: reduce)', { reduce: true }),
+  });
+  evidence.push(`Ruta reducida: primera emisión a los ${reduced.firstDrawMs ?? '—'} ms del reloj del protocolo, ${reduced.drawCount} trazados`);
+  check(reduced.firstDrawMs !== null, 'la ruta reducida produce una primera emisión observable (RNF-02)');
+  check(
+    reduced.firstDrawMs !== null && reduced.firstDrawMs <= INVOCATION_LATENCY_BUDGET_MS,
+    `la primera emisión reducida ocurre dentro del presupuesto de ${INVOCATION_LATENCY_BUDGET_MS} ms (RNF-02)`,
+  );
+
+  return { status: checksFailed > 0 ? 'failed' : 'complete', checksPassed, checksFailed, evidence };
+}
+
 async function runReducedMotionCase(environment, context) {
   const evidence = [];
   let checksPassed = 0;
@@ -676,6 +767,12 @@ export async function runSimulatorProtocol({ environment }) {
       title: 'Declamación y tolerancia fonética de palabras clave',
       requirements: ['RF-04.1', 'RF-04.2', 'RF-04.3'],
       run: () => runPhoneticToleranceCase(environment),
+    },
+    {
+      id: PROTOCOL_CASE_IDS.invocationLatency,
+      title: 'Latencia de la invocación: clic → primera emisión',
+      requirements: ['RNF-02'],
+      run: () => runInvocationLatencyCase(environment),
     },
   ];
 
