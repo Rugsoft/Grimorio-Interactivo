@@ -67,7 +67,7 @@
 
 ## Fase 3: Frontend — Datos, Interceptor e Identidad (Vanilla ES Modules)
 
-- [ ] **Tarea 3.1: Cliente del juramento (`public/assets/js/api/lineageOathClient.js`)**
+- [x] **Tarea 3.1: Cliente del juramento (`public/assets/js/api/lineageOathClient.js`)**
   * **Alcance:** Cliente `fetch` de los 3 endpoints: `fetchOathCatalog()`, `sealOath(lineageId)` y `retainRoute(route)`; mapeo de códigos 200/204/400/401/403 a veredictos estructurados (`{ status, lineage, retainedRoute, errorCode }`), con envío del token CSRF en la mutación.
   * **Cubre:** `RF-02.1`, `RF-03.1`, `RF-03.2`
   * **Hecho cuando:** Cada código HTTP del contrato produce el veredicto estructurado correspondiente y ningún método lanza excepción no controlada ante 4xx/5xx.
