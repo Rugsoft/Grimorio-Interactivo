@@ -15,15 +15,17 @@ declare(strict_types=1);
 namespace Grimorio\Services;
 
 /**
- * Identificador del iniciado recién consagrado.
+ * Identificador del iniciado recién consagrado y su estado de linaje.
  */
 final class ConsecrationResult
 {
     /**
-     * @param string $userId Identificador textual del nuevo usuario.
+     * @param string      $userId  Identificador textual del nuevo usuario.
+     * @param string|null $lineage Linaje jurado (siempre null al nacer: SPEC-09, RF-01.2).
      */
     public function __construct(
         public readonly string $userId,
+        public readonly ?string $lineage = null,
     ) {
     }
 }

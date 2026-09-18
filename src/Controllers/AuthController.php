@@ -91,21 +91,19 @@ final class AuthController
         $alias      = isset($payload['alias']) ? (string) $payload['alias'] : '';
         $email      = isset($payload['email']) ? (string) $payload['email'] : '';
         $passphrase = isset($payload['passphrase']) ? (string) $payload['passphrase'] : '';
-        // El linaje electo es OPCIONAL (RF-01.2): un mago puede consagrarse sin
-        // hermandad y fundar la suya más adelante.
-        $clanId = isset($payload['clanId']) && trim((string) $payload['clanId']) !== ''
-            ? (string) $payload['clanId']
-            : null;
 
         if ($alias === '' || $email === '' || $passphrase === '') {
             return $this->forgeBadRequest(
                 'INVALID_REGISTRATION_DATA',
-                'La consagración exige alias, correo y frase de paso (el linaje es potestativo).'
+                'La consagración exige alias, correo y frase de paso.'
             );
         }
 
+        // ENMIENDA SPEC-09: `clanId` ya no forma parte del contrato. Si un
+        // cliente en caché lo envía, el servicio lo ignora en silencio
+        // (plan §5.8): pestañas abiertas durante el despliegue no se rompen.
         try {
-            $consecration = $this->authService->consecrate($alias, $email, $passphrase, $clanId);
+            $consecration = $this->authService->consecrate($alias, $email, $passphrase);
         } catch (InvalidArgumentException $invalidData) {
             return $this->forgeBadRequest('INVALID_REGISTRATION_DATA', $invalidData->getMessage());
         } catch (RuntimeException $alreadyClaimed) {
@@ -120,10 +118,8 @@ final class AuthController
             ], 409);
         }
 
-        // El contrato del plan (Endpoint 1) declara clanId y clanName; ambos
-        // viajan nulos para quien nace sin linaje.
-        $clanName = $this->resolveClanName($clanId);
-
+        // El contrato de SPEC-09 (plan §2.2, Endpoint consagración): la
+        // cuenta nace PEREGRINA, con `lineage: null` y sin campos de clan.
         // La consagración próspera vincula sesión automáticamente (RF-01.2).
         $this->authService->bind($email, $passphrase);
 
@@ -131,11 +127,10 @@ final class AuthController
             'success' => true,
             'data'    => [
                 'user' => [
-                    'id'       => $consecration->userId,
-                    'alias'    => $alias,
-                    'role'     => 'editor',
-                    'clanId'   => $clanId,
-                    'clanName' => $clanName,
+                    'id'      => $consecration->userId,
+                    'alias'   => $alias,
+                    'role'    => 'editor',
+                    'lineage' => null,
                 ],
             ],
         ], 201);
@@ -228,6 +223,7 @@ final class AuthController
                     'clanName' => $this->resolveClanName(
                         $userRow['clan_id'] === null ? null : (string) $userRow['clan_id']
                     ),
+                    'lineage'  => $userRow['lineage'] ?? null,
                 ],
             ],
         ], 200);
@@ -317,6 +313,7 @@ final class AuthController
                     'role'     => $activeUser->getRole(),
                     'clanId'   => $activeUser->getClanId(),
                     'clanName' => $this->resolveClanName($activeUser->getClanId()),
+                    'lineage'  => $activeUser->getLineage(),
                 ],
             ],
         ], 200);
@@ -540,7 +537,7 @@ final class AuthController
     private function fetchUserRow(string $userId): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, alias, email, role, clan_id, created_at, updated_at FROM users WHERE id = :userId'
+            'SELECT id, alias, email, role, clan_id, lineage, created_at, updated_at FROM users WHERE id = :userId'
         );
         $statement->execute([':userId' => $userId]);
         $userRow = $statement->fetch(PDO::FETCH_ASSOC);

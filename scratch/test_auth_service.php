@@ -91,9 +91,9 @@ $sessionManager = new SessionManager($pdo, '127.0.0.1', 'Arnés AuthService/1.0'
 $authService = new AuthService($pdo, $sessionManager);
 
 // ---------------------------------------------------------------------
-// 1. Consagración (RF-01.1, RF-01.2).
+// 1. Consagración (RF-01.1, enmienda SPEC-09: registro sin linaje).
 // ---------------------------------------------------------------------
-echo "\n[1] Consagración con clan obligatorio y rol editor\n";
+echo "\n[1] Consagración sin linaje: registro de credenciales (SPEC-09)\n";
 
 $consecration = null;
 $consecrationOk = true;
@@ -102,7 +102,6 @@ try {
         alias: 'FrikiArcano',
         email: 'friki@sanctuario.arc',
         passphrase: 'palabra-secreta-del-mago',
-        clanId: 'cln_test',
         now: new DateTimeImmutable($now),
     );
 } catch (Throwable $consecrationError) {
@@ -114,32 +113,34 @@ assertArcane($consecrationOk && $consecration !== null, 'consecrate() registra a
 if ($consecration !== null) {
     assertArcane(str_starts_with($consecration->userId, 'usr_'), 'La consagración devuelve el identificador del usuario');
 
-    $row = $pdo->query("SELECT role, clan_id, password_hash, email FROM users WHERE id = '" . $consecration->userId . "'")->fetch(PDO::FETCH_ASSOC);
+    $row = $pdo->query("SELECT role, clan_id, lineage, password_hash, email FROM users WHERE id = '" . $consecration->userId . "'")->fetch(PDO::FETCH_ASSOC);
     assertArcane($row !== false && $row['role'] === 'editor', 'El rol técnico asignado por defecto es editor (RF-01.2)');
-    assertArcane($row !== false && $row['clan_id'] === 'cln_test', 'El iniciado queda vinculado al clan seleccionado');
+    assertArcane($row !== false && $row['lineage'] === null && $row['clan_id'] === null, 'La cuenta nace PEREGRINA: sin linaje ni espejo de clan (SPEC-09, RF-01.2)');
     assertArcane($row !== false && $row['email'] === 'friki@sanctuario.arc', 'El correo queda registrado');
 }
 
-// 1b. Datos inválidos: alias corto y clan inexistente.
+// 1b. Datos inválidos: alias corto y frase de paso breve. El `clanId`, sea
+// existente o fantasma, ya NO se valida ni se rechaza: se ignora en silencio
+// (enmienda SPEC-09, plan §5.8).
 $shortAliasRejected = false;
 try {
-    $authService->consecrate('ab', 'x@y.arc', 'clave-larga-suficiente', 'cln_test', new DateTimeImmutable($now));
+    $authService->consecrate('ab', 'x@y.arc', 'clave-larga-suficiente', null, new DateTimeImmutable($now));
 } catch (InvalidArgumentException) {
     $shortAliasRejected = true;
 }
 assertArcane($shortAliasRejected, 'Un alias fuera del rango de 3-30 caracteres es rechazado');
 
-$ghostClanRejected = false;
+$ghostClanIgnored = false;
 try {
-    $authService->consecrate('OtroIniciado', 'otro@sanctuario.arc', 'clave-larga-suficiente', 'cln_fantasma', new DateTimeImmutable($now));
+    $ghostClanIgnored = $authService->consecrate('OtroIniciado', 'otro@sanctuario.arc', 'clave-larga-suficiente', 'cln_fantasma', new DateTimeImmutable($now)) !== null;
 } catch (InvalidArgumentException) {
-    $ghostClanRejected = true;
+    $ghostClanIgnored = false;
 }
-assertArcane($ghostClanRejected, 'Un clan inexistente es rechazado (clan obligatorio RF-01.1)');
+assertArcane($ghostClanIgnored, 'Un clanId legado (inexistente) se IGNORA sin error: la consagración ya no declara linaje (SPEC-09)');
 
 $shortPassRejected = false;
 try {
-    $authService->consecrate('TercerIniciado', 'tercero@sanctuario.arc', 'corta', 'cln_test', new DateTimeImmutable($now));
+    $authService->consecrate('TercerIniciado', 'tercero@sanctuario.arc', 'corta', null, new DateTimeImmutable($now));
 } catch (InvalidArgumentException) {
     $shortPassRejected = true;
 }

@@ -84,7 +84,7 @@ final class AuthMiddleware
 
         // Materialización del titular desde la base de datos.
         $userStatement = $this->pdo->prepare(
-            'SELECT id, alias, email, password_hash, role, clan_id, created_at, updated_at
+            'SELECT id, alias, email, password_hash, role, clan_id, lineage, created_at, updated_at
              FROM users WHERE id = :userId'
         );
         $userStatement->execute([':userId' => $activeSession->getUserId()]);

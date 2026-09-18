@@ -53,7 +53,7 @@
   * **Hecho cuando:** Intentar ascender a un peregrino fracasa con error controlado solemne, la cuenta queda sin cambiar y el ascenso de un linajado sigue funcionando intacto.
   * **Verificación:** `scratch/test_lineage_oath_service.php` (fase de designación)
 
-- [ ] **Tarea 2.5: Enmienda de la consagración (`src/Services/AuthService.php`, `src/Controllers/AuthController.php`)**
+- [x] **Tarea 2.5: Enmienda de la consagración (`src/Services/AuthService.php`, `src/Controllers/AuthController.php`)**
   * **Alcance:** `consecrate()` deja de recibir/vincular `clanId` (lo ignora en silencio si llega — §5.8 del plan), crea la cuenta con `lineage: null`, y el contrato de respuesta 201 pasa a `user.lineage` sin `clanName` ni `clanId`; `bind()`/`auth/me` exponen `lineage` para la hidratación del store.
   * **Cubre:** `RF-01.1`, `RF-01.2`, enmienda SPEC-03 (RF-01.1/01.2, HU-01)
   * **Hecho cuando:** Una consagración sin `clanId` crea cuenta `editor` con `lineage: null` y sesión iniciada; una consagración con `clanId` legado la ignora sin error; `GET /api/v1/auth/me` retorna `lineage`.

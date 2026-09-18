@@ -90,7 +90,7 @@ final class AuthService
      * @throws InvalidArgumentException Si algún dato viola el canon.
      * @throws RuntimeException         Si la identidad ya está reclamada (409 neutro).
      */
-    public function consecrate(string $alias, string $email, string $passphrase, ?string $clanId = null, ?DateTimeImmutable $now = null): ConsecrationResult
+    public function consecrate(string $alias, string $email, string $passphrase, ?string $legacyClanId = null, ?DateTimeImmutable $now = null): ConsecrationResult
     {
         $instant = $now ?? new DateTimeImmutable('now', new \DateTimeZone('UTC'));
 
@@ -111,21 +111,13 @@ final class AuthService
             throw new InvalidArgumentException('El correo electrónico no es válido.');
         }
 
-        // Linaje electo (opcional): si se declara, debe existir en el catálogo.
-        $clanId = $clanId === null ? null : trim($clanId);
-        if ($clanId === '') {
-            // Un mago puede consagrarse sin hermandad: nacerá sin linaje y
-            // podrá fundar el suyo (RF-01.2).
-            $clanId = null;
-        }
-
-        if ($clanId !== null) {
-            $clanStatement = $this->pdo->prepare('SELECT id FROM clans WHERE id = :clanId');
-            $clanStatement->execute([':clanId' => $clanId]);
-            if ($clanStatement->fetchColumn() === false) {
-                throw new InvalidArgumentException('El linaje seleccionado no existe en el santuario.');
-            }
-        }
+        // ENMIENDA SPEC-09 (RF-01.1, plan §5.8): la consagración ya no
+        // vincula hermandad ni linaje alguno. Si un cliente en caché porta
+        // `clanId`, se IGNORA EN SILENCIO — sin error, para no romper
+        // pestañas abiertas durante el despliegue. El linaje se jurará en
+        // la ceremonia bloqueante del primer acceso (SPEC-09); la
+        // adhesión a clanes vive después, regida por SPEC-07.
+        $legacyClanId = null;
 
         // Anti-enumeración (RF-01.3): si el alias o el correo ya viven en
         // el grimorio, la respuesta es neutra (409) sin revelar cuál de
@@ -167,21 +159,9 @@ final class AuthService
                 throw new RuntimeException('La consagración no pudo inscribirse en el registro de iniciados.');
             }
 
-            if ($clanId !== null) {
-                // `clan_members` es la autoridad de la afiliación (Tarea 2.3).
-                $membershipRepository = new ClanMemberRepository($this->pdo);
-                $membership = $membershipRepository->addMember(
-                    'mem_' . bin2hex(random_bytes(6)),
-                    $clanId,
-                    $userId,
-                    'adept',
-                    $instant->format('Y-m-d\TH:i:s\Z'),
-                );
-
-                if ($membership === null) {
-                    throw new RuntimeException('El iniciado ya militaba en una hermandad del santuario.');
-                }
-            }
+            // La cuenta y su afiliación ya no se inscriben juntas (enmienda
+            // SPEC-09): `clan_members` solo se escribe por el flujo de
+            // admisión de SPEC-07, jamás por el registro.
 
             $this->pdo->commit();
         } catch (\Throwable $failure) {
@@ -192,7 +172,9 @@ final class AuthService
             throw $failure;
         }
 
-        return new ConsecrationResult(userId: $userId);
+        // Toda cuenta consagrada nace PEREGRINA (RF-01.2 de SPEC-09): el
+        // vínculo perpetuo solo lo forja el juramento, jamás el registro.
+        return new ConsecrationResult(userId: $userId, lineage: null);
     }
 
     /**

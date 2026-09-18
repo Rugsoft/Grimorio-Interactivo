@@ -122,7 +122,7 @@ $consecrateResponse = $controller->consecrate(forgeJsonRequest('POST', '/api/v1/
     'alias'      => 'FrierenElf',
     'email'      => 'frieren@sanctuario.arc',
     'passphrase' => 'palabra-secreta-del-mago',
-    'clanId'     => 'cln_ctrl',
+    'clanId'     => 'cln_ctrl',   // Enmienda SPEC-09: legado, se ignora en silencio.
 ]));
 
 assertArcane($consecrateResponse->getStatusCode() === 201, 'Consagración válida responde 201 Created');
@@ -134,8 +134,8 @@ assertArcane(
     'El contrato data.user porta id usr_* y role editor (plan Endpoint 1)'
 );
 assertArcane(
-    ($userData['clanId'] ?? null) === 'cln_ctrl' && ($userData['clanName'] ?? null) === 'Linaje del Arnés',
-    'El contrato porta clanId y clanName del linaje electo'
+    array_key_exists('lineage', $userData) && $userData['lineage'] === null && !isset($userData['clanId']) && !isset($userData['clanName']),
+    'El contrato SPEC-09 porta lineage: null (peregrina) y ya no porta clanId ni clanName'
 );
 assertArcane(!isset($userData['passwordHash']), 'La respuesta jamás expone passwordHash');
 // La consagración próspera vincula sesión automáticamente (RF-01.2): la

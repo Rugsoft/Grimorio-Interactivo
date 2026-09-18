@@ -53,9 +53,10 @@ final class User implements JsonSerializable
         private readonly string $email,
         private readonly string $role,
         private readonly ?string $clanId,
-        private readonly string $passwordHash,
-        private readonly string $createdAt,
-        private readonly string $updatedAt,
+        private readonly ?string $lineage = null,
+        private readonly string $passwordHash = '',
+        private readonly string $createdAt = '',
+        private readonly string $updatedAt = '',
     ) {
         // Validación estricta en el nacimiento de la entidad: cualquier
         // rol fuera del canon deja la instancia inválida (criterio de la tarea).
@@ -101,6 +102,20 @@ final class User implements JsonSerializable
     public function getClanId(): ?string
     {
         return $this->clanId;
+    }
+
+    /**
+     * El vínculo perpetuo del Juramento de Linaje (SPEC-09, RF-04.3).
+     *
+     * Devuelve `null` cuando el adepto es «peregrino sin linaje»: la fase
+     * de vida que la ceremonia bloqueante del primer acceso conduce al
+     * juramento. Es VÍNCULO INDEPENDIENTE de la afiliación a clanes
+     * (espejo `clanId`): la autoridad de aquella es `clan_members`;
+     * la de este, el juramento sellado (RF-04.1).
+     */
+    public function getLineage(): ?string
+    {
+        return $this->lineage;
     }
 
     /**
@@ -177,6 +192,9 @@ final class User implements JsonSerializable
             role: (string) ($databaseRow['role'] ?? ''),
             clanId: isset($databaseRow['clan_id']) && $databaseRow['clan_id'] !== null && (string) $databaseRow['clan_id'] !== ''
                 ? (string) $databaseRow['clan_id']
+                : null,
+            lineage: isset($databaseRow['lineage']) && $databaseRow['lineage'] !== null && (string) $databaseRow['lineage'] !== ''
+                ? (string) $databaseRow['lineage']
                 : null,
             passwordHash: (string) ($databaseRow['password_hash'] ?? ''),
             createdAt: (string) ($databaseRow['created_at'] ?? ''),
