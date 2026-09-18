@@ -105,7 +105,7 @@
   * **Hecho cuando:** El flujo completo peregrino→sellado funciona de punta a punta contra el cliente falso, el fallo de canon muestra el aviso con reintento manteniendo la retención, y `oath:sealed` porta `{ lineage, retainedRoute }`.
   * **Verificación:** `scratch/test_lineage_oath_view.mjs`
 
-- [ ] **Tarea 4.4: Velo Arcano de la ceremonia (`public/assets/css/components/lineage-oath.css`)**
+- [x] **Tarea 4.4: Velo Arcano de la ceremonia (`public/assets/css/components/lineage-oath.css`)**
   * **Alcance:** Hoja de estilos de la ceremonia con tokens de SPEC-02 (oro arcano sobre tintas oscuras, tipografía ceremonial), tarjetas heráldicas con foco visible ≥ 4.5:1, estados del modal y bloque `@media (prefers-reduced-motion: reduce)` sin transiciones.
   * **Cubre:** `RNF-01`, `RNF-05`
   * **Hecho cuando:** La ceremonia viste los tokens del grimorio sin colores fuera de catálogo, el foco de teclado es visible con contraste AA y con movimiento reducido no hay transición alguna.

@@ -15,6 +15,98 @@
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
+   0. La vista de la ceremonia (Tarea 4.3/4.4): título, rejilla y estados
+   --------------------------------------------------------------------- */
+
+.lineage-oath {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-4);
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: var(--space-ink-5) var(--space-ink-3);
+}
+
+.lineage-oath__title {
+  margin: 0;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  letter-spacing: var(--letter-spacing-seal);
+  text-align: center;
+}
+
+.lineage-oath__intro {
+  margin: 0 auto;
+  max-width: 46rem;
+  text-align: center;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* Rejilla solemne: las Ocho Casas en columnas elásticas (RNF-01). */
+.lineage-oath__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--space-ink-3);
+  align-items: stretch;
+}
+
+/* «Sellando…»: región viva de espera, sin gestos durante el rito. */
+.lineage-oath__sealing {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.lineage-oath__sealing[hidden] {
+  display: none;
+}
+
+/* Leyenda de sellado feliz (role=status); el retorno lo conduce el bus. */
+.lineage-oath__sealed {
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  color: var(--color-text-secondary);
+}
+
+.lineage-oath__sealed[hidden] {
+  display: none;
+}
+
+/* El aviso solemne de fallo: pergamino de rescate con reintento. */
+.lineage-oath__failure {
+  text-align: center;
+  padding: var(--space-ink-4) var(--space-ink-3);
+
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-light-muted);
+  font-family: var(--font-arcane-body);
+}
+
+.lineage-oath__failure[hidden] {
+  display: none;
+}
+
+.lineage-oath__failure-legend {
+  margin: 0 0 var(--space-ink-2);
+}
+
+/* El reintento: botón secundario del Kit con objetivo táctil completo. */
+.lineage-oath__retry {
+  min-height: var(--touch-target-min);
+}
+
+/* ---------------------------------------------------------------------
    1. La tarjeta heráldica (Tarea 4.1)
    --------------------------------------------------------------------- */
 

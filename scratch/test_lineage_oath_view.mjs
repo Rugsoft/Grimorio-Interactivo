@@ -489,11 +489,69 @@ assertCondition(
 viewJ.destroy();
 assertCondition(findByClass(mountJ, 'lineage-card').length === 0, 'destroy() desmonta la ceremonia sin huérfanos');
 
+// --- FASE K: El Velo Arcano — inspección de estilos (Tarea 4.4, RNF-01/05) ---
+console.log('\nFASE K: La hoja de la ceremonia viste tokens y respeta AA\n');
+
+const { readFileSync } = await import('node:fs');
+const css = readFileSync(new URL('../public/assets/css/components/lineage-oath.css', import.meta.url), 'utf8');
+const tokensCss = readFileSync(new URL('../public/assets/css/tokens.css', import.meta.url), 'utf8');
+
+// 1) Cero literales de color en la forja: la paleta vive en tokens.css.
+const hexLiterals = css.match(/#[0-9a-fA-F]{3,8}\b/g) ?? [];
+assertCondition(hexLiterals.length === 0, `Sin literales de color en la hoja (RNF-01): ${hexLiterals.length} hallados`);
+
+// 2) Toda Custom Property usada existe en tokens.css (o es dato del DTO).
+const usedVars = [...css.matchAll(/var\(--([a-z0-9-]+)/g)].map((m) => m[1]);
+const declaredTokens = new Set([...tokensCss.matchAll(/--([a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+// --lineage-banner es DATO heráldico del DTO (bannerColor), no un token.
+const missingVars = [...new Set(usedVars)].filter((v) => v !== 'lineage-banner' && !declaredTokens.has(v));
+assertCondition(missingVars.length === 0, `Toda var(--x) existe en tokens.css: faltan ${JSON.stringify(missingVars)}`);
+
+// 3) Clases de la vista: cada clase usada por el JS viste en la hoja.
+const viewSource = readFileSync(new URL('../public/assets/js/views/lineageOathView.js', import.meta.url), 'utf8');
+const usedClasses = [...new Set([...viewSource.matchAll(/lineage-oath__[a-z-]+/g)].map((m) => m[0]))];
+const missingClasses = usedClasses.filter((c) => !css.includes(`.${c}`));
+assertCondition(missingClasses.length === 0, `Todas las clases de la vista visten: faltan ${JSON.stringify(missingClasses)}`);
+
+// 4) Foco visible con el token de contraste (RNF-05) y objetivo táctil.
+assertCondition(css.includes('.lineage-card:focus-visible') && css.includes('var(--color-parchment-border-focus)'), 'La tarjeta declara :focus-visible con el token dorado (RNF-05)');
+assertCondition(css.includes('.lineage-card__swear') && css.includes('var(--touch-target-min)'), 'El gesto «Jurar» porta objetivo táctil completo');
+
+// 5) Movimiento reducido: toda transición/animación queda neutralizada.
+const reduceBlock = css.slice(css.indexOf('@media (prefers-reduced-motion'));
+const transitionDecls = (css.match(/transition:[^;]+;/g) ?? []).length;
+assertCondition(transitionDecls > 0 && reduceBlock.includes('transition: none'), 'Toda transición tiene contrapartida none en reduced-motion (RNF-05)');
+assertCondition(reduceBlock.includes('animation: none'), 'La entrada solemne del modal se apaga en reduced-motion');
+
+// 6) Contraste AA de los pares canónicos de la ceremonia (tokens vs fondos).
+function luminance(hex) {
+  const channels = hex.replace('#', '').match(/../g).map((h) => parseInt(h, 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+function contrastRatio(foreground, background) {
+  const [l1, l2] = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+function tokenValue(tokenName) {
+  const match = tokensCss.match(new RegExp(`--${tokenName}:\\s*(${['#[0-9a-fA-F]{6}', 'var\\([^)]+\\)'].join('|')})`));
+  return match?.[1] ?? null;
+}
+// Los pares: texto/acentos de la ceremonia sobre sus fondos de obsidiana.
+const contrastPairs = [
+  ['Título dorado sobre la estela', tokenValue('color-gold-arcane'), tokenValue('color-bg-obsidian-surface')],
+  ['Cuerpo sobre la estela', tokenValue('color-text-secondary'), tokenValue('color-bg-obsidian-surface')],
+  ['Aviso muted sobre la estela', tokenValue('color-text-light-muted'), tokenValue('color-bg-obsidian-surface')],
+];
+const contrastFailures = contrastPairs
+  .filter(([, fg, bg]) => fg?.startsWith('#') && bg?.startsWith('#') && contrastRatio(fg, bg) < 4.5);
+assertCondition(contrastFailures.length === 0, `Contraste AA ≥ 4.5:1 en los pares canónicos: fallan ${contrastFailures.length}`);
+
 assertCondition(uncaughtErrors === 0, `Ninguna excepción escapó sin control (${uncaughtErrors} cazadas)`);
 
 console.log(`\n== RESUMEN == Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);
 if (assertsFailed === 0 && uncaughtErrors === 0) {
-  console.log('RESULTADO: EXITO — La ceremonia carga el canon, despliega las 8 tarjetas, sella de punta a punta con veredicto { lineage, retainedRoute }, avisa sin liberar retención y queda operativa ante fallos (Tareas 4.1+4.3).');
+  console.log('RESULTADO: EXITO — La ceremonia carga el canon, despliega las 8 tarjetas, sella de punta a punta con veredicto { lineage, retainedRoute }, avisa sin liberar retención, queda operativa ante fallos y viste el Velo Arcano con tokens y AA (Tareas 4.1+4.3+4.4).');
   process.exit(0);
 }
 console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
