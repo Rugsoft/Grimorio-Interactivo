@@ -41,6 +41,7 @@ import { createLibraryView } from './views/libraryView.js';
 // Dominio. El módulo legado permanece íntegro y verificado por su propio
 // arnés, pero ya no se monta en la SPA.
 import { createLineageHallView } from './views/lineageHallView.js';
+import { createLineageOathView } from './views/lineageOathView.js';
 import { createClanView } from './views/clanView.js';
 import { createClanClient } from './api/clanClient.js';
 import { createErrorView } from './views/errorView.js';
@@ -67,6 +68,8 @@ import {
 } from './api/authClient.js';
 import {
   retainRoute as apiRetainRoute,
+  fetchOathCatalog as apiFetchOathCatalog,
+  sealOath as apiSealOath,
 } from './api/lineageOathClient.js';
 import { createCodexView } from './views/elementalCodexView.js';
 import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
@@ -146,7 +149,12 @@ export function createGrimoireApp(options = {}) {
       dissolve: apiDissolve,
       dissolveAll: apiDissolveAll,
     },
-    lineageOathClient = { retainRoute: apiRetainRoute },
+    lineageOathClient = {
+      retainRoute: apiRetainRoute,
+      fetchOathCatalog: apiFetchOathCatalog,
+      sealOath: apiSealOath,
+    },
+    oathDialog = globalThis.document?.getElementById?.('oathModal'),
     grimoireClient = createGrimoireClient(),
     dominionClient = createDominionClient(),
     clanClient = createClanClient(),
@@ -468,6 +476,23 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: 'auditLog', instance: logView };
       await logView.render();
+      return;
+    }
+
+    if (viewName === 'juramento') {
+      // La Ceremonia del Juramento de Linaje (SPEC-09, Tarea 4.3, RF-02.1):
+      // pantalla solemne y bloqueante del primer acceso. Solo llega aquí un
+      // peregrino confirmado (la guarda de resolveOathRetention desvía) o una
+      // vista exenta de la lista blanca. La vista emite `oath:sealed`/`oath:
+      // failed` y el veredicto lo conduce handleOathSealed (Tarea 3.2).
+      const oathView = createLineageOathView(appRoot, {
+        lineageOathClient,
+        oathDialog,
+        elementFactory,
+        documentRef,
+      });
+      currentView = { name: 'juramento', instance: oathView };
+      await oathView.render();
       return;
     }
 

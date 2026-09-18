@@ -99,7 +99,7 @@
   * **Hecho cuando:** El modal exige segunda pulsación explícita, el descarte no consume nada, el foco jamás escapa mientras está abierto y regresa al cerrarlo, y la región viva anuncia apertura y veredicto.
   * **Verificación:** `scratch/test_lineage_oath_modal.mjs`
 
-- [ ] **Tarea 4.3: Vista de la ceremonia (`public/assets/js/views/lineageOathView.js`)**
+- [x] **Tarea 4.3: Vista de la ceremonia (`public/assets/js/views/lineageOathView.js`)**
   * **Alcance:** Orquestador: carga del canon vía cliente, rejilla solemne de las 8 tarjetas, flujo expandida → modal → `sealOath`, estados de carga/«Sellando…»/fallo (aviso solemne «El canon no responde» + reintento sin liberar retención), emisión de `oath:sealed`/`oath:failed` con el bus `CustomEvent` del §4 del plan, y manejo del veredicto (retorno a `retainedRoute` o portal).
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RF-03.1`, `RF-03.2`, `RNF-04`
   * **Hecho cuando:** El flujo completo peregrino→sellado funciona de punta a punta contra el cliente falso, el fallo de canon muestra el aviso con reintento manteniendo la retención, y `oath:sealed` porta `{ lineage, retainedRoute }`.

@@ -277,9 +277,223 @@ assertCondition(findByTag(hostileCard.element, 'script').length === 0 && findByT
 
 assertCondition(uncaughtErrors === 0, `Ninguna excepción escapó sin control (${uncaughtErrors} cazadas)`);
 
+// =====================================================================
+// FASES F–J: La vista de la ceremonia (Tarea 4.3)
+// =====================================================================
+
+console.log('\nFASES F–J: La vista orquestadora de la ceremonia (Tarea 4.3)\n');
+
+const { createLineageOathView } = await import('../public/assets/js/views/lineageOathView.js');
+
+/** Canon completo de 8 linajes para la vista (4 sin clanes activos). */
+const FULL_CANON = [
+  'primordialFlame', 'celestialTides', 'eternalTempest', 'worldRoots',
+  'dawnWinds', 'solarCrown', 'abyssalShadows', 'aetherWeavers',
+].map((id, index) => ({
+  id,
+  name: `Linaje ${index + 1} de prueba`,
+  glyph: 'rune-x',
+  bannerColor: '#101010',
+  rulingElement: 'fire',
+  doctrineCondensed: `Doctrina condensada ${index + 1}.`,
+  doctrineFull: `Doctrina íntegra ${index + 1}, con su juramento solemne.`,
+  hasActiveClans: index % 2 === 0,
+}));
+
+/** Cliente fingido del juramento con respuestas programables. */
+function createFakeOathClient() {
+  return {
+    calls: { catalog: [], seal: [] },
+    catalogResponse: { success: true, status: 200, data: { accountState: 'pilgrim', lineages: FULL_CANON } },
+    sealResponse: { success: true, status: 200, data: { lineage: '', sealedNow: true, retainedRoute: null } },
+    async fetchOathCatalog() {
+      this.calls.catalog.push(1);
+      return this.catalogResponse;
+    },
+    async sealOath(lineageId) {
+      this.calls.seal.push(lineageId);
+      return this.sealResponse;
+    },
+  };
+}
+
+/** Punto de montaje con replaceChildren y children reales. */
+function createMountRoot() {
+  const root = createFakeElement('main');
+  root.replaceChildren = (...newChildren) => {
+    for (const child of root.children) child.parentNode = null;
+    root.children = [];
+    for (const child of newChildren) root.appendChild(child);
+  };
+  return root;
+}
+
+/** Espera los microturnos que la vista usa para cargar. */
+const wait = (ticks = 4) => new Promise((resolve) => setTimeout(resolve, 0)).then(() => new Promise((r) => setTimeout(r, ticks > 2 ? 0 : 0)));
+
+/** Captura de eventos del plan §4 sobre el bus. */
+function watchBus(bus) {
+  const seen = [];
+  const originalDispatch = bus.dispatchEvent.bind(bus);
+  bus.dispatchEvent = (event) => {
+    if (typeof event.type === 'string' && event.type.startsWith('oath:')) {
+      seen.push({ type: event.type, detail: event.detail });
+    }
+    return originalDispatch(event);
+  };
+  return seen;
+}
+
+const oathClient = createFakeOathClient();
+const mountRoot = createMountRoot();
+const seenEvents = watchBus(mountRoot);
+const view = createLineageOathView(mountRoot, {
+  lineageOathClient: oathClient,
+  documentRef: fakeDocument,
+  elementFactory: fakeDocument.createElement,
+  eventTarget: mountRoot,
+});
+
+// --- FASE F: Carga del canon y rejilla solemne (RF-02.1) ---
+console.log('\nFASE F: Carga del canon y rejilla\n');
+await view.render();
+await wait();
+
+assertCondition(oathClient.calls.catalog.length === 1, 'Una sola carga del canon por montaje (RNF-04)');
+assertCondition(findByClass(mountRoot, 'lineage-card').length === 8, 'La rejilla despliega las 8 tarjetas heráldicas');
+assertCondition(
+  seenEvents.some((e) => e.type === 'oath:catalog-loaded' && e.detail?.lineages?.length === 8),
+  'Emite oath:catalog-loaded con el canon (plan §4)',
+);
+assertCondition(findByClass(mountRoot, 'lineage-oath__failure').length === 0, 'Sin aviso de fallo con el canon en pie');
+
+// --- FASE G: Flujo completo expandida → modal → sellado (RF-02.2/03.1) ---
+console.log('\nFASE G: Flujo peregrino → sellado de punta a punta\n');
+const cardFlameView = findByClass(mountRoot, 'lineage-card')
+  .find((node) => node.getAttribute('data-lineage-id') === 'primordialFlame');
+fire(cardFlameView, 'click'); // expande
+oathClient.sealResponse = { success: true, status: 200, data: { lineage: 'primordialFlame', sealedNow: true, retainedRoute: '#/creador' } };
+
+// El botón Jurar de la tarjeta expandida convoca al modal; el modal forjado
+// por la vista vive sobre un dialog propio dentro del montaje.
+const swearButtonView = findByClass(cardFlameView, 'lineage-card__swear')[0];
+fire(swearButtonView, 'click');
+const viewDialog = findByClass(mountRoot, 'modal--oath')[0] ?? null;
+assertCondition(viewDialog !== null, 'La vista monta su modal solemne sobre un dialog propio');
+const oathTextElement = findByClass(viewDialog, 'oath-modal__oath-text')[0] ?? null;
+assertCondition(
+  oathTextElement !== null && (oathTextElement.textContent ?? '').includes('Linaje 1 de prueba'),
+  'El modal nombra al linaje elegido con el MISMO texto canónico (RF-02.2)',
+);
+
+// La segunda confirmación dispara el sellado y el veredicto.
+fire(findByClass(viewDialog, 'oath-modal__seal')[0], 'click');
+await wait();
+assertCondition(oathClient.calls.seal.length === 1 && oathClient.calls.seal[0] === 'primordialFlame', 'La vista invoca sealOath con el linaje exacto');
+const sealedEvent = seenEvents.find((e) => e.type === 'oath:sealed');
+assertCondition(sealedEvent !== undefined, 'Emite oath:sealed (plan §4)');
+assertCondition(
+  sealedEvent?.detail?.lineage === 'primordialFlame' && sealedEvent?.detail?.retainedRoute === '#/creador',
+  'El veredicto porta { lineage, retainedRoute } exactos (RF-03.1)',
+);
+
+// El descarte previo al sellado no consume nada.
+fire(findByClass(mountRoot, 'lineage-card')[1], 'click'); // expande Mareas
+fire(findByClass(findByClass(mountRoot, 'lineage-card')[1], 'lineage-card__swear')[0], 'click');
+fire(findByClass(viewDialog, 'oath-modal__dismiss')[0], 'click');
+await wait();
+assertCondition(oathClient.calls.seal.length === 1, 'El descarte del modal no invoca sealOath (RF-02.3)');
+
+// --- FASE H: Fallo del canon — aviso + reintento, retención intacta ---
+console.log('\nFASE H: El canon no responde (RF-02.1, RF-05.1)\n');
+const clientH = createFakeOathClient();
+clientH.catalogResponse = { success: false, status: 0, error: { code: 'networkError', message: 'corriente interrumpida' } };
+const mountH = createMountRoot();
+const eventsH = watchBus(mountH);
+const viewH = createLineageOathView(mountH, {
+  lineageOathClient: clientH,
+  documentRef: fakeDocument,
+  elementFactory: fakeDocument.createElement,
+  eventTarget: mountH,
+});
+await viewH.render();
+await wait();
+assertCondition(findByClass(mountH, 'lineage-oath__failure').length === 1, 'El aviso solemne «El canon no responde» se despliega');
+assertCondition(findByClass(mountH, 'lineage-card').length === 0, 'Sin canon no hay tarjetas (sin juramento sin datos, RF-05.1)');
+assertCondition(eventsH.some((e) => e.type === 'oath:failed'), 'Emite oath:failed ante el fallo de canon');
+
+// El reintento con canon restaurado despliega la ceremonia.
+clientH.catalogResponse = { success: true, status: 200, data: { accountState: 'pilgrim', lineages: FULL_CANON } };
+fire(findByClass(mountH, 'lineage-oath__retry')[0], 'click');
+await wait();
+assertCondition(findByClass(mountH, 'lineage-card').length === 8, 'El reintento con canon restaurado despliega las 8 tarjetas');
+assertCondition(findByClass(mountH, 'lineage-oath__failure')[0]?.hasAttribute?.('hidden') !== false, 'El aviso se retira al recuperar el canon');
+
+// --- FASE I: Fallo del sellado — ceremonia operativa (RF-03.2) ---
+console.log('\nFASE I: Fallo del sellado y reintento\n');
+const clientI = createFakeOathClient();
+clientI.sealResponse = { success: false, status: 500, error: { code: 'networkError', message: 'error interno' } };
+const mountI = createMountRoot();
+const eventsI = watchBus(mountI);
+const viewI = createLineageOathView(mountI, {
+  lineageOathClient: clientI,
+  documentRef: fakeDocument,
+  elementFactory: fakeDocument.createElement,
+  eventTarget: mountI,
+});
+await viewI.render();
+await wait();
+const cardI = findByClass(mountI, 'lineage-card')[2];
+fire(cardI, 'click');
+fire(findByClass(cardI, 'lineage-card__swear')[0], 'click');
+fire(findByClass(findByClass(mountI, 'modal--oath')[0], 'oath-modal__seal')[0], 'click');
+await wait();
+assertCondition(findByClass(mountI, 'lineage-oath__failure').length === 1, 'El fallo del sellado muestra el aviso solemne (sin trazas)');
+assertCondition(eventsI.some((e) => e.type === 'oath:failed' && e.detail?.code === 'networkError'), 'Emite oath:failed con el código del contrato');
+assertCondition(findByClass(mountI, 'lineage-card').length === 8, 'La ceremonia permanece operativa para el reintento (RF-03.2)');
+
+// Reintento del sellado tras el fallo: la ceremonia sigue operativa, se
+// reabre el modal sobre la tarjeta expandida y ahora el sellado es feliz.
+clientI.sealResponse = { success: true, status: 200, data: { lineage: 'eternalTempest', sealedNow: true, retainedRoute: null } };
+fire(findByClass(cardI, 'lineage-card__swear')[0], 'click');
+fire(findByClass(findByClass(mountI, 'modal--oath')[0], 'oath-modal__seal')[0], 'click');
+await wait();
+const sealedI = eventsI.filter((e) => e.type === 'oath:sealed');
+assertCondition(sealedI.length === 1 && sealedI[0].detail?.retainedRoute === null, 'El reintento sella y conduce al portal (retainedRoute null)');
+
+// --- FASE J: 401 y limpieza (RF-03.2, RNF-05) ---
+console.log('\nFASE J: Sesión caducada y desmontaje limpio\n');
+const clientJ = createFakeOathClient();
+clientJ.sealResponse = { success: false, status: 401, error: { code: 'SESSION_EXPIRED', message: 'sesión expirada' } };
+const mountJ = createMountRoot();
+const viewJ = createLineageOathView(mountJ, {
+  lineageOathClient: clientJ,
+  documentRef: fakeDocument,
+  elementFactory: fakeDocument.createElement,
+  eventTarget: mountJ,
+});
+await viewJ.render();
+await wait();
+const cardJ = findByClass(mountJ, 'lineage-card')[0];
+fire(cardJ, 'click');
+fire(findByClass(cardJ, 'lineage-card__swear')[0], 'click');
+fire(findByClass(findByClass(mountJ, 'modal--oath')[0], 'oath-modal__seal')[0], 'click');
+await wait();
+const failureJ = findByClass(mountJ, 'lineage-oath__failure')[0] ?? null;
+assertCondition(
+  failureJ !== null && (failureJ._legendElement?.textContent ?? '').includes('expirado'),
+  'La sesión caducada produce su aviso solemne de reautenticación (RF-03.2)',
+);
+
+// El desmontaje libera las tarjetas y deja inertes las respuestas tardías.
+viewJ.destroy();
+assertCondition(findByClass(mountJ, 'lineage-card').length === 0, 'destroy() desmonta la ceremonia sin huérfanos');
+
+assertCondition(uncaughtErrors === 0, `Ninguna excepción escapó sin control (${uncaughtErrors} cazadas)`);
+
 console.log(`\n== RESUMEN == Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);
 if (assertsFailed === 0 && uncaughtErrors === 0) {
-  console.log('RESULTADO: EXITO — Las 8 fichas del canon pueden renderizarse con heráldica y condensada, la expansión revela íntegra y botón, la nota es dato y todo es operable sin ratón (Tarea 4.1).');
+  console.log('RESULTADO: EXITO — La ceremonia carga el canon, despliega las 8 tarjetas, sella de punta a punta con veredicto { lineage, retainedRoute }, avisa sin liberar retención y queda operativa ante fallos (Tareas 4.1+4.3).');
   process.exit(0);
 }
 console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
