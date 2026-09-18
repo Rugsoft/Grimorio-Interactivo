@@ -318,6 +318,13 @@ export function createElementalAuraComponent(options = {}) {
       auraRoot.classList.add('elemental-aura--resting'); // Regreso al dorado perenne.
       auraRoot.style.setProperty('--aura-color', '');
       auraRoot.parentNode?.style?.removeProperty?.('--aura-color');
+      // El contador se apaga junto a la ventana (RF-02.2): la disipación por
+      // detonación no pasa por render(), así que se limpia aquí — de lo
+      // contrario la última cifra (p. ej. «5») quedaba congelada en reposo.
+      lastCountdownSeconds = -1;
+      if (auraRootCountdown !== null) {
+        auraRootCountdown.textContent = '';
+      }
     }
     stopSceneIfIdle();
   }

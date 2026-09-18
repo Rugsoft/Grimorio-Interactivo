@@ -366,9 +366,15 @@ console.log('\n[FASE 7] Disipación manual inmediata');
   scheduler.pump();
   const root = host.children[0];
 
+  component.applyAura('earth'); // el contador pinta «5» con la ventana viva
+  scheduler.pump();
+  const countdown = root?.querySelector('.elemental-aura__countdown');
+  assertTruthy(countdown?.textContent === '5', 'El contador declara la ventana viva antes de la retirada');
+
   component.dissipate();
   assertTruthy(component.isAuraActive() === false, 'La disipación manual apaga el aura de inmediato');
   assertTruthy(root?.classList.contains('elemental-aura--resting') === true, 'La retirada devuelve la capa-luz al reposo dorado perenne');
+  assertTruthy(countdown?.textContent === '', 'El contador se apaga con la disipación (RF-02.2): sin cifra congelada en reposo');
   assertTruthy(bus.ofType('combo:aura-expired').length === 0, 'Sin evento de expiración (no fue una expiración natural)');
   assertTruthy(scheduler.pendingRounds === 0, 'El bucle de cuadros queda apagado');
 
