@@ -248,7 +248,7 @@ function buildFakeShell(initialUrl) {
   // authClient de integración (SPEC-03): el bind responde éxito con la
   // sesión del vínculo (materia prima del FASE 5); el resto devuelve
   // sobres controlados de visitante.
-  const sessionUser = { id: 'usr_1', alias: 'friki', role: 'editor', clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial' };
+  const sessionUser = { id: 'usr_1', alias: 'friki', role: 'editor', clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial', lineage: 'primordialFlame' };
   const authClient = {
     checkSession: async () => ({ success: true, status: 200, data: { authenticated: false, user: null } }),
     bind: async (identity, passphrase) => ({ success: true, status: 200, data: { user: sessionUser } }),

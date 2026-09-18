@@ -277,10 +277,10 @@ export function createGrimoireApp(options = {}) {
     store.setState({ currentView: effectiveView });
 
     // Retención activa: la vista solicitada no se monta (ni un frame).
-    // La ceremonia (Tarea 4.1) vive del caso 'juramento' más abajo; mientras
-    // su vista no exista, el despacho cae al cierre sin montar nada.
+    // El despacho continúa con la vista EFECTIVA — la ceremonia (Tarea 4.3,
+    // caso 'juramento' más abajo), que es una vista real del enrutador.
     if (effectiveView !== viewName) {
-      return;
+      viewName = effectiveView;
     }
 
     if (viewName === 'landing') {
@@ -653,6 +653,8 @@ export function createGrimoireApp(options = {}) {
   /**
    * Interceptación de acciones reservadas (RF-02.3, RF-01.4, RF-05.2):
    * retiene la intención en el store y despliega «Cruzar el Umbral».
+   * SPEC-09: el registro ya no puebla selector de linaje alguno —
+   * el juramento sucede en la ceremonia del primer acceso (RF-01.1).
    * @param {string} action 'openCreator' | 'joinClan' | 'addToGrimoire' | ...
    * @param {string|null} [targetSlug=null] Slug implicado, si lo hay.
    */
@@ -660,8 +662,6 @@ export function createGrimoireApp(options = {}) {
     if (isDestroyed) return;
     store.setState({ pendingIntent: { action, targetSlug } });
     accessModal.open({ action, targetSlug });
-    // El selector de linaje exige el catálogo vivo (RF-01.1).
-    void refreshClansForModal();
   }
 
   /**
@@ -782,23 +782,21 @@ export function createGrimoireApp(options = {}) {
   }
 
   /**
-   * Envío de «Consagrarse» (plan Endpoint 1): llama a consecrate() con el
-   * contrato { alias, email, passphrase, clanId }. El clan es obligatorio
-   * (RF-01.1); sin correo en el shell, el campo email viaja vacío y el
-   * backend responde 400 INVALID_REGISTRATION_DATA (contrato ciego).
+   * Envío de «Consagrarse» (plan Endpoint 1, enmienda SPEC-09): llama a
+   * consecrate() con el contrato { alias, email, passphrase }. El registro
+   * ya no porta `clanId`: la cuenta nace peregrina y jura linaje en la
+   * ceremonia del primer acceso (RF-01.1, RF-01.2). Sin correo en el
+   * shell, el campo email viaja vacío y el backend responde 400
+   * INVALID_REGISTRATION_DATA (contrato ciego).
    *
-   * @param {object} credentials { alias, passphrase, clanId? } del shell.
+   * @param {object} credentials { alias, passphrase, email? } del shell.
    * @param {Object|null} intent Intención pendiente retenida por el modal.
    */
   async function handleConsecrateSubmit(credentials, intent) {
-    // Contrato del Endpoint 1: { alias, email, passphrase, clanId }. El
-    // correo llega del campo registerEmail del shell; el linaje del
-    // selector obligatorio que el modal añade a las credenciales (RF-01.1).
     const envelope = await authClient.consecrate({
       alias: credentials.registerName ?? credentials.alias ?? '',
       email: credentials.registerEmail ?? credentials.email ?? '',
       passphrase: credentials.registerPassword ?? credentials.passphrase ?? '',
-      clanId: credentials.clanId ?? '',
     });
     if (envelope.success === true) {
       handleAuthenticated(envelope.data?.user ?? null);
@@ -829,18 +827,6 @@ export function createGrimoireApp(options = {}) {
       accessDialog.appendChild(errorNode);
     }
     errorNode.textContent = message;
-  }
-
-  /**
-   * Puebla el selector OBLIGATORIO de linaje (RF-01.1) con los clanes del
-   * catálogo (RF-02.2 del portal). Idempotente: se repuebla en cada apertura.
-   */
-  async function refreshClansForModal() {
-    if (typeof accessModal.populateClans !== 'function') return;
-    const envelope = await spellClient.fetchClansPreview();
-    if (envelope?.success === true && Array.isArray(envelope.data)) {
-      accessModal.populateClans(envelope.data.map((clan) => ({ id: clan.id, name: clan.name })));
-    }
   }
 
   /**

@@ -147,7 +147,9 @@ const modal1 = createAccessModalComponent(shell1.accessDialog, {
 
 assertCondition(typeof modal1.showTab === 'function', 'showTab(tabName) está disponible (alternancia de pestañas)');
 assertCondition(typeof modal1.getActiveTab === 'function', 'getActiveTab() está disponible');
-assertCondition(typeof modal1.populateClans === 'function', 'populateClans(clans) está disponible (selector de linajes)');
+// SPEC-09 (Tarea 5.1): populateClans queda RETIRADO del contrato público —
+// el linaje se jura en la ceremonia del primer acceso, no en el registro.
+assertCondition(typeof modal1.populateClans === 'undefined', 'populateClans ya no forma parte del contrato (enmienda SPEC-09)');
 assertCondition(typeof modal1.reportError === 'function', 'reportError(errorEnvelope) está disponible (mensajes anti-enumeración)');
 assertCondition(typeof modal1.lockSubmission === 'function', 'lockSubmission(seconds) está disponible (bloqueo 429)');
 
@@ -167,8 +169,8 @@ assertCondition(modal1.getActiveTab() === 'login', 'La alternancia es idempotent
 modal1.showTab('astralPlane');
 assertCondition(modal1.getActiveTab() === 'login', 'Una pestaña inexistente no altera la activa');
 
-// --- FASE 3: CRITERIO — selector obligatorio de clan (RF-01.1) ---
-console.log('\nFASE 3: Selector obligatorio de clan en la consagración');
+// --- FASE 3: CRITERIO — registro sin linaje (enmienda SPEC-09, RF-01.1) ---
+console.log('\nFASE 3: Registro sin selector de linaje (el juramento sucede en la ceremonia)');
 
 const shell3 = buildShell();
 const registerSubmissions = [];
@@ -178,34 +180,19 @@ const modal3 = createAccessModalComponent(shell3.accessDialog, {
   onClose: () => {},
 });
 
-modal3.populateClans([
-  { id: 'cln_astral', name: 'Eruditos Astrales' },
-  { id: 'cln_ember', name: 'Guardianes de Ascuas' },
-]);
-
+// El shell del registro no trae selector alguno y el componente ya no lo forja.
 const clanSelect = byId(shell3.accessDialog, 'clanSelect');
-assertCondition(clanSelect !== null, 'populateClans crea/enlaza el selector de clan (clanSelect)');
-// El placeholder vacío no cuenta como linaje: exactamente 2 opciones + placeholder.
-const clanOptions = clanSelect !== null ? clanSelect.children.filter((option) => option.getAttribute('value') !== '') : [];
-assertCondition(clanOptions.length === 2, 'El selector lista exactamente los linajes activos (más el placeholder vacío)');
+assertCondition(clanSelect === null, 'Ningún selector de clan existe en el diálogo (clanSelect retirado)');
 
-// Sin clan electo: el envío de registro NO procede (selección obligatoria).
 // open() es quien cablea los formularios del shell (contrato de la Tarea 4.4).
 modal3.open({ action: 'joinClan', targetSlug: null });
 modal3.showTab('register');
-shell3.registerForm.dispatch('submit', { fields: { registerName: 'Novato', registerPassword: 'runas-largas' } });
-assertCondition(registerSubmissions.length === 0, 'Sin clan electo, el registro no se notifica (selección obligatoria, RF-01.1)');
-
-// Con clan electo: el envío procede y porta el clanId (RF-01.1).
-if (clanSelect !== null && clanSelect.children.length > 0) {
-  clanSelect.value = 'cln_ember';
-  shell3.registerForm.dispatch('submit', { fields: { registerName: 'Novato', registerPassword: 'runas-largas' } });
-  assertCondition(registerSubmissions.length === 1, 'Con clan electo, el registro se notifica al orquestador');
-  assertCondition(
-    registerSubmissions[0]?.clanId === 'cln_ember',
-    'El clanId del linaje electo viaja con el registro (RF-01.1)',
-  );
-}
+shell3.registerForm.dispatch('submit', { fields: { registerName: 'Novato', registerPassword: 'runas-largas', registerEmail: 'novato@santuario.arc' } });
+assertCondition(registerSubmissions.length === 1, 'El registro se notifica sin exigir linaje alguno (RF-01.1 enmendado)');
+assertCondition(
+  registerSubmissions[0] !== null && typeof registerSubmissions[0] === 'object' && !('clanId' in registerSubmissions[0]),
+  'Ningún clanId viaja con el payload del registro (RF-01.1)',
+);
 
 // --- FASE 4: CRITERIO — bloqueo temporal del botón con 429 (RF-03.2) ---
 console.log('\nFASE 4: Bloqueo temporal del botón por sobrecarga de maná (429)');

@@ -234,6 +234,10 @@ try {
     elementalMatrixClient: { async getMatrix() { return { success: true, data: null }; }, async getElementReactions() { return { success: true, data: [] }; }, async resolveCombo() { return { success: true, data: null }; } },
     lineageOathClient: {
       async retainRoute(route) { retainedRoutes.push(route); return { success: true, status: 204 }; },
+      // Tarea 4.3: la ceremonia ya es una vista real que carga el canon;
+      // respuesta vacía digna (renderiza el aviso de fallo sin colgar).
+      async fetchOathCatalog() { return { success: false, status: 503, error: { code: 'CATALOG_UNAVAILABLE', message: 'El canon no responde.' } }; },
+      async sealOath() { return { success: false, status: 400, error: { code: 'INVALID_LINEAGE', message: 'Linaje fuera del canon.' } }; },
     },
     // El simulador carga su grimorio al montar; respuesta vacía digna.
     grimoireClient: {

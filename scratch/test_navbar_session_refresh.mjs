@@ -352,7 +352,7 @@ function buildFakeShell(initialUrl) {
   return {
     appRoot, navRoot, linksList, toggleButton, badgeRoot, spellDetailDialog, accessDialog,
     fakeWindow: createFakeWindow(initialUrl),
-    fakeDocument: { createElement: (tag) => createFakeElement(tag) },
+    fakeDocument: { createElement: (tag) => createFakeElement(tag), createElementNS: (_ns, tag) => createFakeElement(tag) },
     spellClient: createFakeSpellClient(),
   };
 }
@@ -390,6 +390,7 @@ const SESSION_USER = {
   role: 'editor',
   clanId: 'cln_primordial',
   clanName: 'Custodios del Fuego Primordial',
+  lineage: 'primordialFlame', // SPEC-09: linajado — la retención no le alcanza.
 };
 
 console.log('== ARNÉS DE REGRESIÓN: repintado de la cabecera al cambiar la sesión ==\n');

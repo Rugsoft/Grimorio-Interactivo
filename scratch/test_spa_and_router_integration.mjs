@@ -228,8 +228,8 @@ function buildTestShell(initialUrl = 'http://grimorio.test/') {
 
   const fakeAuthClient = {
     checkSession: async () => ({ success: true, status: 200, data: { authenticated: false, user: null } }),
-    bind: async () => ({ success: true, status: 200, data: { user: { id: 'u1', alias: 'mago', role: 'reader' } } }),
-    consecrate: async () => ({ success: true, status: 201, data: { user: { id: 'u1', alias: 'mago', role: 'reader' } } }),
+    bind: async () => ({ success: true, status: 200, data: { user: { id: 'u1', alias: 'mago', role: 'reader', lineage: 'primordialFlame' } } }),
+    consecrate: async () => ({ success: true, status: 201, data: { user: { id: 'u1', alias: 'mago', role: 'reader', lineage: 'primordialFlame' } } }),
     dissolve: async () => ({ success: true, status: 200, data: { dissolved: true } }),
     dissolveAll: async () => ({ success: true, status: 200, data: { dissolved: true } }),
     fetchAuditLog: async () => ({ success: true, status: 200, data: { items: [], pagination: { page: 1, limit: 25, totalPages: 1, totalItems: 0 } } }),
@@ -368,7 +368,7 @@ await app3.navigate('tower');
 assertCondition(app3.store.getState().currentView === 'library', 'navigate("tower") sin rol judicial es redirigido a library por RBAC');
 
 // 3.5 Vista Torre de Deliberación: admitida para master
-app3.store.setSession({ id: 'u_master', alias: 'MaestroArcano', role: 'master' });
+app3.store.setSession({ id: 'u_master', alias: 'MaestroArcano', role: 'master', lineage: 'primordialFlame' }); // SPEC-09: linajado — sin retención.
 await app3.navigate('tower');
 assertCondition(byClass(shell3.appRoot, 'masters-tower') !== null, 'navigate("tower") con rol master monta la Torre de Deliberación');
 assertCondition(app3.store.getState().currentView === 'tower', 'El store registra currentView="tower"');

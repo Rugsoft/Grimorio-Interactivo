@@ -113,7 +113,7 @@
 
 ## Fase 5: Integración, Enmienda del Registro y Verificación Final
 
-- [ ] **Tarea 5.1: Retirada del selector de linaje del registro (`accessModalComponent.js`)**
+- [x] **Tarea 5.1: Retirada del selector de linaje del registro (`accessModalComponent.js`)**
   * **Alcance:** Eliminar el desplegable de clan/linaje y su validación obligatoria del flujo de registro (enmienda SPEC-03); el payload de registro ya no porta `clanId`; textos de la pestaña de consagración actualizados al nuevo flujo («tras consagrarte, jurarás tu linaje en el umbral del santuario»).
   * **Cubre:** `RF-01.1`, enmienda SPEC-03 (HU-01)
   * **Hecho cuando:** El formulario de registro solo solicita alias, correo y frase de paso, no existe referencia alguna a `clanId` en su flujo, y el registro real contra el servidor de demo crea la cuenta y aterriza en la ceremonia.

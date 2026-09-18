@@ -9,8 +9,8 @@
  *       credenciales del shell; con éxito asienta la sesión, consume la
  *       intención pendiente y NAVEGA a la vista retenida (p. ej. creator);
  *       con fallo muestra el mensaje del backend y el diálogo permanece.
- *   [C] «Consagrarse» (register): llama a consecrate() con alias, correo,
- *       frase y linaje obligatorio; con éxito mismo flujo que [B].
+ *   [C] «Consagrarse» (register): llama a consecrate() con alias, correo
+ *       y frase (SPEC-09: sin linaje en el registro); éxito → mismo flujo.
  *   [D] «Cruzar el Umbral» (visitante): abre el modal y retiene la intención
  *       en el store (comportamiento ya existente, no debe romperse).
  *   [E] Badge de sesión: setUser/clearUser consumen data.user; el menú
@@ -61,7 +61,7 @@ function createFakeElement(tagName) {
     _value: '',
     _checked: false,
 
-    setAttribute(name, value) { this.attributes[name] = String(value); },
+    setAttribute(name, value) { this.attributes[name] = String(value); if (name === 'class') { this.classes = new Set(String(value).split(/\s+/).filter(Boolean)); } },
     getAttribute(name) { return name in this.attributes ? this.attributes[name] : null; },
     removeAttribute(name) { delete this.attributes[name]; },
     hasAttribute(name) { return name in this.attributes; },
@@ -73,6 +73,18 @@ function createFakeElement(tagName) {
       }
     },
     appendChild(child) { child.parentElement = this; this.children.push(child); return child; },
+    // La ceremonia del juramento (SPEC-09) se monta con replaceChildren:
+    // sin este método la llamada opcional se salta y la vista no aparece.
+    replaceChildren(...newChildren) {
+      for (const child of this.children.splice(0)) child.parentElement = null;
+      for (const child of newChildren) this.appendChild(child);
+    },
+    // Bus de eventos del plan §4 (SPEC-09): la ceremonia emite sobre el
+    // propio punto de montaje; el elemento fingido despacha a sus oyentes.
+    dispatchEvent(event) {
+      for (const listener of this.listeners?.[event?.type] ?? []) listener(event);
+      return true;
+    },
     remove() {
       if (!this.parentElement) return;
       const index = this.parentElement.children.indexOf(this);
@@ -202,7 +214,7 @@ function createFakeAuthClient() {
   const calls = { checkSession: [], bind: [], consecrate: [], dissolve: [], dissolveAll: [] };
   let sessionState = { authenticated: false, user: null };
   let bindResult = { success: false, status: 401, error: { code: 'INVALID_CREDENTIALS', message: 'El vínculo no pudo renovarse: identidad o frase de paso no coinciden.' } };
-  let consecrateResult = { success: false, status: 400, error: { code: 'INVALID_REGISTRATION_DATA', message: 'La consagración exige alias, correo, frase de paso y linaje electo.' } };
+  let consecrateResult = { success: false, status: 400, error: { code: 'INVALID_REGISTRATION_DATA', message: 'La consagración exige alias, correo y frase de paso.' } };
   return {
     calls,
     grantSession(user) { sessionState = { authenticated: true, user }; },
@@ -275,7 +287,11 @@ function buildFakeShell(initialUrl) {
   accessDialog.appendChild(registerForm);
 
   const fakeWindow = createFakeWindow(initialUrl);
-  const fakeDocument = { createElement: (tag) => createFakeElement(tag) };
+  // createElementNS: el sello heráldico del badge (Tarea 3.3) lo exige.
+  const fakeDocument = {
+    createElement: (tag) => createFakeElement(tag),
+    createElementNS: (_namespace, tag) => createFakeElement(tag),
+  };
 
   return {
     appRoot, navRoot, badgeRoot, spellDetailDialog, accessDialog,
@@ -290,7 +306,7 @@ function findNavLink(shell, viewName) {
   return (linksList?.children ?? []).find((link) => link.getAttribute('data-view') === viewName) ?? null;
 }
 
-const SESSION_USER = { id: 'usr_visual', alias: 'Erudita Visual', role: 'editor', clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial' };
+const SESSION_USER = { id: 'usr_visual', alias: 'Erudita Visual', role: 'editor', clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial', lineage: 'primordialFlame' };
 
 console.log('== ARNES TDD: integración SPEC-03 en main.js (authClient, intención, badge) ==\n');
 
@@ -399,7 +415,8 @@ console.log('\nFASE D: «Consagrarse» llama a consecrate() con alias, correo, f
 
 const shellD = buildFakeShell('http://grimorio.test/');
 const authD = createFakeAuthClient();
-authD.setConsecrateResult({ success: true, status: 201, data: { user: { ...SESSION_USER, alias: 'Iniciada Nova', role: 'editor' } } });
+// SPEC-09: la cuenta consagrada nace PEREGRINA (lineage: null, RF-01.2).
+authD.setConsecrateResult({ success: true, status: 201, data: { user: { ...SESSION_USER, alias: 'Iniciada Nova', role: 'editor', lineage: null } } });
 const appD = createGrimoireApp({
   appRoot: shellD.appRoot,
   navRoot: shellD.navRoot,
@@ -417,15 +434,13 @@ await wait(30);
 findNavLink(shellD, 'creator').dispatch('click');
 await wait(20);
 
-// El selector obligatorio de linaje llega poblado por refreshClansForModal
-// (catálogo del portal); la iniciada elige su linaje antes de enviar.
+// SPEC-09 (Tarea 5.1): el registro ya no puebla selector de linaje alguno.
+// La iniciada envía el formulario con el contrato del Endpoint 1 enmendado
+// (alias, correo y frase — el linaje se jura en la ceremonia del umbral).
 await wait(30);
 const clanSelectD = queryById(shellD.accessDialog, 'clanSelect')[0] ?? null;
-assertCondition(clanSelectD !== null, 'El selector obligatorio de linaje está poblado en el diálogo (RF-01.1)');
-if (clanSelectD !== null) clanSelectD.value = 'cln_primordial';
+assertCondition(clanSelectD === null, 'Ningún selector de linaje existe en el diálogo (RF-01.1 enmendado, SPEC-09)');
 
-// Pestaña de registro: el componente alterna formularios; enviamos el de
-// registro con el contrato completo del Endpoint 1 (incluye correo).
 shellD.registerForm.dispatch('submit', { fields: { registerName: 'Iniciada Nova', registerPassword: 'Passphrase-Arcana-2026!', registerEmail: 'nova@grimorio.test' } });
 await wait(50);
 
@@ -433,11 +448,11 @@ assertCondition(
   authD.calls.consecrate.length === 1
   && authD.calls.consecrate[0].alias === 'Iniciada Nova'
   && authD.calls.consecrate[0].email !== ''
-  && authD.calls.consecrate[0].clanId !== '',
-  'El orquestador llamó a consecrate() con alias, correo y linaje (RF-01.1)',
+  && !('clanId' in authD.calls.consecrate[0]),
+  'El orquestador llamó a consecrate() con alias y correo, sin clanId (RF-01.1 enmendado)',
 );
 assertCondition(appD.store.getState().isAuthenticated === true, 'La sesión quedó asentada tras la consagración');
-assertCondition(byClass(shellD.appRoot, 'spell-creator') !== null, 'La intención pendiente navegó al Taller tras consagrarse');
+assertCondition(byClass(shellD.appRoot, 'lineage-oath') !== null, 'La consagración aterriza en la ceremonia del juramento (la cuenta nace peregrina, SPEC-09)');
 
 // --- FASE E: disolver el vínculo desde el badge ---
 console.log('\nFASE E: el menú del badge disuelve el vínculo y restituye el umbral');

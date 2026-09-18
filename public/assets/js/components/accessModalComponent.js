@@ -135,18 +135,10 @@ export function createAccessModalComponent(dialog, options) {
           onAuthenticate(credentials, pendingIntent);
         }
         if (mode === 'register' && typeof onRegister === 'function') {
-          // Selección OBLIGATORIA de clan (RF-01.1): si el selector está
-          // poblado y no se electo linaje, el registro no procede y el
-          // diálogo permanece abierto para que el iniciado elija.
-          const clanSelect = findDescendantById(dialog, 'clanSelect');
-          if (clanSelect !== null) {
-            const selectedClanId = clanSelect.value ?? '';
-            if (selectedClanId === '') return;
-            // El clanId electo viaja con el payload (RF-01.1).
-            onRegister({ ...credentials, clanId: selectedClanId }, pendingIntent);
-          } else {
-            onRegister(credentials, pendingIntent);
-          }
+          // SPEC-09 (enmienda RF-01.1): el registro porta únicamente alias,
+          // correo y frase de paso. El linaje no se elige aquí: tras
+          // consagrarte, jurarás tu linaje en el umbral del santuario.
+          onRegister(credentials, pendingIntent);
         }
         close();
       });
@@ -210,9 +202,11 @@ export function createAccessModalComponent(dialog, options) {
   }
 
   // ===================================================================
-  // Extensión SPEC-03 (Tarea 4.3): pestañas, selector de clan obligatorio,
-  // mensajes anti-enumeración y bloqueo temporal por 429. Todo se apila
-  // sobre el cableado original sin reconstruir el shell.
+  // Extensión SPEC-03 (Tarea 4.3): pestañas, mensajes anti-enumeración
+  // y bloqueo temporal por 429. Todo se apila sobre el cableado original
+  // sin reconstruir el shell. Enmienda SPEC-09 (Tarea 5.1): el selector
+  // de clan del registro queda retirado — el linaje se jura en la
+  // ceremonia del primer acceso (RF-01.1), no en la consagración.
   // ===================================================================
 
   /** Pestañas canónicas del diálogo (plan 2.2, RF-01.1/RF-02.1). */
@@ -280,53 +274,6 @@ export function createAccessModalComponent(dialog, options) {
   }
 
   /**
-   * CRITERIO T4.3: puebla el selector OBLIGATORIO de linaje (RF-01.1)
-   * con los clanes activos del catálogo. Crea el selector si el shell
-   * aún no lo trae y añade la opción placeholder vacía (obliga a elegir).
-   *
-   * @param {Array<{id: string, name: string}>} clans Linajes activos.
-   */
-  function populateClans(clans) {
-    const clanList = Array.isArray(clans) ? clans : [];
-    let clanSelect = findDescendantById(dialog, 'clanSelect');
-    if (clanSelect) {
-      // Repoblado idempotente: se descartan las opciones anteriores.
-      for (const previousOption of [...(clanSelect.children ?? [])]) {
-        previousOption.remove?.();
-      }
-    } else {
-      clanSelect = documentRef.createElement?.('select');
-      if (!clanSelect) return;
-      clanSelect.setAttribute('id', 'clanSelect');
-      clanSelect.setAttribute('name', 'clanSelect');
-      clanSelect.setAttribute('required', '');
-      clanSelect.setAttribute('aria-label', 'Linaje al que consagrarse (obligatorio)');
-      // Viste el selector con el kit canónico de controles (SPEC-02, RF-08.4):
-      // sin esta clase el navegador exhibiría el select nativo sin forjar.
-      clanSelect.setAttribute('class', 'controls-select');
-      const registerFormElement = findOrWireFormElement(SHELL_FORM_IDS.register);
-      registerFormElement?.appendChild(clanSelect);
-    }
-
-    // Placeholder vacío: hasta que el iniciado elija, el valor no es válido.
-    const placeholderOption = documentRef.createElement?.('option');
-    if (placeholderOption) {
-      placeholderOption.setAttribute('value', '');
-      placeholderOption.textContent = '— Elige tu linaje —';
-      clanSelect.appendChild(placeholderOption);
-    }
-
-    // Una opción por linaje activo (Art. IV: nombres solemnes en castellano).
-    for (const clan of clanList) {
-      const clanOption = documentRef.createElement?.('option');
-      if (!clanOption) continue;
-      clanOption.setAttribute('value', String(clan.id));
-      clanOption.textContent = String(clan.name);
-      clanSelect.appendChild(clanOption);
-    }
-  }
-
-  /**
    * CRITERIO T4.3: bloquea temporalmente el envío (RF-03.2). Se invoca
    * cuando la API responde 429 RATE_LIMITED con remainingSeconds: el
    * botón queda congelado mientras dura el castigo de la procedencia.
@@ -388,7 +335,6 @@ export function createAccessModalComponent(dialog, options) {
     destroy,
     showTab,
     getActiveTab,
-    populateClans,
     reportError,
     lockSubmission,
     isSubmissionLocked,

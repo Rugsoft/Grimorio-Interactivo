@@ -552,6 +552,17 @@
   box-shadow: var(--shadow-gold-glow);
 }
 
+/* Nota del nuevo flujo de consagración (SPEC-09, Tarea 5.1): el linaje
+   se jura en la ceremonia del primer acceso, no en este formulario. */
+.access-form__hint {
+  margin: 0;
+
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  text-align: center;
+}
+
 /* ---------------------------------------------------------------------
    6. Estados de rescate: vacío, extravío y corte de maná (RF-06)
    --------------------------------------------------------------------- */
