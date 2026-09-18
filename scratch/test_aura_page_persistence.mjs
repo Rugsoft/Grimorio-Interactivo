@@ -389,6 +389,16 @@ const CATALOG = [
     description: 'Zarcillo umbrío que devora la luz.',
     effects: { damage: 40, healing: 0, barrier: 0, crowdControlType: 'none' },
   },
+  // Página 9: catalizador de la Resonancia (RF-03.2) — porta curación,
+  // barrera y atadura propia para verificar la amplificación íntegra.
+  {
+    id: 'spl_9', name: 'Señal del Origen', circle: 4, elementalAffinity: 'pureArcane', manaCost: 40,
+    castingTime: 'action', areaType: 'singleTarget', rangeType: 'ranged', durationType: 'instant',
+    magicSchool: 'evocation', hasVerbal: true, hasSomatic: true, hasMaterial: false,
+    incantationFormula: '¡Runa primera, resuena!',
+    description: 'Onda de maná puro que cura, protege y frena.',
+    effects: { damage: 40, healing: 20, barrier: 12, crowdControlType: 'slow' },
+  },
 ];
 
 console.log('== ARNÉS TDD — Tarea 4.1: Persistencia de auras al hojear (SPEC-06) ==');
@@ -915,6 +925,63 @@ assertCondition(
 assertCondition(
   collapseState.dummy.barrier === 20,
   'la barrera queda INTACTA tras la penetración (RF-04.2, Hallazgo 6)',
+);
+
+// =====================================================================
+// [9e] Resonancia Arcana Pura íntegra (RF-03.2, Hallazgo 15):
+//      el catalizador amplifica curación y barrera ×1.25 y añade (+1) s
+//      a la atadura propia del conjuro — no solo el daño.
+// =====================================================================
+console.log('\n[9e] Catalizador íntegro: curación, barrera y CC amplificados (RF-03.2)');
+
+await surface.view.restoreDummy();
+await goToPage(surface, 2); // Fuego: imbuye el aura que el catalizador consumirá
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+assertCondition(surface.view.getState().elementalAura.element === 'fire', 'Fuego se imbuye como aura previa (fase 9e)');
+
+await goToPage(surface, 9); // Señal del Origen: catalizador con cura/escudo/lentitud
+const preResonance = surface.view.getState();
+const healthBeforeResonance = preResonance.dummy.health;
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+
+const resonanceState = surface.view.getState();
+assertCondition(
+  eventsOf(surface, 'combo:reaction-triggered').some((e) => e.detail?.reactionId === 'pureArcaneResonance'),
+  'la Resonancia Arcana Pura detona sobre el aura de Fuego (RF-03.2)',
+);
+// Balance neto del impacto: daño ya amplificado en el veredicto
+// (ceil(40 × 1.25) = 50, contrato de 11 claves) menos la curación
+// amplificada por la vista (ceil(20 × 1.25) = 25): 500 − 50 + 25.
+assertCondition(
+  resonanceState.dummy.health === healthBeforeResonance - 50 + 25,
+  'el daño amplificado (50) hiere y la curación amplificada (25) restaura: neto −25 (RF-03.2, Hallazgo 15)',
+);
+// Barrera amplificada: ceil(12 × 1.25) = 15.
+assertCondition(
+  resonanceState.dummy.barrier === 15,
+  'la barrera amplificada ceil(12 × 1.25) = 15 alza el escudo (RF-03.2, Hallazgo 15)',
+);
+// La atadura propia del catalizador ('slow') aplica con +1 s: 4 s + 1 s.
+assertCondition(
+  resonanceState.dummy.activeCC === 'slow',
+  'la atadura propia del catalizador (slow) aplica al blanco (RF-03.2)',
+);
+surface.raf.run(90, 16); // +1440 ms tras el vuelo (~480 ms): ~1.9 s con el aura consumida
+assertCondition(
+  surface.view.getState().dummy.activeCC === 'slow',
+  'la lentitud sigue viva a ~1.9 s: la ventana de 5 s (+1 s) gobierna (RF-03.2)',
+);
+surface.raf.run(280, 16); // +4480 ms: total ≈6.4 s desde el impacto: la atadura de 5 s expiró
+assertCondition(
+  surface.view.getState().dummy.activeCC === null,
+  'la lentitud se disipa a su plazo extendido de 5 s (4 s canónicos + 1 s del catalizador)',
+);
+// La resonancia consume el aura: neutral puro (RF-03.4).
+assertCondition(
+  surface.view.getState().elementalAura.element === null,
+  'la resonancia consume el aura: neutral puro tras el catalizador (RF-03.4)',
 );
 
 // =====================================================================

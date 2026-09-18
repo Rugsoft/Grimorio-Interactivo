@@ -377,6 +377,7 @@ try {
 }
 
 const { createGrimoireSimulatorView } = module;
+const { DUMMY_MAX_HEALTH } = await import('../public/assets/js/components/combatDummyComponent.js');
 
 /** Monta la vista completa con dobles inyectables. */
 function buildView(overrides = {}) {
@@ -687,6 +688,29 @@ assertCondition(
   'el bus recibe `grimoire:speech-triggered` con la coincidencia fallida (plan 4.1)',
 );
 
+// --- Caso Límite 3 (SPEC-05): maniquí inalterado + bruma de disipación ---
+await unheard.raf.run(10, 16); // el latido de 100 ms de la bruma vence; nace en el siguiente cuadro
+const mistVisible = unheard.view._floatingTextsProbe().find((t) => t.mist === true);
+assertCondition(
+  mistVisible !== undefined && /disipado en el éter/.test(mistVisible.text),
+  'la palabra no reconocida alza la bruma de disipación con su leyenda canónica (Caso Límite 3)',
+);
+assertCondition(
+  mistVisible !== undefined && mistVisible.color === '#9aa7b8',
+  'la bruma viste el gris-azulada del éter (Caso Límite 3)',
+);
+assertCondition(
+  unheard.view.getState().dummy.health === DUMMY_MAX_HEALTH
+    && unheard.view.getState().dummy.activeCC === null
+    && unheard.view.getState().dummy.barrier === 0,
+  'el maniquí permanece INALTERADO ante la palabra extraviada (Caso Límite 3)',
+);
+await unheard.raf.run(130, 16); // ≈2080 ms: la bruma se disuelve (vida 2 s)
+assertCondition(
+  unheard.view._floatingTextsProbe().every((t) => t.mist !== true),
+  'la bruma se disipa del éter a su plazo (2 s, Caso Límite 3)',
+);
+
 const deaf = buildView({ speech: createFakeSpeechService({ recognition: false, synthesis: false }) });
 await deaf.view.render();
 assertCondition(deaf.view.getState().voiceSealResting === true, 'sin soporte vocal el sello queda en reposo ceremonial (RF-04.4)');
@@ -714,6 +738,49 @@ assertCondition(
   denied.view.getAnnouncements().some((m) => /micrófono/i.test(m)),
   'el aviso de permiso denegado llega a la región viva (RF-04.4)',
 );
+
+// ---------------------------------------------------------------------------
+// [6b] Fallo imprevisto de la invocación (RF-05.5, criterio del DoD):
+//      SI el motor de manifestación lanza una excepción, ENTONCES la vista
+//      anuncia el fallo con solemnidad por la región viva, no propaga la
+//      excepción y el banco de pruebas queda operativo para un nuevo intento.
+// ---------------------------------------------------------------------------
+console.log('\n[6b] Fallo imprevisto de la invocación (RF-05.5)');
+
+// Sabotaje honesto del motor: un conjuro con Círculo fuera del canon (1-5)
+// hace que `pool.emitSpell` lance RangeError dentro de `castSpell` — el
+// fallo imprevisto que el try/catch de la vista debe absorber.
+const BROKEN_SPELL = { ...CATALOG[0], id: 'spl_broken', name: 'Grieta del Cielo', circle: 99 };
+const failing = buildView({ client: createFakeGrimoireClient({ catalog: [...CATALOG, BROKEN_SPELL] }) });
+await failing.view.render();
+// Navegar hasta la página del conjuro saboteado (la última).
+for (let i = 0; i < CATALOG.length; i++) await failing.view.nextPage();
+
+const healthBeforeFailure = failing.view.getState().dummy.health;
+let castOutcome = 'no-thrown';
+try {
+  await failing.view.castCurrentSpell({ triggerMethod: 'click' });
+} catch (error) {
+  castOutcome = 'thrown'; // RF-05.5 prohíbe propagar excepciones silenciosas.
+}
+assertCondition(castOutcome === 'no-thrown', 'el fallo del motor NO se propaga como excepción (RF-05.5)');
+assertCondition(
+  failing.view.getAnnouncements().some((m) => /se dispersó sin alcanzar el maniquí/i.test(m)),
+  'el fallo se anuncia con solemnidad por la región viva (RF-05.5)',
+);
+assertCondition(
+  failing.view.getState().dummy.health === healthBeforeFailure,
+  'el maniquí queda intacto: sin impacto fantasma del conjuro fallido (RF-05.5)',
+);
+assertCondition(
+  failing.view.getState().logEntries.length === 0,
+  'la bitácora no inscribe el conjuro fallido (RF-05.5)',
+);
+
+// El banco queda operativo: volviendo al primer conjuro, el nuevo intento prospera.
+for (let i = 0; i < CATALOG.length; i++) await failing.view.previousPage();
+const castOk = await failing.view.castCurrentSpell({ triggerMethod: 'click' });
+assertCondition(castOk === true, 'tras un fallo, el banco de pruebas queda operativo para un nuevo intento (RF-05.5)');
 
 // =====================================================================
 // [7] Rendimiento, movimiento reducido y visibilidad (RF-06)

@@ -35,7 +35,7 @@ import { createComboResolver, createSpellImpactQueue } from '../utils/comboResol
 import { createStunlockManager } from '../utils/stunlockManager.js';
 import { ParticlePool } from '../utils/particleEngine.js';
 import { createArcaneCanvasComponent } from '../components/arcaneCanvasComponent.js';
-import { createCombatDummyComponent, DUMMY_MAX_HEALTH } from '../components/combatDummyComponent.js';
+import { createCombatDummyComponent, DUMMY_MAX_HEALTH, CC_DURATION_MS } from '../components/combatDummyComponent.js';
 import { createFloatingCombatTextComponent } from '../components/floatingCombatTextComponent.js';
 import { createSpeechService } from '../utils/speechService.js';
 import { createTestLogStorage } from '../utils/testLogStorage.js';
@@ -77,6 +77,14 @@ const CODEX_EFFECT_TO_CC = Object.freeze({
 
 /** Trituración de barrera canónica de la Fractura Basáltica (RF-04.2). */
 const CODEX_BARRIER_SHATTER = 50;
+
+/** Duración de atadura por defecto del maniquí (CC_DURATION_MS, 4 s),
+ * usada como base cuando el catalizador extiende el control en +1 s (RF-03.2). */
+const CC_DURATION_MS_FALLBACK = CC_DURATION_MS;
+
+/** Extensión de control de masas de la Resonancia Arcana Pura: (+1) segundo
+ * sobre la atadura que el conjuro catalizador hubiera provocado (RF-03.2). */
+const AMPLIFICATION_CC_EXTENSION_MS = 1000;
 
 /**
  * Motivo canónico del recibo de dominio cuando el adepto ya colmó su techo
@@ -626,14 +634,28 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     // ignora el 100% de la barrera y toca la salud; el escudo queda intacto.
     const isBarrierPiercing = tacticalEffect === 'barrierPiercing';
 
+    // Resonancia Arcana Pura (RF-03.2, Hallazgo 15): el catalizador amplifica
+    // TODAS las magnitudes del conjuro — no solo el daño que ya viaja
+    // ampliado en el veredicto. La vista sella curación y barrera ×1.25 y
+    // añade (+1) segundo a la atadura del elemento original.
+    const isAmplification = tacticalEffect === 'amplification';
+    const amplificationFactor = isAmplification ? verdict.damageMultiplierApplied : 1.0;
+    const amplifiedHealing = Math.ceil((Number(effects.healing ?? 0) || 0) * amplificationFactor);
+    const amplifiedBarrier = Math.ceil((Number(effects.barrier ?? 0) || 0) * amplificationFactor);
+    // La extensión del control (+1 s) solo procede SI el conjuro catalizador
+    // porta una atadura propia (RF-03.2); el maniquí por defecto ata 4 s.
+    const amplificationCcExtensionMs = isAmplification && crowdControlType ? AMPLIFICATION_CC_EXTENSION_MS : 0;
+
     const result = dummy.applySpellImpact({
       name: spell?.name,
       effects: {
         damage: verdict.effectiveDamage,
-        healing: Number(effects.healing ?? 0) || 0,
-        barrier: Number(effects.barrier ?? 0) || 0,
+        healing: amplifiedHealing,
+        barrier: amplifiedBarrier,
         crowdControlType: crowdControlType ?? 'none',
-        ...(crowdControlDurationMs !== null ? { crowdControlDurationMs } : {}),
+        ...(crowdControlDurationMs !== null || amplificationCcExtensionMs > 0
+          ? { crowdControlDurationMs: (crowdControlDurationMs ?? CC_DURATION_MS_FALLBACK) + amplificationCcExtensionMs }
+          : {}),
         ...(barrierShatter > 0 ? { barrierShatter } : {}),
         ...(isBarrierPiercing ? { pierceBarrier: true } : {}),
       },
@@ -672,12 +694,13 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
       elementalAura.dissipate();
     }
 
-    // Textos flotantes escalonados sobre el torso del maniquí (RF-05.2).
+    // Textos flotantes escalonados sobre el torso del maniquí (RF-05.2):
+    // reflejan las magnitudes ya amplificadas por el catalizador (RF-03.2).
     floatingTexts.spawnImpactTexts({
       spellName: spell?.name,
       damage: result.damageApplied,
-      healing: Number(effects.healing ?? 0) || 0,
-      barrier: Number(effects.barrier ?? 0) || 0,
+      healing: amplifiedHealing,
+      barrier: amplifiedBarrier,
       crowdControlType: result.crowdControlApplied,
       fullHealthLegend: result.fullHealthLegend,
     }, {
@@ -956,6 +979,12 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     return true;
   }
 
+  /** Coordenadas del torso del maniquí: el mismo blanco canónico del vuelo (CAST_TARGET_RATIO). */
+  function getDummyTorsoCoordinates() {
+    const metrics = canvasMetrics();
+    return { x: metrics.width * CAST_TARGET_RATIO.x, y: metrics.height * CAST_TARGET_RATIO.y };
+  }
+
   /** El oráculo ha entendido una invocación (RF-04.3 y bus `speech-triggered`). */
   function handleSpeechMatch(activeSpell, transcript = '') {
     const matched = typeof speechService.matchesSpellInvocation === 'function'
@@ -968,6 +997,11 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     });
     if (!matched) {
       announce('El oráculo no reconoció las palabras rituales: repite el nombre del conjuro o su fórmula.');
+      // Bruma de disipación (SPEC-05, Caso Límite 3): la palabra de poder
+      // no halla resonancia; el maniquí permanece inalterado.
+      if (!prefersReducedMotion()) {
+        floatingTexts.spawnMist(getDummyTorsoCoordinates());
+      }
       return;
     }
     announce(`El oráculo ha reconocido «${transcript}»: el conjuro se desata.`);
@@ -1182,9 +1216,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   /** Crónica de anuncios accesibles emitidos (RF-06.4). */
   function getAnnouncements() {
     return [...state.announcements];
-  }
-
-  return {
+  }    return {
     render,
     destroy,
     switchCatalog,
@@ -1196,5 +1228,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     toggleMicrophone,
     getAnnouncements,
     getState,
+    /** Oráculo de rótulos flotantes ( Arnés Caso Límite 3, bruma incluida). */
+    _floatingTextsProbe: () => floatingTexts.getActiveTexts(),
   };
 }

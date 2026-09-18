@@ -135,8 +135,19 @@ foreach ($catalystAuras as $auraElement) {
     assert_truthy($resonance->clearedAura && $resonance->resultingAura === null, "La resonancia consume el aura de {$auraElement} (neutral puro)");
 }
 
-// La extensión de +1 s a los controles de masas viaja en el Códice (Artículo II).
-$catalystFicha = null;
+// RF-03.2 (Hallazgo 15): el veredicto del catalizador debe portar la señal de
+// amplificación para que el cliente traduzca curación, barrera y +1 s de CC.
+$resonanceSignal = $service->resolveCombo('fire', new SpellImpactData(
+    id: 'spl_catalyst_signal',
+    element: 'pureArcane',
+    baseDamage: 40,
+    baseHealing: 30,
+    baseBarrier: 20,
+    crowdControlType: 'slow',
+), false);
+assert_truthy($resonanceSignal->tacticalEffectApplied === 'amplification', 'El veredicto del catalizador porta la señal amplification para la traducción del cliente');
+assert_truthy($resonanceSignal->damageMultiplierApplied === 1.25, 'El veredicto del catalizador porta el factor 1.25 para curación/barrera');
+assert_truthy($resonanceSignal->effectiveDamage === 50, 'El daño del catalizador ya viaja amplificado en el veredicto: ceil(40 × 1.25) = 50');
 foreach ($service->getMatrixGraph()->reactions as $reaction) {
     if ($reaction->id === 'pureArcaneResonance') {
         $catalystFicha = $reaction;

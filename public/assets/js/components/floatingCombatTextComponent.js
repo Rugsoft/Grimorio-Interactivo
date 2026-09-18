@@ -34,7 +34,12 @@ export const TEXT_COLORS = {
   healing: '#2a9d8f',   // esmeralda (5.59)
   barrier: '#5b93b8',   // azul zafiro (aclarado: 4.05 → ≥ 4.5)
   crowdControl: '#d4af37', // oro rúnico (8.84)
+  dissipation: '#9aa7b8',  // bruma gris-azulada del éter (contraste ≥ 4.5)
 };
+
+/** Desfase de deriva de la bruma de disipación (px hacia arriba). */
+export const MIST_DRIFT_PX = 30;
+export const MIST_LEGEND = 'La resonancia de la palabra de poder se ha disipado en el éter';
 
 /** Desfases espaciales canónicos (px) respecto al torso (X₀, Y₀). */
 export const SUPPORT_OFFSET_X = 35;
@@ -50,6 +55,13 @@ const CC_LABELS = {
 
 /** Duración de vida de cada rótulo (ms) y ascenso (px/s). */
 const TEXT_LIFETIME_MS = 1600;
+
+/** Vida y retardo de la bruma de disipación (Caso Límite 3): su lectura
+ * es más reposada que la de un rótulo de impacto y nace tras un latido. */
+const MIST_LIFETIME_MS = 2000;
+const MIST_DELAY_MS = 100;
+/** La bruma deriva más despacio: sutil, no un estruendo. */
+const MIST_DRIFT_SCALE = 0.45;
 const FLOAT_SPEED_PX_PER_S = 55;
 
 /**
@@ -74,7 +86,7 @@ const MONUMENTAL_LIFETIME_MS = 2200;
  *   - clock: reloj inyectable ({ get now(), advance(ms) }); por defecto
  *     Date.now() (los arneses controlan el tiempo con el suyo).
  * @returns {object} API: spawnImpactTexts, updateAndRender, clear,
- *   getActiveCount, getPendingCount.
+ *   getActiveCount, getPendingCount, getActiveTexts.
  */
 export function createFloatingCombatTextComponent(options = {}) {
   const ctx = options.ctx;
@@ -154,6 +166,26 @@ export function createFloatingCombatTextComponent(options = {}) {
   }
 
   /**
+   * Programa la bruma de disipación (SPEC-05, Caso Límite 3): leyenda
+   * gris-azulada y sutil que asciende lentamente sobre el blanco cuando
+   * la palabra ritual no fue reconocida. El maniquí queda inalterado.
+   *
+   * @param {{x: number, y: number}} torso - centro del torso (X₀, Y₀).
+   * @returns {number} rótulos programados (1).
+   */
+  function spawnMist(torso) {
+    pending.push({
+      text: MIST_LEGEND,
+      x: torso.x,
+      y: torso.y + CC_OFFSET_Y,
+      color: TEXT_COLORS.dissipation,
+      bornAt: now() + MIST_DELAY_MS,
+      mist: true,
+    });
+    return 1;
+  }
+
+  /**
    * Programa el Texto Flotante Monumental de una detonación de combo
    * (SPEC-06, Tarea 4.2, RF-06.2): rótulo ceremonial en oro rúnico con
    * el nombre solemne de la reacción y el balance de daño amplificado
@@ -204,10 +236,12 @@ export function createFloatingCombatTextComponent(options = {}) {
             color: item.color,
             bornAt: item.bornAt,
             monumental: Boolean(item.monumental),
+            mist: Boolean(item.mist),
             // La vida cuenta desde su nacimiento PROGRAMADO: un rótulo
             // promovido tarde (cuadro congelado) nace ya disuelto. El
             // monumental vive más: su lectura exige más tiempo en escena.
-            expiresAt: item.bornAt + (item.monumental ? MONUMENTAL_LIFETIME_MS : TEXT_LIFETIME_MS),
+            expiresAt: item.bornAt + (item.monumental ? MONUMENTAL_LIFETIME_MS
+              : item.mist ? MIST_LIFETIME_MS : TEXT_LIFETIME_MS),
           });
         } else {
           stillWaiting.push(item);
@@ -227,14 +261,17 @@ export function createFloatingCombatTextComponent(options = {}) {
       if (instant >= item.expiresAt) {
         continue; // Expirado: purga silenciosa.
       }
-      item.y -= FLOAT_SPEED_PX_PER_S * dt; // flotación hacia arriba
+      item.y -= (item.mist ? FLOAT_SPEED_PX_PER_S * MIST_DRIFT_SCALE : FLOAT_SPEED_PX_PER_S) * dt; // flotación (la bruma deriva despacio)
       const lifetime = item.monumental ? MONUMENTAL_LIFETIME_MS : TEXT_LIFETIME_MS;
       const lifeRatio = (item.expiresAt - instant) / lifetime;
       if (ctx) {
         // El monumental interrumpe el estilo convencional: tipografía
-        // ceremonial a 23 px (×1.3). Cada rótulo restaura el suyo.
+        // ceremonial a 23 px (×1.3). La bruma viste cursiva tenue. Cada
+        // rótulo restaura el suyo.
         if (item.monumental) {
           ctx.font = `bold ${MONUMENTAL_FONT_PX}px MedievalArcaneTitle, Cinzel, Georgia, serif`;
+        } else if (item.mist) {
+          ctx.font = 'italic 16px Georgia, serif';
         } else {
           ctx.font = 'bold 18px Georgia, serif';
         }
@@ -262,10 +299,20 @@ export function createFloatingCombatTextComponent(options = {}) {
     return active.length;
   }
 
+  /** Instantánea de los rótulos vivos (oráculo del arnés, solo lectura). */
+  function getActiveTexts() {
+    return active.map((item) => ({
+      text: item.text,
+      color: item.color,
+      monumental: Boolean(item.monumental),
+      mist: Boolean(item.mist),
+    }));
+  }
+
   /** Rótulos esperando su retardo escalonado. */
   function getPendingCount() {
     return pending.length;
   }
 
-  return { spawnImpactTexts, spawnMonumentalText, updateAndRender, clear, getActiveCount, getPendingCount };
+  return { spawnImpactTexts, spawnMonumentalText, spawnMist, updateAndRender, clear, getActiveCount, getPendingCount, getActiveTexts };
 }
