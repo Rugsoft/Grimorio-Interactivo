@@ -81,7 +81,7 @@ specs/
 ├── 06-elemental-affinity-combos.spec.md # Matriz elemental y motor de validación de combos
 ├── 07-clans-lineages.spec.md            # Linajes mágicos y cálculo de Dominio semanal
 ├── 08-moderation-two-step.spec.md       # Flujo de moderación (experimental -> 3 firmas -> validado)
-└── 09-lineage-oath-first-access.spec.md # Juramento de linaje bloqueante en el primer acceso (enmienda SPEC-03)
+└── 09-lineage-oath-first-access.spec.md # Juramento de linaje bloqueante en el primer acceso (enmienda SPEC-03; con plan y tasks — lista para implementación)
 
 ---
 
