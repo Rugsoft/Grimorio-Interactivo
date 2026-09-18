@@ -526,18 +526,20 @@ respetando el catálogo cerrado y su aserto de rotulación (SPEC-03, TASK-08).
 
 ---
 
-## Anexo A — Borrador de las Ocho Doctrinas Canónicas (para revisión del Arquitecto)
+## Anexo A — Doctrinas Canónicas de los Ocho Linajes (ratificadas)
 
 > Textos canónicos (íntegra, 2–4 frases); la condensada se derivará recortando
 > su primera o primeras frases. Voz solemne, sin anacronismos (Artículo IV).
+> **[RATIFICADAS]** — pulidas tras revisión editorial: concordancias corregidas
+> («arma más honda», «retractarse»), anacronismo de «linterna» sustituido por
+> «antorcha» (Artículo IV.2) y cierres hilados con el lenguaje del juramento
+> («sellamos»). Cada primera frase sirve como versión condensada de la tarjeta.
 
-1. **Llama Primordial** — «Nacimos del primer fuego que ardió antes que los nombres. Forjamos en la hoguera lo que otros apenas se atreven a mirar, y nuestra palabra arde tan limpia como purifica. Quien jura con nosotros aprende que la llama no destruye: revela.»
-2. **Mareas Celestiales** — «El agua recuerda cada forma que alguna vez acogió. Nuestros conjuros fluyen como la marea: ceden, envuelven y vuelven siempre. La paciencia es nuestra arma más hondo y el diezmo del río, nuestra ley.»
-3. **Tempestad Eterna** — «La tormenta no pregunta a dónde caerá el rayo. Corremos donde el trueno resuena y firmamos nuestros pactos con luz partida. Nuestros juramentos son breves como el relámpago y tan imposibles de retractar.»
-4. **Raíces del Mundo** — «Lo que la montaña promete, la montaña cumple. Caminamos lentos porque cargamos con lo que otros olvidan: la memoria de la piedra y la deuda con la tierra. Nuestra palabra pesa como basalto.»
-5. **Vientos del Alba** — «Nadie ata al viento, y sin embargo todo lo alcanza. Cruzamos fronteras, llevamos recados y canciones, y deshacemos en un soplo lo que el orgullo edificó. La libertad que juramos es la que otorgamos.»
+1. **Llama Primordial** — «Nacimos del primer fuego que ardió antes de que el mundo tuviera nombres. Forjamos en la hoguera lo que otros no se atreven a mirar, y nuestra palabra arde tan limpia como purifica. Quien jura con nosotros aprende que la llama no destruye: revela.»
+2. **Mareas Celestiales** — «El agua recuerda cada forma que alguna vez acogió. Nuestros conjuros fluyen como la marea: ceden, envuelven y siempre vuelven. La paciencia es nuestra arma más honda, y nuestra ley, la promesa del río: todo lo que cede, retorna.»
+3. **Tempestad Eterna** — «La tormenta no pregunta a dónde caerá el rayo. Corremos donde truena el cielo y sellamos nuestros pactos con luz partida. Serás como el relámpago: breve en prometer, eterno en cumplir.»
+4. **Raíces del Mundo** — «Lo que la montaña promete, la montaña cumple. Caminamos lentos porque cargamos con lo que otros olvidan: la memoria de la piedra y la deuda con la tierra. Nuestra palabra pesa como el basalto.»
+5. **Vientos del Alba** — «Nadie ata al viento, y sin embargo todo lo alcanza. Cruzamos fronteras, llevamos palabras y canciones, y deshacemos en un soplo lo que el orgullo edificó. La libertad que juramos es la que otorgamos.»
 6. **Corona Solar** — «La luz no esconde nada: por eso reina. Iluminamos el saber, señalamos al mentiroso y sostenemos el alba cuando la noche se alarga. Nuestro yugo es brillar, y brillar fatiga más que combatir.»
-7. **Sombras Abisales** — «Conocemos el nombre de todas las cosas que el sol no nombra. Guardamos lo que el mundo prefiere olvidar y caminamos donde la linterna se apaga. No somos la oscuridad: somos su discreto custodio.»
-8. **Tejedores del Éter** — «Del maná puro está tejido el mundo, y nosotros conocemos el hilván. No pertenecemos a un elemento: los hilos de todos pasan por nuestras manos. Quien busca el origen de la magia, busca nuestra puerta.»
-
-**[PENDIENTE DE RATIFICACIÓN]** — ningún texto llega a código sin tu aprobación.
+7. **Sombras Abisales** — «Conocemos el nombre de todas las cosas que el sol no nombra. Guardamos lo que el mundo prefiere olvidar y caminamos donde se apaga toda antorcha. No somos la oscuridad: somos su fiel custodio.»
+8. **Tejedores del Éter** — «Del maná puro está tejido el mundo, y nosotros conocemos su hilván. No rendimos culto a un solo elemento: por nuestras manos pasan los hilos de todos. Quien busca el origen de la magia, busca nuestra puerta.»

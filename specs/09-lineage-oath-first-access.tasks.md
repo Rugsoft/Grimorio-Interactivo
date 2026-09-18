@@ -139,4 +139,4 @@
 - **2.5 puede ejecutarse en paralelo con 2.2–2.4** (solo toca el flujo de consagración), pero **2.6** depende de todos los de Fase 2.
 - **3.1 → 3.2 → 3.3 → 4.x:** el cliente alimenta store/interceptor y ceremonia; las tareas 3.3 y 4.1 son independientes entre sí.
 - **5.1 requiere 2.5** (backend ya tolera el registro sin linaje) y **5.3 cierra** con todo lo anterior.
-- Las doctrinas del **Anexo A del plan** siguen [PENDIENTES DE RATIFICACIÓN]: la Tarea 1.2 las inscribe tal como el Arquitecto las apruebe.
+- Las doctrinas del **Anexo A del plan** están [RATIFICADAS]: la Tarea 1.2 las inscribe textualmente.
