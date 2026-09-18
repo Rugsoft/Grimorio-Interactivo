@@ -782,6 +782,46 @@ assertCondition(
 assertCondition(surface.view.getState().elementalAura.active === true, 'la ventana renace con la reimbuición');
 
 // =====================================================================
+// [9c] Ráfaga FIFO lee el aura VIVA al resolver (RF-05.4 + Hallazgo 13):
+//      la cola congela impactos al encolar pero resuelve uno por cuadro;
+//      el segundo impacto de la ráfaga debe leer el aura YA APLICADA por
+//      el primero (imbuye → detona), no la instantánea del encolado.
+// =====================================================================
+console.log('\n[9c] Ráfaga FIFO: el segundo impacto detona sobre la imbuición del primero');
+
+await surface.view.restoreDummy();
+// La vista queda en página 3 (Rayo) tras la fase anterior: dos invocaciones
+// casi simultáneas de Rayo con aterrizajes en cuadros consecutivos. Con la
+// lectura viva, el segundo NO puede refrescar: la primera imbuye y la
+// segunda refresca (mismo elemento) — así que encadenamos el guion:
+// página 1 (Agua) imbuye, luego rayo entra en la cola ANTES de que el
+// primer impacto se resuelva... Para forzar ese orden sin depender del
+// vuelo, encolamos vía castCurrentSpell doble con impacto manual:
+await surface.view.previousPage();
+await surface.view.previousPage(); // página 1: Agua
+
+// Primer impacto: se resuelve AL INSTANTE al encolar (plan 3.3).
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+assertCondition(surface.view.getState().elementalAura.element === 'water', 'la ráfaga parte de la imbuición de Agua');
+
+// Segundo impacto encolado mientras el reloj sigue en el MISMO cuadro de
+// resolución: debe leer el aura de Agua viva y detonar Electrocución con
+// el Rayo (página 3), no refrescar ni tratar el blanco como neutral.
+await surface.view.nextPage();
+await surface.view.nextPage(); // página 3: Rayo
+const reactionsBeforeBurst = eventsOf(surface, 'combo:reaction-triggered').length;
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+
+const burstState = surface.view.getState();
+assertCondition(
+  eventsOf(surface, 'combo:reaction-triggered').length === reactionsBeforeBurst + 1,
+  'el impacto de Rayo sobre el aura de Agua recién aplicada detona la reacción (lectura VIVA, RF-05.4)',
+);
+assertCondition(burstState.elementalAura.element === null, 'el aura se consume en la detonación de la ráfaga');
+
+// =====================================================================
 // [10] destroy() desmonta el aura
 // =====================================================================
 console.log('\n[10] Desmontaje limpio');

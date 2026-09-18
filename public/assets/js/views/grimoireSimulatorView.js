@@ -324,6 +324,14 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   /** Cola determinista FIFO de impactos (plan 3.3): un impacto por cuadro. */
   const impactQueue = createSpellImpactQueue({
     resolveImpact: (impact) => {
+      // El estado del aura se lee VIVO en el cuadro de resolución, jamás
+      // la instantánea del encolado: la cola drena un impacto por cuadro
+      // y, durante ese lapso, el aura puede expirar (RF-02.7) o haber sido
+      // aplicada por un impacto anterior de la ráfaga (RF-05.4: el primer
+      // impacto imbuye y el segundo detona SOBRE esa imbuición). Resolver
+      // contra la copia congelada reproduciría el desdoblamiento de estado
+      // que el Hallazgo 13 de SPEC-06 desterró para el halo.
+      impact.activeAura = activeAuraElement ?? '';
       const verdict = comboResolver.resolveImpact(impact);
       // El estado del aura sigue al veredicto: la única fuente de verdad.
       activeAuraElement = verdict.resultingAura ?? null;
