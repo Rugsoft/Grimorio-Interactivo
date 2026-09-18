@@ -65,6 +65,9 @@ import {
   dissolveAll as apiDissolveAll,
   fetchAuditLog as apiFetchAuditLog,
 } from './api/authClient.js';
+import {
+  retainRoute as apiRetainRoute,
+} from './api/lineageOathClient.js';
 import { createCodexView } from './views/elementalCodexView.js';
 import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
 import { createExperimentalHallView } from './views/experimentalHallView.js';
@@ -143,6 +146,7 @@ export function createGrimoireApp(options = {}) {
       dissolve: apiDissolve,
       dissolveAll: apiDissolveAll,
     },
+    lineageOathClient = { retainRoute: apiRetainRoute },
     grimoireClient = createGrimoireClient(),
     dominionClient = createDominionClient(),
     clanClient = createClanClient(),
@@ -182,6 +186,8 @@ export function createGrimoireApp(options = {}) {
   let historyManager = null;
   let errorView = null;
   let isDestroyed = false;
+  /** Bandera del listener `oath:sealed` del bus del shell (SPEC-09). */
+  let windowOathSealedListener = false;
 
   /**
    * Desmonta la vista activa, si existe. Toda la SPA es de una vista a la vez.
@@ -197,8 +203,49 @@ export function createGrimoireApp(options = {}) {
    * @param {Object} [navigateOptions]
    * @param {'canonical'|'essays'} [navigateOptions.catalogMode] Tomo del Simulador.
    */
+  /**
+   * Vistas que un «Peregrino sin Linaje» puede pisar sin juramento
+   * (lista blanca del plan §3.2): la propia ceremonia, el portal de
+   * inicio y la gestión de credenciales a través del diálogo de acceso.
+   * Todo lo demás queda retenido (RF-01.3).
+   */
+  const OATH_EXEMPT_VIEWS = Object.freeze(['landing', 'juramento', 'error']);
+
+  /**
+   * Interceptor de retención (SPEC-09, Tarea 3.2 — RF-01.3, RNF-04):
+   * un «Peregrino sin Linaje» (sesión activa, lineage null, rol distinto
+   * de supremeAdmin) que pida una vista no exenta es desviado a la
+   * ceremonia del juramento, reteniendo su ruta en la sesión del servidor
+   * para el retorno (RF-05.3). La decisión es LOCAL e instantánea vía el
+   * store hidratado por auth/session (sin round-trip extra); la retención
+   * de SUSTANCIA sigue siendo del backend (403 LINEAGE_OATH_REQUIRED).
+   *
+   * @param {string} requestedView Vista pedida por el navegante.
+   * @returns {string} La vista que realmente debe montarse.
+   */
+  function resolveOathRetention(requestedView) {
+    const state = store.getState();
+    if (state.isAuthenticated !== true) return requestedView;
+    if (state.userRole === 'supremeAdmin') return requestedView; // RF-01.6
+    if (state.userLineage !== null) return requestedView;        // linajado
+    if (OATH_EXEMPT_VIEWS.includes(requestedView)) return requestedView;
+
+    // Retener la ruta ANTES de desviar (RF-05.3). El fallo del envío es
+    // inocuo: jamás interrumpe el desvío hacia la ceremonia.
+    const requestedHash = VIEW_TO_HASH_MAP[requestedView] ?? null;
+    if (requestedHash !== null) {
+      void lineageOathClient.retainRoute(requestedHash);
+    }
+    return 'juramento';
+  }
+
   async function navigate(viewName, navigateOptions = {}) {
     if (isDestroyed) return;
+
+    // El interceptor va ANTES de desmontar la vista actual: si retiene, la
+    // vista viva no parpadea y la ceremonia se monta sobre el punto limpio.
+    const effectiveView = resolveOathRetention(viewName);
+
     destroyCurrentView();
 
     // El orquestador es el dueño del punto de montaje: retira TODO el
@@ -217,7 +264,16 @@ export function createGrimoireApp(options = {}) {
       }
     }
 
-    store.setState({ currentView: viewName });
+    // El estado refleja la vista EFECTIVA (la ceremonia si hubo retención);
+    // el desvío hacia ella ocurre al final, tras resolver el caso del hash.
+    store.setState({ currentView: effectiveView });
+
+    // Retención activa: la vista solicitada no se monta (ni un frame).
+    // La ceremonia (Tarea 4.1) vive del caso 'juramento' más abajo; mientras
+    // su vista no exista, el despacho cae al cierre sin montar nada.
+    if (effectiveView !== viewName) {
+      return;
+    }
 
     if (viewName === 'landing') {
       const landingView = createLandingView(appRoot, {
@@ -230,7 +286,7 @@ export function createGrimoireApp(options = {}) {
         // El blasón se forja como SVG en línea (SPEC-02 RF-07): el documento viaja.
         documentRef,
       });
-      currentView = { name: viewName, instance: landingView };
+      currentView = { name: effectiveView, instance: landingView };
       await landingView.render();
       return;
     }
@@ -245,7 +301,7 @@ export function createGrimoireApp(options = {}) {
         dominionClient,
         elementFactory,
       });
-      currentView = { name: viewName, instance: libraryView };
+      currentView = { name: effectiveView, instance: libraryView };
       await libraryView.render();
       return;
     }
@@ -266,7 +322,7 @@ export function createGrimoireApp(options = {}) {
         // Los sellos del podio se forjan en el documento del orquestador.
         documentRef,
       });
-      currentView = { name: viewName, instance: hallView };
+      currentView = { name: effectiveView, instance: hallView };
       await hallView.render();
       return;
     }
@@ -290,7 +346,7 @@ export function createGrimoireApp(options = {}) {
         // El sello de la casa se forja en el documento del orquestador.
         documentRef,
       });
-      currentView = { name: viewName, instance: clanView };
+      currentView = { name: effectiveView, instance: clanView };
       await clanView.render();
       return;
     }
@@ -311,7 +367,7 @@ export function createGrimoireApp(options = {}) {
         },
         elementFactory,
       });
-      currentView = { name: viewName, instance: creatorView };
+      currentView = { name: effectiveView, instance: creatorView };
       await creatorView.render();
       return;
     }
@@ -336,7 +392,7 @@ export function createGrimoireApp(options = {}) {
         // el orquestador aporta la sesión y el cliente; la Cámara solo narra.
         awardSimulatorPractice: (comboElement) => awardSimulatorPractice(comboElement),
       });
-      currentView = { name: viewName, instance: simulatorView };
+      currentView = { name: effectiveView, instance: simulatorView };
       await simulatorView.render();
       return;
     }
@@ -348,7 +404,7 @@ export function createGrimoireApp(options = {}) {
         elementFactory,
         document: documentRef,
       });
-      currentView = { name: viewName, instance: codexView };
+      currentView = { name: effectiveView, instance: codexView };
       await codexView.render();
       return;
     }
@@ -615,6 +671,39 @@ export function createGrimoireApp(options = {}) {
   }
 
   /**
+   * El veredicto del juramento (SPEC-09, Tarea 3.2 — RF-01.7, RF-03.1):
+   * la ceremonia notifica `oath:sealed` en el bus del shell con
+   * { lineage, retainedRoute }; el orquestador actualiza el store (el
+   * interceptor deja de retener al instante) y conduce al retorno: la
+   * ruta retenida si existe y es interna, el portal de inicio en caso
+   * contrario.
+   *
+   * @param {CustomEvent} event Evento del bus con detail { lineage, retainedRoute }.
+   */
+  function handleOathSealed(event) {
+    const detail = event?.detail ?? {};
+    const lineage = typeof detail.lineage === 'string' && detail.lineage !== '' ? detail.lineage : null;
+
+    // El store se actualiza con el linaje jurado SIN recargar: el
+    // interceptor (resolveOathRetention) lee el estado vivo y libera al
+    // adepto en el mismo gesto que conduce al retorno (RNF-04).
+    const sessionUser = store.getState().currentUser;
+    if (sessionUser !== null && lineage !== null) {
+      store.setSession({ ...sessionUser, lineage });
+      sessionBadge?.setUser({ ...sessionUser, lineage });
+    }
+
+    // Retorno: ruta retenida saneada, o el portal de inicio (RF-03.1).
+    const retainedRoute = typeof detail.retainedRoute === 'string' && detail.retainedRoute.startsWith('#/')
+      ? detail.retainedRoute
+      : null;
+    const targetView = retainedRoute !== null
+      ? (HASH_TO_VIEW_MAP[retainedRoute] ?? 'landing')
+      : 'landing';
+    void navigate(targetView);
+  }
+
+  /**
    * «Ver mi libro personal» (RF-07.1 de SPEC-03): con vínculo abre el Tomo de
    * Ensayos; sin él, retiene la intención y despliega «Cruzar el Umbral».
    */
@@ -794,6 +883,14 @@ export function createGrimoireApp(options = {}) {
       void apiCheckSessionWrapper();
     }
 
+    // El veredicto del juramento (SPEC-09, Tarea 3.2): la ceremonia anuncia
+    // `oath:sealed` en el bus del shell y el orquestador actualiza store y
+    // navegación sin recarga (RF-01.7, RF-03.1).
+    if (typeof windowRef?.addEventListener === 'function') {
+      windowRef.addEventListener('oath:sealed', handleOathSealed);
+      windowOathSealedListener = true;
+    }
+
     // Historial y enlaces directos (plan 4.3): con resolveInitialHash el
     // gestor notifica el hash inicial #hechizo-slug al instante (RF-04.1).
     historyManager = createHistoryManager(windowRef, {
@@ -862,6 +959,10 @@ export function createGrimoireApp(options = {}) {
     if (windowHashListener !== null && typeof windowRef?.removeEventListener === 'function') {
       windowRef.removeEventListener('hashchange', windowHashListener);
       windowHashListener = null;
+    }
+    if (windowOathSealedListener && typeof windowRef?.removeEventListener === 'function') {
+      windowRef.removeEventListener('oath:sealed', handleOathSealed);
+      windowOathSealedListener = false;
     }
     navbar?.destroy?.();
     detailModal?.destroy?.();

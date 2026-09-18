@@ -72,6 +72,11 @@ function createInitialState() {
     isAuthenticated: false,
     userRole: 'reader',
     userClan: null,
+    /** El vínculo perpetuo del Juramento de Linaje (SPEC-09, Tarea 3.2).
+     *  null = «Peregrino sin Linaje»: el interceptor de navigate() retiene
+     *  al portador hacia la ceremonia (RF-01.3). La decisión es local e
+     *  instantánea (RNF-04): sin round-trip extra al hidratar. */
+    userLineage: null,
   };
 }
 
@@ -173,6 +178,12 @@ export function createStore() {
     const sessionUser = user !== null && typeof user === 'object' ? user : null;
     const clanId = typeof sessionUser?.clanId === 'string' ? sessionUser.clanId : '';
     const clanName = typeof sessionUser?.clanName === 'string' ? sessionUser.clanName : '';
+    // El linaje jurado viaja en el sobre de sesión (auth/me, Tarea 2.5):
+    // solo una cadena no vacía del canon declara vínculo; todo lo demás
+    // (ausente, null, vacío) es peregrino.
+    const lineage = typeof sessionUser?.lineage === 'string' && sessionUser.lineage !== ''
+      ? sessionUser.lineage
+      : null;
 
     setState({
       currentUser: sessionUser,
@@ -180,6 +191,7 @@ export function createStore() {
       userRole: typeof sessionUser?.role === 'string' && sessionUser.role !== '' ? sessionUser.role : 'reader',
       // Sin clan real no se fabrica un clan fantasma: null es la ausencia.
       userClan: clanId !== '' ? { id: clanId, name: clanName } : null,
+      userLineage: lineage,
     });
   }
 
@@ -194,6 +206,7 @@ export function createStore() {
       isAuthenticated: false,
       userRole: 'reader',
       userClan: null,
+      userLineage: null,
     });
   }
 

@@ -73,7 +73,7 @@
   * **Hecho cuando:** Cada código HTTP del contrato produce el veredicto estructurado correspondiente y ningún método lanza excepción no controlada ante 4xx/5xx.
   * **Verificación:** `scratch/test_lineage_oath_client.mjs`
 
-- [ ] **Tarea 3.2: Store e interceptor de retención (`public/assets/js/store.js`, `main.js`)**
+- [x] **Tarea 3.2: Store e interceptor de retención (`public/assets/js/store.js`, `main.js`)**
   * **Alcance:** Hidratar `sessionUser.lineage` desde `auth/me`; en `navigate()` aplicar la guarda del §3.2 del plan (peregrino + vista no blanca → retener ruta vía API y desviar a `juramento`); añadir la vista `juramento` a la lista blanca del enrutador; tras `oath:sealed`, actualizar el store y navegar a `retainedRoute` o al portal.
   * **Cubre:** `RF-01.3`, `RF-01.7`, `RF-03.1`, `RNF-04`
   * **Hecho cuando:** Un peregrino que pide `#/creador` acaba en la ceremonia con su ruta retenida; tras sellar, aterriza en `#/creador`; un linajado navega sin un solo round-trip adicional y el Supremo jamás es retenido.
