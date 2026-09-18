@@ -29,7 +29,7 @@
 
 ## Fase 2: Servicios de Dominio y Middleware de Retención (Backend)
 
-- [ ] **Tarea 2.1: Catálogo ceremonial (`src/Services/LineageCatalogService.php` + DTOs)**
+- [x] **Tarea 2.1: Catálogo ceremonial (`src/Services/LineageCatalogService.php` + DTOs)**
   * **Alcance:** Crear el servicio del canon inmutable (§5.3 del plan) con `getOathCatalog(accountLineage)`, retornando los 8 `LineageProfileDto` (`id`, `name`, `glyph`, `bannerColor`, `rulingElement`, `doctrineCondensed`, `doctrineFull`, `hasActiveClans`) y el estado de cuenta (`pilgrim` | linaje). Sin tabla administrable: la inmutabilidad es de servicio.
   * **Cubre:** `RF-02.1`, `RF-02.2`, caso límite 5 (canon inmutable), `RNF-02`
   * **Hecho cuando:** El servicio retorna exactamente 8 fichas con las claves del contrato del plan (§2.2, Endpoint 1), `hasActiveClans` refleja la existencia de clanes `active` por linaje, y no existe método alguno de mutación en su API.
