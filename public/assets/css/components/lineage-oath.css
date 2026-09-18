@@ -159,7 +159,104 @@
 }
 
 /* ---------------------------------------------------------------------
-   3. Movimiento reducido (RNF-05, AGENTS.md 8)
+   3. El modal solemne de doble confirmación (Tarea 4.2, RF-02.3)
+      Tercer nivel de la pila de modales: sobre ficha (100) y acceso (200).
+   --------------------------------------------------------------------- */
+
+#oathModal {
+  z-index: 300;
+}
+
+.oath-modal__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-3);
+  padding: var(--space-ink-5);
+}
+
+.oath-modal__title {
+  margin: 0;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+}
+
+/* Región viva de anuncios: presencia sin estridencia. */
+.oath-modal__announce {
+  margin: 0;
+  min-height: 1em;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-text-secondary);
+}
+
+/* El juramento: cita solemne en cursiva, a cuerpo de lectura. */
+.oath-modal__oath-text {
+  margin: 0;
+  padding: var(--space-ink-2) var(--space-ink-3);
+
+  border-left: 2px solid var(--color-gold-arcane);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  font-style: italic;
+  line-height: 1.65;
+}
+
+/* La advertencia de perpetuidad: VISIBLE, EXPLÍCITA E INELUDIBLE (RNF-03).
+   A cuerpo de modal, con filo de brasa; jamás letra menuda ni tooltip. */
+.oath-modal__perpetuity {
+  margin: 0;
+  padding: var(--space-ink-2) var(--space-ink-3);
+  box-sizing: border-box;
+
+  border: 1px solid var(--color-ember-red-deep);
+  border-radius: var(--radius-scroll);
+  color: var(--color-text-light);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.oath-modal__seal,
+.oath-modal__dismiss {
+  min-height: var(--touch-target-min);
+}
+
+.oath-modal__dismiss {
+  align-self: flex-start;
+}
+
+/* Botón × de cierre (degradación): esquina del panel. */
+.oath-modal__close {
+  position: absolute;
+  top: var(--space-ink-2);
+  right: var(--space-ink-2);
+
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-ink-large);
+  cursor: pointer;
+}
+
+.oath-modal__close:hover,
+.oath-modal__close:focus-visible {
+  color: var(--color-gold-arcane);
+}
+
+.oath-modal__close:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   4. Movimiento reducido (RNF-05, AGENTS.md 8)
    --------------------------------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -168,5 +265,10 @@
   .lineage-card:focus-visible {
     transition: none;
     transform: none;
+  }
+
+  .modal[open],
+  #oathModal[open] {
+    animation: none;
   }
 }

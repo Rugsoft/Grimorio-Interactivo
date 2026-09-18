@@ -93,7 +93,7 @@
   * **Hecho cuando:** Las 8 tarjetas renderizan su heráldica y condensada, la expansión revela la íntegra y el botón, la nota aparece solo en linajes sin clanes activos y todo es operable sin ratón.
   * **Verificación:** `scratch/test_lineage_oath_view.mjs`
 
-- [ ] **Tarea 4.2: Modal solemne de doble confirmación (`public/assets/js/components/oathModalComponent.js`)**
+- [x] **Tarea 4.2: Modal solemne de doble confirmación (`public/assets/js/components/oathModalComponent.js`)**
   * **Alcance:** `<dialog>` nativo con el juramento en primera persona nombrando al linaje, advertencia de perpetuidad visible e ineludible (RNF-03), botón «Sellar el juramento» (segunda confirmación explícita) y descarte seguro (botón/Escape); foco atrapado dentro y devuelto al elemento originador al cerrar; anuncios ARIA; emite `oath:confirmation-opened/dismissed/confirmed`.
   * **Cubre:** `RF-02.3`, `RF-03.1`, `RNF-03`, `RNF-05`
   * **Hecho cuando:** El modal exige segunda pulsación explícita, el descarte no consume nada, el foco jamás escapa mientras está abierto y regresa al cerrarlo, y la región viva anuncia apertura y veredicto.
