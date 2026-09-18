@@ -41,7 +41,7 @@
   * **Hecho cuando:** Mismo linaje reenviado responde éxito sin mutación; linaje distinto lanza `OathConflict`; dos `sealOath` entrelazados producen un solo ganador determinista; el Admin Supremo recibe `OathForbiddenRole`; y cada sellado feliz genera un asiento de bitácora con actor, acto y estampa temporal.
   * **Verificación:** `scratch/test_lineage_oath_service.php`
 
-- [ ] **Tarea 2.3: Middleware de retención (`src/Middleware/LineageOathMiddleware.php`)**
+- [x] **Tarea 2.3: Middleware de retención (`src/Middleware/LineageOathMiddleware.php`)**
   * **Alcance:** Implementar la guardia de sustancia: para sesión válida con `lineage IS NULL` y rol ≠ `supremeAdmin`, denegar toda ruta de gestión no incluida en la lista blanca (canon ceremonial, juramento, ruta retenida, perfil de credenciales, logout, lectura pública) con 403 `LINEAGE_OATH_REQUIRED` + mensaje solemne; retener en `$_SESSION['retainedRoute']` la ruta solicitada saneada (lista blanca de vistas internas de `main.js`, jamás URLs externas); dejar pasar a linajados y Supremo sin comprobación adicional.
   * **Cubre:** `RF-01.3`, `RF-01.4`, `RF-01.6`, `RF-05.1`, `RF-05.3`
   * **Hecho cuando:** Un peregrino recibe 403 `LINEAGE_OATH_REQUIRED` en cualquier ruta de gestión, la ruta solicitada interna queda en su sesión, una URL externa se descarta, un linajado jamás ve la guardia y el Supremo navega exento con o sin linaje.
