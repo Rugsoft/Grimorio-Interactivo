@@ -301,6 +301,9 @@ export function createAccessModalComponent(dialog, options) {
       clanSelect.setAttribute('name', 'clanSelect');
       clanSelect.setAttribute('required', '');
       clanSelect.setAttribute('aria-label', 'Linaje al que consagrarse (obligatorio)');
+      // Viste el selector con el kit canónico de controles (SPEC-02, RF-08.4):
+      // sin esta clase el navegador exhibiría el select nativo sin forjar.
+      clanSelect.setAttribute('class', 'controls-select');
       const registerFormElement = findOrWireFormElement(SHELL_FORM_IDS.register);
       registerFormElement?.appendChild(clanSelect);
     }

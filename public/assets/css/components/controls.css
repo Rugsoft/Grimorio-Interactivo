@@ -263,6 +263,12 @@
   box-shadow: var(--shadow-gold-glow);
 }
 
+/* Dentro de formularios apilados (Umbral, Tarea 4.3) el selector ocupa el
+   ancho del campo: el kit es neutro por defecto, el contexto lo estira. */
+.access-form .controls-select {
+  width: 100%;
+}
+
 .controls-select:disabled {
   background-color: var(--color-stone-disabled);
   border-color: var(--color-stone-disabled);
