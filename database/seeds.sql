@@ -3,6 +3,8 @@
 --
 -- Tarea 1.1 (TASKS-01): clanes fundacionales, catálogo de Escuelas de
 -- Magia y los 3 *Pergaminos Primordiales* canónicos.
+-- Tarea 1.2 (TASKS-09): el canon ceremonial de los Ocho Linajes
+-- (doctrinas condensada e íntegra) y el linaje jurado del Custodio.
 --
 -- Cubre: RF-01.3 (Pergaminos Primordiales de muestra no editables),
 --        RF-02.2 (Salón de Linajes), RF-03.5 (escuelas de referencia).
@@ -25,6 +27,80 @@ INSERT INTO magic_schools (slug, name) VALUES ('evocation', 'Evocación');
 INSERT INTO magic_schools (slug, name) VALUES ('illusion', 'Ilusión');
 INSERT INTO magic_schools (slug, name) VALUES ('necromancy', 'Nigromancia');
 INSERT INTO magic_schools (slug, name) VALUES ('transmutation', 'Transmutación');
+
+-- ---------------------------------------------------------------------
+-- El canon ceremonial de los Ocho Linajes (SPEC-09, Tarea 1.2 —
+-- RF-02.1, RF-02.2): las doctrinas canónicas del Anexo A del plan,
+-- [RATIFICADAS], inscritas TEXTUALMENTE. Un solo texto canónico del que
+-- viajan las dos granularidades de la ceremonia: la condensada de la
+-- tarjeta (RF-02.1) y la íntegra de la expansión y el modal (RF-02.2).
+--
+-- Los textos viajan en noble castellano (Artículo IV); las claves y
+-- columnas en inglés (Artículo V). La heráldica (name, glyph,
+-- banner_color, ruling_element) es la del canon de SPEC-07
+-- (LineageSynergyService::CANONICAL_LINEAGES, Endpoint 10): fuente
+-- única de identidad heráldica, jamás divergente.
+--
+-- Canon INMUTABLE (exclusión 5 de SPEC-09): estas filas nacen aquí y no
+-- vuelven a tocarse jamás. No existe operación del sistema que las
+-- altere; el CHECK de `users.lineage` y el servicio canónico cierran el
+-- círculo.
+-- ---------------------------------------------------------------------
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('primordialFlame', 'Linaje de la Llama Primordial', 'rune-ignis', '#ff4500', 'fire',
+     'Nacimos del primer fuego que ardió antes de que el mundo tuviera nombres.',
+     'Nacimos del primer fuego que ardió antes de que el mundo tuviera nombres. Forjamos en la hoguera lo que otros no se atreven a mirar, y nuestra palabra arde tan limpia como purifica. Quien jura con nosotros aprende que la llama no destruye: revela.',
+     1);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('celestialTides', 'Linaje de las Mareas Celestiales', 'rune-aqua', '#00bfff', 'water',
+     'El agua recuerda cada forma que alguna vez acogió.',
+     'El agua recuerda cada forma que alguna vez acogió. Nuestros conjuros fluyen como la marea: ceden, envuelven y siempre vuelven. La paciencia es nuestra arma más honda, y nuestra ley, la promesa del río: todo lo que cede, retorna.',
+     2);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('eternalTempest', 'Linaje de la Tempestad Eterna', 'rune-fulgur', '#9932cc', 'lightning',
+     'La tormenta no pregunta a dónde caerá el rayo.',
+     'La tormenta no pregunta a dónde caerá el rayo. Corremos donde truena el cielo y sellamos nuestros pactos con luz partida. Serás como el relámpago: breve en prometer, eterno en cumplir.',
+     3);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('worldRoots', 'Linaje de las Raíces del Mundo', 'rune-terra', '#8b4513', 'earth',
+     'Lo que la montaña promete, la montaña cumple.',
+     'Lo que la montaña promete, la montaña cumple. Caminamos lentos porque cargamos con lo que otros olvidan: la memoria de la piedra y la deuda con la tierra. Nuestra palabra pesa como el basalto.',
+     4);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('dawnWinds', 'Linaje de los Vientos del Alba', 'rune-ventus', '#2e8b57', 'wind',
+     'Nadie ata al viento, y sin embargo todo lo alcanza.',
+     'Nadie ata al viento, y sin embargo todo lo alcanza. Cruzamos fronteras, llevamos palabras y canciones, y deshacemos en un soplo lo que el orgullo edificó. La libertad que juramos es la que otorgamos.',
+     5);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('solarCrown', 'Linaje de la Corona Solar', 'rune-lux', '#ffd700', 'light',
+     'La luz no esconde nada: por eso reina.',
+     'La luz no esconde nada: por eso reina. Iluminamos el saber, señalamos al mentiroso y sostenemos el alba cuando la noche se alarga. Nuestro yugo es brillar, y brillar fatiga más que combatir.',
+     6);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('abyssalShadows', 'Linaje de las Sombras Abisales', 'rune-tenebrae', '#4b0082', 'darkness',
+     'Conocemos el nombre de todas las cosas que el sol no nombra.',
+     'Conocemos el nombre de todas las cosas que el sol no nombra. Guardamos lo que el mundo prefiere olvidar y caminamos donde se apaga toda antorcha. No somos la oscuridad: somos su fiel custodio.',
+     7);
+
+INSERT INTO lineage_doctrines (id, name, glyph, banner_color, ruling_element,
+                               doctrine_condensed, doctrine_full, position) VALUES
+    ('aetherWeavers', 'Linaje de los Tejedores del Éter', 'rune-arcana', '#4169e1', 'pureArcane',
+     'Del maná puro está tejido el mundo, y nosotros conocemos su hilván.',
+     'Del maná puro está tejido el mundo, y nosotros conocemos su hilván. No rendimos culto a un solo elemento: por nuestras manos pasan los hilos de todos. Quien busca el origen de la magia, busca nuestra puerta.',
+     8);
 
 -- ---------------------------------------------------------------------
 -- Linaje fundacional neutro: custodio de los Pergaminos Primordiales.
@@ -50,9 +126,10 @@ INSERT INTO clans (id, slug, name, motto, created_at,
 -- latencia fundacional. Rol 'master' (solo lectura operativa; su
 -- password_hash es un placeholder NO verificable, jamás un vínculo).
 -- ---------------------------------------------------------------------
-INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at) VALUES
+INSERT INTO users (id, alias, email, password_hash, role, clan_id, lineage, created_at, updated_at) VALUES
     ('usr_custodio_primordial', 'El Custodio Primordial',
      'custodio@primordialis.arc', 'x', 'master', 'cln_primordial',
+     'primordialFlame',
      '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z');
 
 -- La corona del linaje fundacional, ya con el tutor inscrito en `users`.

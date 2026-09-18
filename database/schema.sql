@@ -72,6 +72,35 @@ CREATE TABLE IF NOT EXISTS clans (
 );
 
 -- ---------------------------------------------------------------------
+-- Tabla: lineage_doctrines — El canon ceremonial de los Ocho Linajes
+-- [SPEC-09, Tarea 1.2 — RF-02.1, RF-02.2]
+--
+-- FUENTE DE VERDAD de las doctrinas canónicas del juramento (Anexo A del
+-- plan, [RATIFICADAS]): un solo texto canónico del que viajan las dos
+-- granularidades de la ceremonia — la condensada (1-2 frases, tarjeta
+-- contraída, RF-02.1) y la íntegra (2-4 frases, expansión y modal,
+-- RF-02.2). La heráldica (name, glyph, banner_color, ruling_element) es
+-- la misma del canon de SPEC-07 (LineageSynergyService, Endpoint 10).
+--
+-- ¿Por qué tabla y no constantes de servicio? La coherencia
+-- guion↔esquema (lección de SPEC-08) y el Artículo III: las doctrinas
+-- son memoria de hermandad inscribed en la base, legibles por cualquier
+-- arnés y por la vista de ceremonia sin acoplar el backend a un array
+-- PHP. El canon sigue siendo INMUTABLE (exclusión 5): ninguna operación
+-- del sistema altera estas filas; la tabla solo nace aquí y en semillas.
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS lineage_doctrines (
+    id                 TEXT PRIMARY KEY,                    -- Clave canónica del linaje (ej. 'primordialFlame')
+    name               TEXT NOT NULL,                       -- Nombre ceremonial en castellano (RF-04.2)
+    glyph              TEXT NOT NULL,                       -- Glifo rúnico ancestral (heráldica de SPEC-07)
+    banner_color       TEXT NOT NULL,                       -- Estandarte ceremonial #rrggbb
+    ruling_element     TEXT NOT NULL,                       -- Afinidad elemental rectora (ej. 'fire')
+    doctrine_condensed TEXT NOT NULL,                       -- Doctrina condensada: 1-2 frases (RF-02.1)
+    doctrine_full      TEXT NOT NULL,                       -- Doctrina íntegra: 2-4 frases (RF-02.2)
+    position           INTEGER NOT NULL DEFAULT 0           -- Orden ceremonial de la rejilla
+);
+
+-- ---------------------------------------------------------------------
 -- Tabla: clan_members — Membresías, roles y Convalecencia Arcana
 -- [RF-01.1, RF-01.3, RF-01.4, RF-01.6, RF-01.8, RF-01.9]
 --
@@ -349,6 +378,24 @@ CREATE TABLE IF NOT EXISTS users (
     -- por ClanMemberRepository y reconciliado por la migración
     -- sql/07_membership_single_source.sql. NULL = sin linaje.
     clan_id       TEXT REFERENCES clans (id),
+    -- EL VÍNCULO DEL JURAMENTO DE LINAJE [SPEC-09, Tarea 1.2 — RF-01.5,
+    -- RF-01.2, RF-03.4, RF-04.1]. ANULABLE a propósito: NULL significa
+    -- «peregrino sin linaje», la fase de vida que la ceremonia bloqueante
+    -- del primer acceso conduce al juramento (RF-01.2/01.3). El vínculo
+    -- es PERPETUO: solo el juramento (SPEC-09) lo escribe, jamás se muta
+    -- una vez sellado (RF-03.4) y muere con la cuenta purgada. El CHECK
+    -- impone el canon cerrado de los OCHO Linajes Canónicos de SPEC-07:
+    -- la base es la última muralla del canon inmutable (exclusión 5).
+    -- Sin REFERENCES a propósito: el canon vive como servicio. Es
+    -- VÍNCULO INDEPENDIENTE del espejo `clan_id` (RF-04.1): la AUTORIDAD
+    -- de la membresía sigue siendo `clan_members` (SPEC-07); la migración
+    -- sql/09_lineage_oath.sql alineó el legado UNA SOLA VEZ (caso límite
+    -- 7). Coherente con el ALTER de esa migración (guion↔esquema).
+    lineage       TEXT NULL
+                  CHECK (lineage IN (
+                      'primordialFlame', 'celestialTides', 'eternalTempest', 'worldRoots',
+                      'dawnWinds', 'solarCrown', 'abyssalShadows', 'aetherWeavers'
+                  )),
     recovery_token_hash         TEXT NOT NULL DEFAULT '',    -- SHA-256 del pergamino activo ('' = sin pergamino, RF-04.1)
     recovery_token_expires_at   TEXT,                        -- Vigencia de 60 minutos del pergamino (RF-04.1)
     created_at    TEXT NOT NULL,                             -- Alta del iniciado (ISO 8601 UTC)

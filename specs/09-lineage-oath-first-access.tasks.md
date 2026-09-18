@@ -15,7 +15,7 @@
   * **Hecho cuando:** Ejecutar el guion dos veces consecutivas sobre SQLite no produce error ni duplica el respaldo, un usuario con `clan_id` histórico despierta con su `lineage_type` heredado, y los sin clan quedan con `lineage IS NULL`.
   * **Verificación:** `scratch/test_lineage_migration.php`
 
-- [ ] **Tarea 1.2: Actualización del esquema maestro y semillas (`database/schema.sql`, `database/seeds.sql`)**
+- [x] **Tarea 1.2: Actualización del esquema maestro y semillas (`database/schema.sql`, `database/seeds.sql`)**
   * **Alcance:** Incorporar `lineage` al DDL maestro de `users` con el mismo `CHECK` del canon (coherencia guion↔esquema, lección de SPEC-08 Tarea 1.5) y añadir las 8 doctrinas canónicas (condensada e íntegra, Anexo A del plan) como semilla o fuente canónica del catálogo.
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RNF-02`
   * **Hecho cuando:** Una base nueva creada desde `schema.sql` ya nace con la columna y su `CHECK`, y el catálogo de linajes sirve las 8 doctrinas en ambas granularidades en noble castellano.

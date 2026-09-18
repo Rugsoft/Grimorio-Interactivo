@@ -178,6 +178,10 @@ assertCondition(
     str_contains($scriptSource, 'SELECT c.lineage_type FROM clans c WHERE c.id = users.clan_id'),
     'El respaldo hereda el lineage_type del clan histórico (caso límite 7)'
 );
+assertCondition(
+    str_contains((string) file_get_contents($projectRoot . '/database/schema.sql'), 'CREATE TABLE IF NOT EXISTS lineage_doctrines'),
+    'El DDL canónico declara la tabla `lineage_doctrines` (Tarea 1.2)'
+);
 
 // --- FASE 1: Primera aplicación sobre una base legada ---
 echo "\nFASE 1: Primera aplicacion sobre una base LEGADA\n";
@@ -245,8 +249,97 @@ $legacy->rollBack();
 assertCondition($canonProbe === null, 'Cualquiera de los 8 linajes del canon cabe (sonda revertida: el peregrino no se consagra aqui)');
 assertCondition(lineageOf($legacy, 'usr_peregrino') === null, 'La sonda no dejo huella: el juramento pertenece a la ceremonia, no a la migracion');
 
-// --- FASE 4: Los vínculos siguen separados ---
-echo "\nFASE 4: Linaje jurado y clan son vinculos independientes (RF-04.1)\n";
+// --- FASE 5: Coherencia guion↔esquema y canon sembrado (Tarea 1.2) ---
+echo "\nFASE 4: Coherencia guion↔esquema y canon sembrado (Tarea 1.2)\n";
+
+// Una base NUEVA nace con la columna y su CHECK: el DDL maestro la
+// declara de forma directa (lección de SPEC-08: sin este frente, toda
+// base levantada solo con schema.sql quedaría sin la columna).
+$canonical = new PDO('sqlite::memory:');
+$canonical->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+$canonical->exec('PRAGMA foreign_keys = ON;');
+$canonical->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
+$canonical->exec((string) file_get_contents($projectRoot . '/database/seeds.sql'));
+
+$canonicalColumns = array_column($canonical->query('PRAGMA table_info(users)')->fetchAll(PDO::FETCH_ASSOC), 'name');
+assertCondition(in_array('lineage', $canonicalColumns, true), 'Una base NUEVA desde schema.sql nace con `users.lineage` (coherencia guion↔esquema)');
+
+$sqlCanonical = (string) file_get_contents($projectRoot . '/database/schema.sql');
+$sqlSeeds = (string) file_get_contents($projectRoot . '/database/seeds.sql');
+$sqlMigration = $scriptSource;
+
+// El mismo CHECK del canon en DDL y migración: muralla idéntica en ambos.
+// Se extrae por delimitadores estables («lineage IN (» … «)») en vez de
+// por regex de forma, para que el aserto mida el CONTENIDO y no el layout.
+$extractCanon = static function (string $sql): string {
+    $marker = 'lineage IN (';
+    $start = strpos($sql, $marker);
+    if ($start === false) {
+        return '';
+    }
+    $start += strlen($marker);
+    $end = strpos($sql, ')', $start);
+
+    return $end === false ? '' : preg_replace('/\s+/', ' ', trim(substr($sql, $start, $end - $start)));
+};
+assertCondition($extractCanon($sqlCanonical) !== '' && $extractCanon($sqlCanonical) === $extractCanon($sqlMigration), 'El CHECK del canon es IDÉNTICO en el DDL maestro y en la migración');
+
+// El mundo sembrado es coherente con la reconciliación: el Custodio, con
+// clan histórico, porta ya su linaje jurado (espejo del respaldo).
+assertCondition(
+    (int) $canonical->query("SELECT COUNT(*) FROM lineage_doctrines")->fetchColumn() === 8,
+    'El catálogo sembrado sirve las OCHO doctrinas canónicas'
+);
+assertCondition(
+    (int) $canonical->query("SELECT COUNT(*) FROM lineage_doctrines WHERE doctrine_condensed <> '' AND doctrine_full <> ''")->fetchColumn() === 8,
+    'Las 8 doctrinas viajan en AMBAS granularidades (condensada e íntegra)'
+);
+$condensedIsPrefix = true;
+foreach ($canonical->query('SELECT id, doctrine_condensed, doctrine_full FROM lineage_doctrines ORDER BY position') as $doctrine) {
+    if (!str_starts_with($doctrine['doctrine_full'], $doctrine['doctrine_condensed'])) {
+        $condensedIsPrefix = false;
+        break;
+    }
+}
+assertCondition($condensedIsPrefix, 'La condensada es el recorte de la íntegra: un solo texto canónico derivado (plan §2.1)');
+assertCondition(
+    $canonical->query("SELECT ruling_element FROM lineage_doctrines WHERE id = 'aetherWeavers'")->fetchColumn() === 'pureArcane',
+    'La heráldica sembrada es la del canon de SPEC-07 (mismo elemento rector)'
+);
+$heraldryAligned = true;
+$canonicalLineages = ['primordialFlame' => ['rune-ignis', '#ff4500', 'fire'], 'celestialTides' => ['rune-aqua', '#00bfff', 'water'], 'eternalTempest' => ['rune-fulgur', '#9932cc', 'lightning'], 'worldRoots' => ['rune-terra', '#8b4513', 'earth'], 'dawnWinds' => ['rune-ventus', '#2e8b57', 'wind'], 'solarCrown' => ['rune-lux', '#ffd700', 'light'], 'abyssalShadows' => ['rune-tenebrae', '#4b0082', 'darkness'], 'aetherWeavers' => ['rune-arcana', '#4169e1', 'pureArcane']];
+foreach ($canonical->query('SELECT id, glyph, banner_color, ruling_element FROM lineage_doctrines') as $doctrine) {
+    $expected = $canonicalLineages[$doctrine['id']] ?? null;
+    if ($expected === null || [$doctrine['glyph'], $doctrine['banner_color'], $doctrine['ruling_element']] !== $expected) {
+        $heraldryAligned = false;
+        break;
+    }
+}
+assertCondition($heraldryAligned, 'Las 8 heráldicas sembradas coinciden con LineageSynergyService (fuente única, jamás divergente)');
+assertCondition(
+    lineageOf($canonical, 'usr_custodio_primordial') === 'primordialFlame',
+    'El Custodio sembrado porta ya su linaje jurado: mundo coherente con el respaldo de legado'
+);
+assertCondition(
+    (int) $canonical->query("SELECT COUNT(*) FROM clans WHERE lineage_type = 'primordialFlame'")->fetchColumn() >= 1,
+    'El linaje fundacional de las semillas sigue sirviendo al Salón de Linajes (RF-02.2 de SPEC-01)'
+);
+
+// La muralla del canon también vive en el DDL maestro: una base nueva
+// rechaza el linaje ajeno igual que la migrada.
+assertCondition(
+    captureError(static fn () => $canonical->exec("INSERT INTO users (id, alias, email, password_hash, role, clan_id, lineage, created_at, updated_at)
+                                                   VALUES ('usr_fantasma', 'Fantasma', 'fantasma@arcano.arc', 'x', 'editor', NULL, 'dracoStorm', '{$NOW}', '{$NOW}')")) !== null,
+    'La base NUEVA también rechaza un linaje fuera del canon: misma muralla que la migrada'
+);
+
+// El guion de migración sobre la base NUEVA es inocuo: la columna ya
+// existe (señal de re-aplicación) y el respaldo no altera a nadie.
+$inocuous = captureError(static fn () => applyMigrationScript($canonical, $sqlMigration));
+assertCondition($inocuous === null, 'Aplicar la migración sobre una base NUEVA es inocuo (columna ya nacida, respaldo sin filas que alcanzar)');
+
+// --- FASE 5: Los vínculos siguen separados ---
+echo "\nFASE 5: Linaje jurado y clan son vinculos independientes (RF-04.1)\n";
 $mirror = $legacy->query("SELECT clan_id FROM users WHERE id = 'usr_heredera'")->fetchColumn();
 assertCondition($mirror === 'cln_llama', 'El espejo `users.clan_id` no se toca: la migracion no altera la membresia (autoridad SPEC-07)');
 $legacy->beginTransaction();
