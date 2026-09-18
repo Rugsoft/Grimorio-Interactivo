@@ -12,7 +12,7 @@
 El **Grimorio Interactivo** es un espacio colaborativo donde coexisten lectores, creadores de conjuros y maestros evaluadores organizados en linajes mágicos que compiten por el Dominio del Grimorio. Para que esta contienda sea justa y el conocimiento permanezca protegido frente a corrupciones, suplantaciones o desequilibrios, se requiere un sistema riguroso de identidad arcana, sesiones seguras y control de acceso basado en roles (RBAC) que dé estricto cumplimiento al **Artículo III (Ética de la Moderación y Conflicto de Intereses)** y al **Artículo V (Dualidad Lingüística)** de la Constitución.
 
 ### 1.2 Objetivo
-Definir las reglas de negocio y los flujos de usuario para la consagración de nuevos miembros (registro con linaje obligatorio), la renovación del vínculo arcano (autenticación segura y persistente), la disolución de sesiones (individual y global), la recuperación de credenciales extraviadas, la matriz de permisos para los cuatro roles del sistema, la defensa anti-fuerza bruta y anti-DoS, y la Bitácora de Auditoría pública e inmutable.
+Definir las reglas de negocio y los flujos de usuario para la consagración de nuevos miembros (registro de credenciales; el juramento de linaje vive en SPEC-09), la renovación del vínculo arcano (autenticación segura y persistente), la disolución de sesiones (individual y global), la recuperación de credenciales extraviadas, la matriz de permisos para los cuatro roles del sistema, la defensa anti-fuerza bruta y anti-DoS, y la Bitácora de Auditoría pública e inmutable.
 
 ---
 
@@ -31,10 +31,10 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 
 ## 3. Historias de Usuario
 
-* **HU-01 (Consagración e Integración a un Linaje):**  
+* **HU-01 (Consagración de Credenciales):**  
   *Como* visitante que desea participar activamente en el santuario,  
-  *quiero* consagrar mi vínculo eligiendo un alias único, credenciales y un clan al que jurar lealtad,  
-  *para* nacer como Editor y comenzar a aportar saberes en favor de mi linaje.
+  *quiero* consagrar mi vínculo eligiendo un alias único y mis credenciales,  
+  *para* nacer como Editor y jurar después mi linaje en la ceremonia del primer acceso (SPEC-09).
 
 * **HU-02 (Vínculo Arcano Duradero y Cierre Global):**  
   *Como* hechicero activo,  
@@ -65,11 +65,12 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 
 ## 4. Requisitos Funcionales (Notación EARS en Español)
 
-### RF-01: Proceso de Consagración (Registro con Linaje)
+### RF-01: Proceso de Consagración (Registro de Credenciales)
+> **[Enmendado por SPEC-09 — Juramento de Linaje en el Primer Acceso.]** La selección de linaje/clan en el registro queda retirada: la identidad arcana se jura en la ceremonia bloqueante del primer acceso (SPEC-09), con doctrina, heráldica e irrevocabilidad manifiestas.
 * **RF-01.1 [Ubicuo]:**  
-  El sistema DEBERÁ requerir para la consagración de un nuevo miembro: un nombre de iniciado (alias único de 3 a 30 caracteres alfanuméricos), un correo electrónico válido, una frase de paso secreta (mínimo 8 caracteres, permitiendo frases en lenguaje natural sin forzar símbolos arbitrarios) y la **selección obligatoria de un clan activo**.
+  El sistema DEBERÁ requerir para la consagración de un nuevo miembro únicamente: un nombre de iniciado (alias único de 3 a 30 caracteres alfanuméricos), un correo electrónico válido y una frase de paso secreta (mínimo 8 caracteres, permitiendo frases en lenguaje natural sin forzar símbolos arbitrarios). La selección de linaje o clan NO FORMA PARTE del registro.
 * **RF-01.2 [Dirigido por Eventos]:**  
-  CUANDO el usuario complete la consagración con datos válidos, el sistema DEBERÁ crear la cuenta, asignarle el rol técnico de `editor`, vincularlo permanentemente al clan seleccionado e iniciar de forma automática su sesión de usuario.
+  CUANDO el usuario complete la consagración con datos válidos, el sistema DEBERÁ crear la cuenta, asignarle el rol técnico de `editor`, dejarla **sin linaje asignado** (linaje nulo; el juramento pertenece a SPEC-09) e iniciar de forma automática su sesión de usuario.
 * **RF-01.3 [No Deseado / Excepción]:**  
   SI el alias o el correo propuesto ya se encuentran en uso, ENTONCES el sistema DEBERÁ responder con una notificación genérica y neutral que no permita a un observador externo verificar la existencia de identidades registradas, canalizando el aviso mediante un correo discreto a la cuenta original si corresponde.
 
