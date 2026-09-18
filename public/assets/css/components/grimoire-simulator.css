@@ -387,6 +387,21 @@
   50%      { filter: drop-shadow(0 0 16px rgba(212, 169, 78, 0.55)) drop-shadow(0 0 30px rgba(192, 86, 59, 0.30)); }
 }
 
+/* Concordancia elemental (RF-02.2): cuando el aura del blanco está
+   imbuida, la respiración de la efigie cede su dorado al color heráldico
+   vigente (viaja por --aura-color, pintado en el anfitrión por el
+   componente del aura) y se aquieda en intensidad para no disputar
+   el protagonismo al tinte de la capa-luz. */
+.grimoire-simulator__dummy-host[style*="--aura-color"] .combat-dummy__mannequin {
+  animation-name: scarecrowBreathingAttuned;
+  animation-duration: 3.5s;
+}
+
+@keyframes scarecrowBreathingAttuned {
+  0%, 100% { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--aura-color, var(--color-gold-arcane)) 35%, transparent)); }
+  50%      { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--aura-color, var(--color-gold-arcane)) 55%, transparent)); }
+}
+
 /* Bandas de herida: la efigie agosta sus tonos al descender la salud. */
 .combat-dummy--wounded .combat-dummy__mannequin {
   filter: sepia(0.35) saturate(0.65) brightness(0.9)

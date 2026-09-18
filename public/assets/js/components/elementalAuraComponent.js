@@ -180,6 +180,10 @@ export function createElementalAuraComponent(options = {}) {
 
     if (auraIsActive) {
       auraRoot.style.setProperty('--aura-color', heraldicColorOf(activeElement));
+      // El tinte también se publica en el anfitrión: la respiración de la
+      // efigie (hermana del aura en el DOM) lo lee para armonizarse con
+      // el color heráldico vigente y no disputarle el protagonismo.
+      auraRoot.parentNode?.style?.setProperty?.('--aura-color', heraldicColorOf(activeElement));
 
       // Contador numérico (RF-02.2 ratificado): segundos enteros que
       // restan (5 → 0). Se escribe solo cuando cambia la cifra para no
@@ -229,8 +233,12 @@ export function createElementalAuraComponent(options = {}) {
         auraRoot.classList.remove('elemental-aura--active', 'elemental-aura--pulse');
         auraRoot.classList.add('elemental-aura--resting'); // El CSS transiciona al dorado.
         auraRoot.style.setProperty('--aura-color', '');
+        auraRoot.parentNode?.style?.removeProperty?.('--aura-color');
       }
-      eventTarget.dispatchEvent(new CustomEvent('combo:aura-expired', { detail: { element: expiredElement } }));
+      // Con bubbles: el bus de combos burbujea hasta el anfitrión (contrato
+      // compartido con los eventos del resolutor) para que la vista y los
+      // arneses ajenos oigan la expiración natural.
+      eventTarget.dispatchEvent(new CustomEvent('combo:aura-expired', { detail: { element: expiredElement }, bubbles: true }));
       render();
       stopSceneIfIdle();
       return;
@@ -309,6 +317,7 @@ export function createElementalAuraComponent(options = {}) {
       auraRoot.classList.remove('elemental-aura--active', 'elemental-aura--pulse');
       auraRoot.classList.add('elemental-aura--resting'); // Regreso al dorado perenne.
       auraRoot.style.setProperty('--aura-color', '');
+      auraRoot.parentNode?.style?.removeProperty?.('--aura-color');
     }
     stopSceneIfIdle();
   }

@@ -745,6 +745,43 @@ assertCondition(resetState.stunlockImmunity === false, 'la inmunidad anti-stunlo
 assertCondition(resetState.dummy.health === 500, 'el maniquí vuelve a sus 500 PV (RF-02.6)');
 
 // =====================================================================
+// [9b] Expiración natural sincronizada con la vista (Hallazgo del
+//      corrector de auras): al expirar la ventana, la copia del estado
+//      `activeAuraElement` debe purgarse también en la vista. Sin esta
+//      sincronía, reimbuir el MISMO elemento tras la expiración caía en
+//      el Caso B (refresco invisible sobre un aura ya caducada) y un
+//      elemento distinto detonaba un combo fantasma sobre reposo dorado.
+// =====================================================================
+console.log('\n[9b] Expiración natural: la vista purga su estado elemental');
+
+await surface.view.restoreDummy();
+await surface.view.castCurrentSpell({ triggerMethod: 'click' }); // imbuye
+flyToImpact(surface);
+assertCondition(surface.view.getState().elementalAura.active === true, 'el aura vive tras la imbuición (fase 9b)');
+
+// La ventana vive 5 s: avanzamos el reloj más allá de la expiración y
+// dejamos que el bucle de escena del halo la declare (RF-02.5).
+surface.raf.run(340, 16); // +5440 ms > 5000 ms de resonancia
+const expiredState = surface.view.getState();
+assertCondition(expiredState.elementalAura.active === false, 'la ventana expira a su plazo natural');
+assertCondition(expiredState.elementalAura.element === null, 'el estado de la vista queda neutral tras la expiración');
+assertCondition(
+  eventsOf(surface, 'combo:aura-expired').length >= 1,
+  'la expiración natural emite `combo:aura-expired` (RF-02.5)',
+);
+
+// Reimbuyendo el MISMO elemento tras expirar: debe volver a imbuirse
+// (Caso A) y no refrescar en silencio sobre un aura caducada.
+const appliedBeforeReimbuement = eventsOf(surface, 'combo:aura-applied').length;
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+assertCondition(
+  eventsOf(surface, 'combo:aura-applied').length === appliedBeforeReimbuement + 1,
+  'reimbuir el mismo elemento tras expirar vuelve a imbuir (Caso A, no refresco)',
+);
+assertCondition(surface.view.getState().elementalAura.active === true, 'la ventana renace con la reimbuición');
+
+// =====================================================================
 // [10] destroy() desmonta el aura
 // =====================================================================
 console.log('\n[10] Desmontaje limpio');

@@ -345,8 +345,22 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     now,
     eventTarget: comboEventTarget,
     prefersReducedMotion: () => Boolean(motionQuery?.matches),
+    // El bucle de escena del aura late en el MISMO planificador que la
+    // vista (cuadros, no timers): su expiración natural queda sincronizada
+    // con el resto de la Cámara y obedece a los mismos arneses.
+    scheduleFrame: rafWrapper,
   });
   elementalAura.mount(dummyHost);
+
+  // La expiración natural del halo (RF-02.5) también es verdad para la
+  // vista: su copia del estado elemental se purga con ella. Sin esta
+  // sincronía, un aura caducada seguía viviendo en `activeAuraElement`
+  // y el resolutor interpretaba impactos posteriores como refresco
+  // (mismo elemento, sin efecto visible) o combo (elemento distinto)
+  // sobre un blanco que en pantalla ya estaba en reposo dorado.
+  comboEventTarget.addEventListener('combo:aura-expired', () => {
+    activeAuraElement = null;
+  });
 
   /**
    * Pool dedicado a las deflagraciones de combo (SPEC-06, Tarea 4.2):
