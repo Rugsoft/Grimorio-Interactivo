@@ -74,6 +74,9 @@ final class AuditEntry
         'SOVEREIGN_RESCUE',           // Rescate de una obra rechazada, a experimental o a validated (RF-04.3)
         'SOVEREIGN_ARCHIVE',          // Revocación y archivo póstumo de una obra consagrada (RF-04.4)
         'SOVEREIGN_POINTS_DEDUCTED',  // Deducción retroactiva de los PDA del linaje fraudulento (RF-04.4)
+        // Actos del Juramento de Linaje (TASKS-09, RF-03.1, RNF-06): el
+        // vínculo perpetuo sellado en la ceremonia del primer acceso.
+        'LINEAGE_OATH_SWORN',         // Juramento del linaje sellado en la ceremonia (SPEC-09)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

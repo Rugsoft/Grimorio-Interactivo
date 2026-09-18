@@ -35,7 +35,7 @@
   * **Hecho cuando:** El servicio retorna exactamente 8 fichas con las claves del contrato del plan (§2.2, Endpoint 1), `hasActiveClans` refleja la existencia de clanes `active` por linaje, y no existe método alguno de mutación en su API.
   * **Verificación:** `scratch/test_lineage_catalog_service.php`
 
-- [ ] **Tarea 2.2: Servicio del juramento (`src/Services/LineageOathService.php`)**
+- [x] **Tarea 2.2: Servicio del juramento (`src/Services/LineageOathService.php`)**
   * **Alcance:** Implementar `sealOath(userId, lineageId, actorRole)`: validación de canon (única validación, caso límite 5), delegación en `sealOathGuarded`, re-evaluación tras carrera (`rowCount = 0` → re-lee y resuelve por idempotencia), exención del Admin Supremo (`OATH_FORBIDDEN_ROLE`), asiento `LINEAGE_OATH_SWORN` en `AuditService` (catálogo cerrado + rótulo castellano «Juramento de Linaje sellado») y consumo de la ruta retenida de la sesión.
   * **Cubre:** `RF-03.1`, `RF-03.3`, `RF-03.4`, `RF-01.6`, `RNF-06`
   * **Hecho cuando:** Mismo linaje reenviado responde éxito sin mutación; linaje distinto lanza `OathConflict`; dos `sealOath` entrelazados producen un solo ganador determinista; el Admin Supremo recibe `OathForbiddenRole`; y cada sellado feliz genera un asiento de bitácora con actor, acto y estampa temporal.
