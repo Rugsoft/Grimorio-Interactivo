@@ -43,6 +43,8 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Grimorio\Dto\DominionReversalDto;
 use Grimorio\Dto\SpellReviewDto;
+use Grimorio\Exceptions\LineageOathException;
+use Grimorio\Repositories\LineageOathRepository;
 use Grimorio\Exceptions\ModerationWorkflowException;
 use Grimorio\Exceptions\SpellNotFoundException;
 use Grimorio\Models\User;
@@ -68,6 +70,12 @@ final class SovereignAdminService
      * que un rango ejerciera las atribuciones del otro.
      */
     public const SOVEREIGN_ROLE = 'supremeAdmin';
+
+    /** El oficio validador al que asciende el candidato (RF-05.2). */
+    private const ROLE_MASTER = 'master';
+
+    /** El rango del que solo se parte para el ascenso al oficio. */
+    private const ROLE_EDITOR = 'editor';
 
     /** Destino canónico del rescate: devolver la obra a deliberación (RF-04.3). */
     public const RESCUE_TARGET_EXPERIMENTAL = SpellReviewRepository::STATUS_EXPERIMENTAL;
@@ -632,5 +640,145 @@ final class SovereignAdminService
             'decreeTargetType'        => self::DECREE_TARGET_TYPE,
             'deductionAuditAction'    => self::DEDUCTION_AUDIT_ACTION,
         ];
+    }
+
+    /**
+     * DESIGNACIÓN DE MAESTRO (SPEC-09, Tarea 2.4 — RF-05.2, Art. III).
+     *
+     * Eleva a un editor al oficio validador de Maestro. LA GUARDIA DE
+     * LINAJE es ineludible y va primero: nadie asciende desde la ventana
+     * sin linaje jurado, garantizando que el conflicto de intereses del
+     * Artículo III tenga siempre un sujeto ético determinado (SPEC-09,
+     * RF-05.2). El caso es imposible por construcción: la ceremonia
+     * bloqueante del primer acceso retiene a todo peregrino antes de que
+     * pueda hacerse visible y operar en el santuario.
+     *
+     * El acto queda asentado en la Bitácora como 'PROMOTE_MASTER'
+     * (catálogo cerrado de SPEC-03), imborrable por los triggers del
+     * esquema (Art. III.3: cada acto deja su edicto).
+     *
+     * @param string                 $adminId    Administrador Supremo actuante.
+     * @param string                 $candidateId Cuenta candidata al oficio.
+     * @param DateTimeImmutable|null $now        Instante del decreto.
+     *
+     * @throws LineageOathException    Si el candidato aún no ha jurado linaje (403 `MASTER_REQUIRES_LINEAGE`).
+     * @throws InvalidArgumentException Si el soberano no existe o no lo es, o el candidato no existe.
+     */
+    public function promoteMaster(
+        string $adminId,
+        string $candidateId,
+        ?DateTimeImmutable $now = null,
+    ): User {
+        $instant = self::normalizeInstant($now);
+
+        // La potestad soberana se acredita antes de tocar a nadie: solo un
+        // Admin Supremo inscrito designa Maestros.
+        $admin = $this->loadSovereign($adminId);
+
+        // El candidato debe existir y ser un editor real.
+        $candidate = $this->loadCandidate($candidateId);
+
+        // LA GUARDIA DE RF-05.2: el vínculo se lee de la base, jamás de una
+        // afirmación del llamador. Un peregrino no puede ser sujeto ético
+        // determinado del Artículo III: rechazo solemne sin mutación.
+        $lineageRepository = new LineageOathRepository($this->pdo);
+        if ($lineageRepository->findAccountLineage($candidate->getId()) === null) {
+            throw LineageOathException::masterRequiresLineage($candidate->getAlias());
+        }
+
+        // El ascenso, en una sola escritura preparada.
+        $statement = $this->pdo->prepare(
+            'UPDATE users SET role = :newRole, updated_at = :now WHERE id = :userId'
+        );
+        $statement->execute([
+            ':newRole' => self::ROLE_MASTER,
+            ':now'     => self::stamp($instant),
+            ':userId'  => $candidate->getId(),
+        ]);
+
+        // Art. III.3: el edicto y su efecto son un solo gesto.
+        $this->auditService->recordAction(
+            actorUserId: $admin->getId(),
+            actorAlias: $admin->getAlias(),
+            actorRole: $admin->getRole(),
+            actionType: 'PROMOTE_MASTER',
+            targetEntityType: 'user',
+            targetEntityId: $candidate->getId(),
+            justification: 'Designación de Maestro: «' . $candidate->getAlias() . '» porta linaje jurado y asciende al oficio validador.',
+            now: $instant,
+        );
+
+        // La entidad se rematerializa desde la fila recién escrita: la
+        // verdad vive en la base, no en el objeto.
+        return $this->loadAnyUser($candidateId, self::ROLE_MASTER);
+    }
+
+    /** Carga una cuenta por id, acreditándola con el rol esperado. */
+    private function loadAnyUser(string $userId, string $expectedRole): User
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, alias, email, role, clan_id, password_hash, created_at, updated_at
+               FROM users WHERE id = :userId'
+        );
+        $statement->execute([':userId' => $userId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($row)) {
+            throw new InvalidArgumentException('La cuenta no figura en los anales del santuario.');
+        }
+
+        $user = new User(
+            id: (string) $row['id'],
+            alias: (string) $row['alias'],
+            email: (string) $row['email'],
+            role: (string) $row['role'],
+            clanId: $row['clan_id'] === null ? null : (string) $row['clan_id'],
+            passwordHash: (string) $row['password_hash'],
+            createdAt: (string) $row['created_at'],
+            updatedAt: (string) $row['updated_at'],
+        );
+
+        if ($user->getRole() !== $expectedRole) {
+            throw new InvalidArgumentException('La cuenta no porta el rango que se le atribuye.');
+        }
+
+        return $user;
+    }
+
+    /** Carga y acredita al candidato a Maestro (editor vivo, jamás el soberano). */
+    private function loadCandidate(string $candidateId): User
+    {
+        $candidateId = trim($candidateId);
+        if ($candidateId === '') {
+            throw new InvalidArgumentException('Toda designación exige conocer la identidad del candidato.');
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT id, alias, email, role, clan_id, password_hash, created_at, updated_at
+               FROM users WHERE id = :userId'
+        );
+        $statement->execute([':userId' => $candidateId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($row)) {
+            throw new InvalidArgumentException('El candidato a Maestro no figura en los anales del santuario.');
+        }
+
+        $candidate = new User(
+            id: (string) $row['id'],
+            alias: (string) $row['alias'],
+            email: (string) $row['email'],
+            role: (string) $row['role'],
+            clanId: $row['clan_id'] === null ? null : (string) $row['clan_id'],
+            passwordHash: (string) $row['password_hash'],
+            createdAt: (string) $row['created_at'],
+            updatedAt: (string) $row['updated_at'],
+        );
+
+        if ($candidate->getRole() !== self::ROLE_EDITOR) {
+            throw new InvalidArgumentException('Solo un editor puede ser elevado al oficio de Maestro.');
+        }
+
+        return $candidate;
     }
 }

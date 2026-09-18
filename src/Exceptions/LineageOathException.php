@@ -32,6 +32,8 @@ final class LineageOathException extends RuntimeException
     public const LINEAGE_OATH_CONFLICT = 'LINEAGE_OATH_CONFLICT';
     /** El actor está exento por privilegio y no puede jurar (Admin Supremo, RF-01.6). */
     public const OATH_FORBIDDEN_ROLE = 'OATH_FORBIDDEN_ROLE';
+    /** Nadie asciende al oficio validador desde la ventana sin linaje (RF-05.2, Art. III). */
+    public const MASTER_REQUIRES_LINEAGE = 'MASTER_REQUIRES_LINEAGE';
 
     /**
      * @param string $errorCode  Código canónico del contrato REST.
@@ -73,6 +75,16 @@ final class LineageOathException extends RuntimeException
             self::OATH_FORBIDDEN_ROLE,
             403,
             'El Administrador Supremo navega exento por privilegio fundacional: su voz no requiere linaje jurado.',
+        );
+    }
+
+    /** La designación de Maestro exige linaje jurado previo (RF-05.2, Art. III). */
+    public static function masterRequiresLineage(string $alias): self
+    {
+        return new self(
+            self::MASTER_REQUIRES_LINEAGE,
+            403,
+            "«{$alias}» aún no ha jurado linaje: nadie asciende al oficio de Maestro desde la ventana sin linaje jurado.",
         );
     }
 }

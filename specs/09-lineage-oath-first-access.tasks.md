@@ -47,7 +47,7 @@
   * **Hecho cuando:** Un peregrino recibe 403 `LINEAGE_OATH_REQUIRED` en cualquier ruta de gestión, la ruta solicitada interna queda en su sesión, una URL externa se descarta, un linajado jamás ve la guardia y el Supremo navega exento con o sin linaje.
   * **Verificación:** `scratch/test_lineage_oath_middleware.php`
 
-- [ ] **Tarea 2.4: Guardia de designación de Maestro (`src/Services/SovereignAdminService.php`)**
+- [x] **Tarea 2.4: Guardia de designación de Maestro (`src/Services/SovereignAdminService.php`)**
   * **Alcance:** Añadir la guardia de RF-05.2 a `promoteMaster` (y al flujo equivalente del `SovereignAdminController`): rechazo solemne si la cuenta candidata tiene `lineage IS NULL`, con mensaje en noble castellano y sin exponer trazas.
   * **Cubre:** `RF-05.2`, Artículo III
   * **Hecho cuando:** Intentar ascender a un peregrino fracasa con error controlado solemne, la cuenta queda sin cambiar y el ascenso de un linajado sigue funcionando intacto.
