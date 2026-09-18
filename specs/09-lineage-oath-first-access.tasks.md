@@ -9,7 +9,7 @@
 
 ## Fase 1: Esquema de Base de Datos, Migración y Repositorio (PDO)
 
-- [ ] **Tarea 1.1: Migración de la columna de linaje (`sql/09_lineage_oath.sql`)**
+- [x] **Tarea 1.1: Migración de la columna de linaje (`sql/09_lineage_oath.sql`)**
   * **Alcance:** Crear el guion SQL idempotente (estilo `07_*`/`08_*`): añadir `users.lineage TEXT NULL` con `CHECK` del canon de 8 linajes (recreando la tabla si el dialecto no admite el `CHECK` por `ALTER`), detectar la columna existente antes de actuar, y ejecutar el **respaldo de legado** — `UPDATE users SET lineage = (SELECT c.lineage_type FROM clans c WHERE c.id = users.clan_id) WHERE lineage IS NULL AND clan_id IS NOT NULL`.
   * **Cubre:** `RF-01.5`, `RF-04.1`, caso límite 7 (exención de legados)
   * **Hecho cuando:** Ejecutar el guion dos veces consecutivas sobre SQLite no produce error ni duplica el respaldo, un usuario con `clan_id` histórico despierta con su `lineage_type` heredado, y los sin clan quedan con `lineage IS NULL`.
