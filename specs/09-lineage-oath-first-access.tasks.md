@@ -87,7 +87,7 @@
 
 ## Fase 4: Frontend — La Ceremonia (Vista, Tarjetas y Modal)
 
-- [ ] **Tarea 4.1: Tarjeta heráldica (`public/assets/js/components/lineageCardComponent.js`)**
+- [x] **Tarea 4.1: Tarjeta heráldica (`public/assets/js/components/lineageCardComponent.js`)**
   * **Alcance:** Componente contraído/expandido: contraída con nombre, glifo, estandarte, elemento rector y doctrina condensada; expandida con doctrina íntegra, botón «Jurar» y nota discreta «Sin hermandades activas» cuando `hasActiveClans = false`; enfocable y operable por teclado (Enter/espaciadora); emite `oath:lineage-expanded`.
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RNF-05`
   * **Hecho cuando:** Las 8 tarjetas renderizan su heráldica y condensada, la expansión revela la íntegra y el botón, la nota aparece solo en linajes sin clanes activos y todo es operable sin ratón.

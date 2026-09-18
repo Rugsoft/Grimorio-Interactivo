@@ -1,0 +1,172 @@
+/* =====================================================================
+   lineage-oath.css — La Ceremonia del Juramento de Linaje (SPEC-09)
+   =====================================================================
+   Viste la pantalla solemne del primer acceso: la rejilla de las Ocho
+   Casas, la tarjeta heráldica contraída/expandida (Tarea 4.1) y, en las
+   tareas siguientes, el Velo Arcano y el modal de doble confirmación.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS puro con tokens de tokens.css;
+       cero frameworks, cero literales de color en la forja (los dados
+       viajan como Custom Properties desde los DTO heráldicos).
+     - Artículo IV (El Velo Arcano): paleta crepuscular solemne.
+     - RNF-05: foco visible, objetivos táctiles y movimiento reducido.
+     - RNF-01: el Velo Arcano — la ceremonia vela el santuario (Tarea 4.3).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. La tarjeta heráldica (Tarea 4.1)
+   --------------------------------------------------------------------- */
+
+/* Pergamino de obsidiana: cada Casa es una estela en la penumbra. */
+.lineage-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  box-sizing: border-box;
+
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  box-shadow: var(--shadow-arcane);
+  color: var(--color-text-secondary);
+
+  cursor: pointer;
+  transition: border-color var(--transition-arcane),
+              box-shadow var(--transition-arcane),
+              transform var(--transition-arcane);
+}
+
+.lineage-card:hover,
+.lineage-card:focus-visible {
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow);
+  transform: translateY(-2px);
+}
+
+.lineage-card:focus-visible {
+  outline: 3px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Expandida: la Casa despliega su doctrina íntegra y se sostiene en alto. */
+.lineage-card[aria-expanded='true'] {
+  border-color: var(--color-gold-arcane);
+  transform: none;
+  cursor: default;
+}
+
+.lineage-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-ink-3);
+}
+
+/* El sello heráldico a escala de emblema (misma forja que SPEC-07). */
+.lineage-card__seal {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 auto;
+}
+
+.lineage-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-1);
+  min-width: 0;
+}
+
+.lineage-card__name {
+  margin: 0;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  line-height: 1.25;
+}
+
+/* El estandarte es dato del DTO (bannerColor viaja como Custom Property). */
+.lineage-card__banner {
+  align-self: flex-start;
+  padding: 0.1rem var(--space-ink-2);
+  border-radius: var(--radius-scroll);
+
+  border: 1px solid var(--lineage-banner, transparent);
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+/* Cinta del estandarte bajo el rótulo: la Casa se declara en color. */
+.lineage-card__banner::before {
+  content: '';
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: var(--space-ink-2);
+  vertical-align: -0.125rem;
+
+  border-radius: 50%;
+  background-color: var(--lineage-banner, transparent);
+  border: 1px solid var(--color-parchment-border);
+}
+
+.lineage-card__doctrine-condensed {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  line-height: 1.55;
+}
+
+/* ---------------------------------------------------------------------
+   2. La expansión: doctrina íntegra, nota discreta y el gesto de jurar
+   --------------------------------------------------------------------- */
+
+.lineage-card__expansion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-2);
+
+  border-top: 1px solid var(--color-parchment-border);
+  padding-top: var(--space-ink-2);
+}
+
+.lineage-card__doctrine-full {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  font-style: italic;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+/* La nota discreta: presente solo donde el dato declara casas sin vida. */
+.lineage-card__no-clans {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  opacity: 0.75;
+}
+
+/* El gesto de jurar: botón primario del Kit de Controles (SPEC-02 RF-08),
+   con objetivo táctil completo (RNF-05). */
+.lineage-card__swear {
+  align-self: flex-start;
+  min-height: var(--touch-target-min);
+}
+
+/* ---------------------------------------------------------------------
+   3. Movimiento reducido (RNF-05, AGENTS.md 8)
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .lineage-card,
+  .lineage-card:hover,
+  .lineage-card:focus-visible {
+    transition: none;
+    transform: none;
+  }
+}
