@@ -54,6 +54,7 @@ use Grimorio\Controllers\PortalController;
 use Grimorio\Controllers\SpellController;
 use Grimorio\Controllers\AuthController;
 use Grimorio\Controllers\AuditController;
+use Grimorio\Controllers\LineageOathController;
 use Grimorio\Controllers\SpellCreatorController;
 use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
@@ -61,13 +62,17 @@ use Grimorio\Core\Response;
 use Grimorio\Core\Router;
 use Grimorio\Core\SessionManager;
 use Grimorio\Middleware\AuthMiddleware;
+use Grimorio\Middleware\LineageOathMiddleware;
 use Grimorio\Database\Connection;
+use Grimorio\Repositories\LineageOathRepository;
 use Grimorio\Repositories\ImperialDecreeRepository;
 use Grimorio\Repositories\ObjectionVerdictRepository;
 use Grimorio\Repositories\SpellReviewRepository;
 use Grimorio\Services\AuditService;
 use Grimorio\Services\ClanService;
 use Grimorio\Services\ConstitutionalEthicsValidator;
+use Grimorio\Services\LineageCatalogService;
+use Grimorio\Services\LineageOathService;
 use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\MasterDeliberationService;
 use Grimorio\Services\ModerationWorkflowService;
@@ -260,6 +265,20 @@ function buildRouter(): Router
     // Consulta pública y paginada de decisiones solemnes, firmas, vetos y decretos.
     $router->addRoute('GET', '/api/v1/audit/log', fn (Request $request): Response => $auditController->log($request));
 
+    // --- Rutas del Juramento de Linaje (SPEC-09, Tarea 2.6) ---
+    // La ceremonia bloqueante del primer acceso: canon ceremonial, sellado
+    // del juramento y registro de la ruta retenida del interceptor. La
+    // retención de SUSTANCIA de las demás rutas la ejerce
+    // LineageOathMiddleware antes del despacho (ver más abajo).
+    $lineageOathRepository = new LineageOathRepository($connection->getPdo());
+    $lineageOathController = new LineageOathController(
+        new LineageCatalogService($lineageOathRepository),
+        new LineageOathService($lineageOathRepository, new AuditService($connection->getPdo())),
+    );
+    $router->addRoute('GET', '/api/v1/lineage/oath-catalog', fn (Request $request): Response => $lineageOathController->oathCatalog($request));
+    $router->addRoute('POST', '/api/v1/lineage/oath', fn (Request $request): Response => $lineageOathController->sealOath($request));
+    $router->addRoute('POST', '/api/v1/lineage/retained-route', fn (Request $request): Response => $lineageOathController->retainRoute($request));
+
     return $router;
 }
 
@@ -296,6 +315,23 @@ if (PHP_SAPI !== 'cli') {
         // HTTP llegaba anónima y los endpoints protegidos daban 401.
         $authMiddleware = new AuthMiddleware(Connection::getInstance()->getPdo(), new SessionManager(Connection::getInstance()->getPdo()));
         $authMiddleware->injectContext($request);
+
+        // Cadena de protección del portal (SPEC-09, Tarea 2.6):
+        // AuthMiddleware → LineageOathMiddleware. La retención de
+        // sustancia deniega al peregrino toda ruta de gestión con
+        // 403 LINEAGE_OATH_REQUIRED ANTES del despacho, reteniendo su
+        // ruta solicitada en la sesión (RF-01.3, RF-05.1, RF-05.3).
+        // El RbacMiddleware por-ruta sigue actuando dentro del despacho
+        // para la jerarquía fina (SPEC-03, RF-05).
+        $lineageOathMiddleware = new LineageOathMiddleware(
+            new LineageOathRepository(Connection::getInstance()->getPdo())
+        );
+        $oathGuardResponse = $lineageOathMiddleware->guard($request);
+        if ($oathGuardResponse !== null) {
+            $oathGuardResponse->send();
+            return;
+        }
+
         $router  = buildRouter();
         $response = $router->dispatch($request);
         $response->send();

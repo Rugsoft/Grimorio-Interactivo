@@ -116,10 +116,11 @@ final class LineageOathMiddleware
     {
         $user = $request->getUser();
 
-        // Sin vínculo válido: anónimo. La autenticación es asunto del
-        // AuthMiddleware (401); la retención de ruta no tiene a dónde
-        // retener sin sesión.
-        if (!$user instanceof User) {
+        // Sin vínculo válido o visitante anónimo (id vacío): la
+        // autenticación es asunto del AuthMiddleware (401); la retención
+        // de ruta no tiene a dónde retener sin sesión y jamás convertirá
+        // un anónimo en peregrino.
+        if (!$user instanceof User || $user->getId() === '') {
             return null;
         }
 
@@ -147,7 +148,7 @@ final class LineageOathMiddleware
         // RF-05.3: retener la ruta solicitada ANTES de responder. Solo
         // rutas internas de la SPA; jamás URLs externas ni cadenas hostiles.
         $requestedRoute = (string) ($request->getHeader('X-Requested-Route') ?? '');
-        $this->retainRouteIfInternal($requestedRoute);
+        self::retainRouteIfInternal($requestedRoute);
 
         return Response::json(
             [
@@ -167,9 +168,11 @@ final class LineageOathMiddleware
     /**
      * Retiene en la sesión la ruta solicitada, si es una vista interna
      * saneada (RF-05.3). Las URLs externas y las cadenas que no nombran
-     * una vista del portal se descartan en silencio.
+     * una vista del portal se descartan en silencio. Es el ÚNICO
+     * saneamiento de rutas del juramento: lo comparten la guardia y el
+     * endpoint de retención del controlador (Tarea 2.6).
      */
-    private function retainRouteIfInternal(string $requestedRoute): void
+    public static function retainRouteIfInternal(string $requestedRoute): void
     {
         $candidate = trim($requestedRoute);
         if ($candidate === '' || !str_starts_with($candidate, '#/')) {

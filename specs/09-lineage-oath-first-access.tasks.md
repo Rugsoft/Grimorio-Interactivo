@@ -59,7 +59,7 @@
   * **Hecho cuando:** Una consagración sin `clanId` crea cuenta `editor` con `lineage: null` y sesión iniciada; una consagración con `clanId` legado la ignora sin error; `GET /api/v1/auth/me` retorna `lineage`.
   * **Verificación:** `scratch/test_lineage_consecration.php`
 
-- [ ] **Tarea 2.6: Controlador y rutas (`src/Controllers/LineageOathController.php`, `public/index.php`)**
+- [x] **Tarea 2.6: Controlador y rutas (`src/Controllers/LineageOathController.php`, `public/index.php`)**
   * **Alcance:** Implementar el controlador de los 3 endpoints (§2.2 del plan): `GET /api/v1/lineage/oath-catalog`, `POST /api/v1/lineage/oath` (con verificación CSRF y mapeo de excepciones del servicio a 200/400/401/403), `POST /api/v1/lineage/retained-route` (204, saneamiento); registrar rutas y encadenar `AuthMiddleware → RbacMiddleware → LineageOathMiddleware` en las rutas de gestión existentes.
   * **Cubre:** `RF-02.1`, `RF-03.1`, `RF-03.2`, `RF-05.1`, `RF-05.3`
   * **Hecho cuando:** Los tres endpoints responden con los contratos y códigos exactos del plan ante entradas válidas y hostiles, y todas las rutas de gestión pasan por la cadena de tres middlewares.

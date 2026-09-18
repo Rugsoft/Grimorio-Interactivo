@@ -780,6 +780,10 @@ $seedPdo->exec('PRAGMA foreign_keys = ON');
 $seedPdo->exec((string) file_get_contents($projectRoot . '/database/schema.sql'));
 $seedPdo->exec((string) file_get_contents($projectRoot . '/database/seeds.sql'));
 seedUser($seedPdo, 'usr_http_founder', 'FundadorHttp');
+// SPEC-09 (Tarea 2.6): el fundador porta linaje jurado. La retención de
+// sustancia deniega toda gestión a peregrinos; un adepto de arnés que
+// quiera operar el santuario debe haber jurado.
+$seedPdo->exec("UPDATE users SET lineage = 'solarCrown' WHERE id = 'usr_http_founder'");
 
 // Vínculo arcano real: se emite la sesión con el gestor de producción.
 $sessionManager = new SessionManager($seedPdo, $serverHost, 'Arnés ClanController/1.0');
