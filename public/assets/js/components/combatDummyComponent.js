@@ -29,6 +29,10 @@ export const DUMMY_MAX_HEALTH = 500;
 /** Vigencia de las ataduras de control de masas (RF-02.4 / RF-05.1). */
 export const CC_DURATION_MS = 4000;
 
+/** Residencia de la cúpula luminosa tras un impacto de barrera o curación
+ * (RF-05.1): breve latido de ~600 ms que el bucle de escena retira. */
+export const DOME_LINGER_MS = 600;
+
 /** Tiempo de regeneración automática tras la destrucción (RF-02.5). */
 export const REGENERATION_DELAY_MS = 2000;
 
@@ -42,6 +46,16 @@ export const REGENERATION_DELAY_MS = 2000;
  * @returns {object} API del componente: applySpellImpact, tick,
  *   onPageChange, restore, getState.
  */
+/**
+ * ¿Viste el impacto cúpula luminosa? (RF-05.1): solo los efectos de
+ * barrera o curación la alzan — el daño puro jamás.
+ * @param {object} spell - { effects: { healing, barrier } }.
+ */
+function impactShowsDome(spell) {
+  const effects = spell?.effects ?? {};
+  return (Number(effects.healing ?? 0) || 0) > 0 || (Number(effects.barrier ?? 0) || 0) > 0;
+}
+
 export function createCombatDummyComponent(options = {}) {
   const host = options.host;
   const clock = options.clock ?? { now: () => Date.now() };
@@ -56,6 +70,7 @@ export function createCombatDummyComponent(options = {}) {
     ccExpiresAt: 0,
     state: 'intact', // intact | shielded | damaged | ccIncapacitated | destroyed
     regenerationAt: 0,
+    domeUntil: 0, // cúpula luminosa (RF-05.1): instante de retirada
   };
 
   // --- Render mínimo (figura + barra de salud + indicador de barrera) ---
@@ -133,6 +148,29 @@ export function createCombatDummyComponent(options = {}) {
       figure.classList?.add?.('combat-dummy--destroyed');
     } else {
       figure.classList?.remove?.('combat-dummy--destroyed');
+    }
+
+    // Ataduras visuales de CC (RF-05.1): la efigie viste la correa de su
+    // sometimiento — hielo (stun), enredaderas rúnicas (root) o halo de
+    // lentitud (slow) — y se disipa sola con la atadura (tick a los 4 s
+    // o inmediatamente al restaurar).
+    figure.classList?.toggle?.(
+      'combat-dummy--bound-stun',
+      state.activeCC === 'stun',
+    );
+    figure.classList?.toggle?.(
+      'combat-dummy--bound-root',
+      state.activeCC === 'root',
+    );
+    figure.classList?.toggle?.(
+      'combat-dummy--bound-slow',
+      state.activeCC === 'slow',
+    );
+    // La cúpula luminosa (RF-05.1) la alza applySpellImpact (conoce el
+    // impacto); render() solo la retira si su residencia venció.
+    if (state.domeUntil > 0 && now() >= state.domeUntil) {
+      state.domeUntil = 0;
+      figure.classList?.remove?.('combat-dummy--dome');
     }
   }
 
@@ -241,6 +279,13 @@ export function createCombatDummyComponent(options = {}) {
       crowdControlApplied = ccType;
     }
 
+    // Cúpula luminosa (RF-05.1): los efectos de barrera o curación alzan
+    // la media esfera envolvente; su residencia la retira sola (tick).
+    if (impactShowsDome(spell)) {
+      state.domeUntil = now() + DOME_LINGER_MS;
+      figure.classList?.add?.('combat-dummy--dome');
+    }
+
     // 6. Destrucción: la salud a 0 disuelve el armazón (RF-02.5).
     if (state.health === 0) {
       state.state = 'destroyed';
@@ -287,6 +332,12 @@ export function createCombatDummyComponent(options = {}) {
       refreshDerivedState();
       render();
     }
+
+    // Cúpula luminosa (RF-05.1): retirada al vencer su residencia.
+    if (state.domeUntil > 0 && instant >= state.domeUntil) {
+      state.domeUntil = 0;
+      figure.classList?.remove?.('combat-dummy--dome');
+    }
   }
 
   /**
@@ -309,6 +360,8 @@ export function createCombatDummyComponent(options = {}) {
     state.activeCC = null;
     state.ccExpiresAt = 0;
     state.regenerationAt = 0;
+    state.domeUntil = 0; // la restauración retira la cúpula al instante
+    figure.classList?.remove?.('combat-dummy--dome');
     state.state = 'intact';
     render();
     return { ...state };
@@ -328,7 +381,20 @@ export function createCombatDummyComponent(options = {}) {
  * navegador real el anfitrión aporta ownerDocument.createElement.
  */
 function createElementShim(tagName) {
-  return {
+  /** Fiel al DOM: los arneses asertan las clases visuales (RF-05.1). */
+  const classList = {
+    _owner: null,
+    add(...names) { names.forEach((n) => this._owner.classes.add(n)); },
+    remove(...names) { names.forEach((n) => this._owner.classes.delete(n)); },
+    contains(name) { return this._owner.classes.has(name); },
+    toggle(name, force) {
+      const want = force === undefined ? !this._owner.classes.has(name) : Boolean(force);
+      if (want) this._owner.classes.add(name);
+      else this._owner.classes.delete(name);
+      return want;
+    },
+  };
+  const element = {
     tagName: String(tagName).toUpperCase(),
     children: [],
     classes: new Set(),
@@ -345,7 +411,10 @@ function createElementShim(tagName) {
     appendChild(child) { child.parentElement = this; this.children.push(child); return child; },
     set className(value) { this.classes = new Set(String(value).split(/\s+/).filter(Boolean)); },
     get className() { return [...this.classes].join(' '); },
+    classList,
     get textContent() { return this._textContent; },
     set textContent(value) { this._textContent = String(value); },
   };
+  classList._owner = element;
+  return element;
 }

@@ -416,6 +416,91 @@
 }
 
 /* ---------------------------------------------------------------------
+ * Reacciones físicas del impacto (RF-05.1): cúpula luminosa envolvente
+ * ante barrera/curación y ataduras visuales de control de masas — hielo,
+ * enredaderas rúnicas y halo de lentitud — disipándose con la atadura.
+ * ------------------------------------------------------------------- */
+
+/* Cúpula luminosa: media esfera de luz que abraza la efigie. Nace con
+   la clase y late un solo pulso (~600 ms de residencia). */
+.combat-dummy--dome::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  width: clamp(140px, 16vw, 180px);
+  height: clamp(95px, 11vw, 125px);
+  border-radius: 50% 50% 12% 12% / 72% 72% 28% 28%;
+  background: radial-gradient(
+    ellipse at 50% 78%,
+    rgba(120, 200, 255, 0.34) 0%,
+    rgba(120, 200, 255, 0.14) 46%,
+    transparent 72%
+  );
+  border: 1px solid rgba(120, 200, 255, 0.38);
+  border-bottom-color: transparent;
+  pointer-events: none;
+  animation: luminous-dome 600ms ease-out;
+}
+
+@keyframes luminous-dome {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.82); }
+  35%  { opacity: 1; }
+  100% { opacity: 0.78; transform: translateX(-50%) scale(1); }
+}
+
+/* Paleta heráldica de las ataduras (tokens del grimorio). */
+.combat-dummy__figure {
+  --bind-stun: rgba(150, 214, 255, 0.85);  /* escarcha */
+  --bind-root: rgba(126, 188, 121, 0.85);  /* enredadera */
+  --bind-slow: rgba(176, 152, 224, 0.80);  /* bruma violeta */
+}
+
+/* Atadura de hielo (stun): escarcha que abraza sombrero y busto. */
+.combat-dummy--bound-stun .combat-dummy__mannequin {
+  filter: drop-shadow(0 0 9px var(--bind-stun)) saturate(0.82) brightness(1.04);
+}
+
+/* Atadura de enredaderas (root): lazo rúnico vegetal a la base. */
+.combat-dummy--bound-root::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: clamp(110px, 13vw, 150px);
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--bind-root);
+  border-top-color: transparent;
+  box-shadow: 0 0 10px var(--bind-root), inset 0 0 8px var(--bind-root);
+  pointer-events: none;
+}
+
+/* Halo de lentitud (slow): aro violeta que orbita la cintura. */
+.combat-dummy--bound-slow::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  transform: translateX(-50%);
+  width: clamp(100px, 12vw, 140px);
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--bind-slow);
+  border-bottom-color: transparent;
+  box-shadow: 0 0 9px var(--bind-slow);
+  pointer-events: none;
+  animation: slow-halo-orbit 2.6s linear infinite;
+}
+
+@keyframes slow-halo-orbit {
+  0%   { transform: translateX(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) rotate(360deg); }
+}
+
+/* ---------------------------------------------------------------------
  * 6. Controles ceremoniales y bitácora de pruebas (RF-05.3).
  * ------------------------------------------------------------------- */
 .grimoire-simulator__controls {
@@ -594,5 +679,13 @@
   /* Sin derrumbe teatral: la efigie solo se desvanece con dignidad. */
   .combat-dummy--destroyed .combat-dummy__mannequin {
     transform: none;
+  }
+  /* Corona de luz estática (SPEC-06, caso 5): bajo movimiento reducido
+     la deflagración de combo se substituye por un resplandor fijo del
+     blanco, sin latidos ni órbitas — la lectura, no el vértigo. */
+  .grimoire-simulator__dummy-host.combo-light-crown {
+    animation: none;
+    box-shadow: 0 0 34px 10px rgba(212, 169, 78, 0.42),
+                0 0 70px 22px rgba(212, 169, 78, 0.18);
   }
 }

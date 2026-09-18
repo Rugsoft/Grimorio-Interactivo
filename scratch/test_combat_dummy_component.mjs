@@ -82,6 +82,12 @@ function createFakeElement(tagName) {
     add(...names) { names.forEach((n) => this._owner.classes.add(n)); },
     remove(...names) { names.forEach((n) => this._owner.classes.delete(n)); },
     contains(name) { return this._owner.classes.has(name); },
+    toggle(name, force) {
+      const want = force === undefined ? !this._owner.classes.has(name) : Boolean(force);
+      if (want) this._owner.classes.add(name);
+      else this._owner.classes.delete(name);
+      return want;
+    },
   };
   return element;
 }
@@ -251,6 +257,51 @@ console.log('[6] «Restaurar Maniquí» — reseteo instantáneo (RF-02.6)');
   assertCondition(reset.barrier === 0, 'barreras disipadas');
   assertCondition(reset.activeCC === null, 'estados alterados disipados');
   assertCondition(reset.state === 'intact', 'estado «intact» restaurado');
+}
+
+// ============================================================================
+console.log('\n[RF-05.1] Cúpula luminosa y ataduras visuales');
+// ============================================================================
+
+{
+  const visual = buildDummy(createFakeClock());
+  const figureOf = () => visual.host.children.find((c) => String(c.className).includes('combat-dummy__figure'));
+  const hasClass = (name) => Boolean(figureOf()?.classes?.has?.(name));
+
+  // El daño puro jamás alza la cúpula.
+  visual.component.applySpellImpact(spell({ damage: 30 }));
+  assertCondition(!hasClass('combat-dummy--dome'), 'el daño puro no alza la cúpula luminosa (RF-05.1)');
+
+  // Barrera: cúpula con residencia de ~600 ms.
+  visual.component.applySpellImpact(spell({ barrier: 25 }));
+  assertCondition(hasClass('combat-dummy--dome'), 'la barrera alza la cúpula luminosa (RF-05.1)');
+  assertCondition(visual.component.getState().domeUntil - visual.clock.now === 600, 'la cúpula vive 600 ms (residencia canónica)');
+  visual.clock.advance(700);
+  visual.component.tick();
+  assertCondition(!hasClass('combat-dummy--dome'), 'la cúpula se retira sola al vencer su residencia');
+
+  // Curación: también alza la cúpula.
+  visual.component.applySpellImpact(spell({ healing: 20 }));
+  assertCondition(hasClass('combat-dummy--dome'), 'la curación alza la cúpula luminosa (RF-05.1)');
+
+  // Ataduras visuales: una clase por tipo de CC.
+  visual.component.applySpellImpact(spell({ crowdControlType: 'stun' }));
+  assertCondition(hasClass('combat-dummy--bound-stun'), 'el stun viste la atadura de hielo (RF-05.1)');
+  visual.component.applySpellImpact(spell({ crowdControlType: 'root' }));
+  assertCondition(hasClass('combat-dummy--bound-root') && !hasClass('combat-dummy--bound-stun'), 'el root sustituye al hielo con sus enredaderas');
+  visual.component.applySpellImpact(spell({ crowdControlType: 'slow' }));
+  assertCondition(hasClass('combat-dummy--bound-slow'), 'el slow viste el halo de lentitud (RF-05.1)');
+
+  // Disipación visual al vencer la atadura.
+  visual.clock.advance(4100);
+  visual.component.tick();
+  assertCondition(!hasClass('combat-dummy--bound-slow'), 'la atadura visual se disipa con el CC a los 4 s (RF-05.1)');
+
+  // Restauración inmediata: ataduras y cúpula ceden al instante.
+  visual.component.applySpellImpact(spell({ crowdControlType: 'stun', barrier: 10 }));
+  assertCondition(hasClass('combat-dummy--bound-stun'), 'atadura viva antes de restaurar');
+  visual.component.restore();
+  assertCondition(!hasClass('combat-dummy--bound-stun') && !hasClass('combat-dummy--dome'), '«Restaurar Maniquí» retira ataduras y cúpula al instante (RF-05.1)');
 }
 
 console.log('== RESUMEN ==');

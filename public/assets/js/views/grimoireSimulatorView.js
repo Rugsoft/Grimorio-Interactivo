@@ -56,6 +56,10 @@ export const CROWD_CONTROL_LABELS = Object.freeze({
 /** Clase del temblor ceremonial de la Cámara al recibir un impacto (RF-05.1). */
 export const IMPACT_TREMOR_CLASS = 'grimoire-simulator__stage--tremor';
 
+/** Corona de luz estática de los combos bajo movimiento reducido (SPEC-06, caso 5). */
+export const COMBO_LIGHT_CROWN_CLASS = 'combo-light-crown';
+export const COMBO_LIGHT_CROWN_MS = 900;
+
 /** Duración del temblor ceremonial en milisegundos. */
 export const IMPACT_TREMOR_MS = 240;
 
@@ -197,6 +201,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     sceneRunning: false,
     microphoneListening: false,
     tremorUntil: 0,
+    comboCrownUntil: 0, // corona de luz estática (SPEC-06, caso 5)
     voiceResting: false,
   };
 
@@ -681,6 +686,12 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
           colorB: verdict.colorB,
           random: comboDetonationRandom,
         });
+      } else if (prefersReducedMotion()) {
+        // Corona de luz estática (SPEC-06, caso 5): bajo movimiento reducido
+        // la deflagración masiva se substituye por un resplandor fijo sobre
+        // el blanco; el texto monumental sigue proyectándose nítido.
+        dummyHost.classList.add(COMBO_LIGHT_CROWN_CLASS);
+        state.comboCrownUntil = now() + COMBO_LIGHT_CROWN_MS;
       }
       floatingTexts.spawnMonumentalText({
         reactionName: verdict.reactionName ?? '',
@@ -900,6 +911,9 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     impactQueue.clear();
     floatingTexts.clear();
     comboDetonationPool?.reset();
+    // La corona estática de combos también cede ante la restauración.
+    state.comboCrownUntil = 0;
+    dummyHost.classList.remove(COMBO_LIGHT_CROWN_CLASS);
     testLog.clear();
     refreshLogbook();
     dispatchBus('grimoire:dummy-reset', { reason: 'user' });
@@ -998,10 +1012,9 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     if (!matched) {
       announce('El oráculo no reconoció las palabras rituales: repite el nombre del conjuro o su fórmula.');
       // Bruma de disipación (SPEC-05, Caso Límite 3): la palabra de poder
-      // no halla resonancia; el maniquí permanece inalterado.
-      if (!prefersReducedMotion()) {
-        floatingTexts.spawnMist(getDummyTorsoCoordinates());
-      }
+      // no halla resonancia; el maniquí permanece inalterado. La bruma es
+      // deriva sutil sin animación violenta: también bajo movimiento reducido.
+      floatingTexts.spawnMist(getDummyTorsoCoordinates());
       return;
     }
     announce(`El oráculo ha reconocido «${transcript}»: el conjuro se desata.`);
@@ -1038,6 +1051,11 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     if (state.tremorUntil && instant >= state.tremorUntil) {
       state.tremorUntil = 0;
       stage.classList.remove(IMPACT_TREMOR_CLASS);
+    }
+
+    if (state.comboCrownUntil && instant >= state.comboCrownUntil) {
+      state.comboCrownUntil = 0;
+      dummyHost.classList.remove(COMBO_LIGHT_CROWN_CLASS);
     }
 
     if (state.sceneRunning) {

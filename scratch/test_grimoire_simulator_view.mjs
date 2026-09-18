@@ -378,6 +378,7 @@ try {
 
 const { createGrimoireSimulatorView } = module;
 const { DUMMY_MAX_HEALTH } = await import('../public/assets/js/components/combatDummyComponent.js');
+const { COMBO_LIGHT_CROWN_CLASS } = await import('../public/assets/js/views/grimoireSimulatorView.js');
 
 /** Monta la vista completa con dobles inyectables. */
 function buildView(overrides = {}) {
@@ -815,6 +816,57 @@ assertCondition(calm.view.getState().activeParticles === 0, 'con movimiento redu
 assertCondition(calm.view.getState().dummy.health < calmHealth, 'el impacto se resuelve de inmediato sin trayectoria (RF-06.1)');
 assertCondition(calm.view.getState().reducedMotion === true, 'la vista declara su respeto al movimiento reducido (RF-06.1)');
 assertCondition(calm.view.getState().tremoring === false, 'con movimiento reducido no hay temblor de página (RF-06.1)');
+
+// Corona de luz estática (SPEC-06, caso 5): sin catálogo reactivo en este
+// arnés no hay detonación de combo real, pero la corona es la SUSTITUTA
+// de la deflagración — la fabricamos detonando en una vista con catálogo
+// de elementos reactivos. Reutilizo la vista «tremoring» (Fuego→Agua no
+// existe aquí) — mejor: la corona solo procede con reacción, así que la
+// ejercitamos con el catálogo mínimo Fuego + Agua que sí detona.
+const crown = buildView({ motionQuery: createFakeMotionQuery({ matches: true }) });
+await crown.view.render();
+await crown.view.castCurrentSpell({ triggerMethod: 'click' }); // Fuego imbuye
+crown.raf.run(40, 16);
+await crown.view.nextPage(); // Agua: detona Vaporización Arcana sobre Fuego
+await crown.view.castCurrentSpell({ triggerMethod: 'click' });
+const crownHost = queryFirst(crown.host, 'grimoire-simulator__dummy-host');
+assertCondition(
+  crown.view.getAnnouncements().some((m) => /Vaporización/i.test(m)),
+  'la detonación de Vaporización se anuncia (SPEC-06)',
+);
+assertCondition(
+  Boolean(crownHost?.classList?.contains?.(COMBO_LIGHT_CROWN_CLASS)),
+  'bajo movimiento reducido la deflagración alza la corona de luz estática (SPEC-06, caso 5)',
+);
+crown.raf.run(70, 16); // +1120 ms: la corona cede
+assertCondition(
+  !crownHost?.classList?.contains?.(COMBO_LIGHT_CROWN_CLASS),
+  'la corona de luz se retira sola tras su residencia (SPEC-06, caso 5)',
+);
+crown.view.destroy();
+
+// Sandbox ilimitado (RF-02.2): conjurar decenas de veces no consume maná
+// ni impone esperas — el contrato es la AUSENCIA de cualquier desccount.
+const sandbox = buildView();
+await sandbox.view.render();
+const sandboxSpells = 25;
+for (let i = 0; i < sandboxSpells; i++) {
+  const ok = await sandbox.view.castCurrentSpell({ triggerMethod: 'click' });
+  if (!ok) {
+    assertCondition(false, `la invocación ${i + 1} fue rechazada: el banco jamás bloquea (RF-02.2)`);
+    break;
+  }
+}
+assertCondition(true, `${sandboxSpells} invocaciones consecutivas sin rechazo ni espera (RF-02.2)`);
+assertCondition(
+  sandbox.view.getState().tactileSealEnabled === true,
+  'el sello táctil sigue habilitado tras la ráfaga del sandbox (RF-02.2)',
+);
+assertCondition(
+  sandbox.busEvents.filter((e) => e.name === 'grimoire:cast-spell').length === sandboxSpells,
+  'todas las invocaciones llegaron al bus: cero racionamiento de maná (RF-02.2)',
+);
+sandbox.view.destroy();
 
 // Sin movimiento reducido, el impacto estremece la Cámara y luego se serena.
 const tremoring = buildView();
