@@ -193,10 +193,13 @@ export function createCombatDummyComponent(options = {}) {
       state.barrier = Math.max(0, state.barrier - barrierShatter);
     }
 
-    // 1. Absorción de barrera (prioritaria sobre la salud).
+    // 1. Absorción de barrera (prioritaria sobre la salud). La penetración
+    //    del Códice (Colapso Crepuscular, RF-04.2) la sortea: el daño puro
+    //    vuela directo a la salud y el escudo queda intacto (Hallazgo 6).
     let damageToApply = damage;
     let barrierAbsorbed = 0;
-    if (state.barrier > 0 && damageToApply > 0) {
+    const piercesBarrier = Number(effects.pierceBarrier ?? 0) === 1 || effects.pierceBarrier === true;
+    if (!piercesBarrier && state.barrier > 0 && damageToApply > 0) {
       if (state.barrier >= damageToApply) {
         state.barrier -= damageToApply;
         barrierAbsorbed = damageToApply;

@@ -72,6 +72,7 @@ const CODEX_EFFECT_TO_CC = Object.freeze({
   blindnessMist: 'slow',
   rootAndSlow: 'slow',
   hardStun: 'stun',
+  freezeParalysis: 'stun', // Congelación del Códice: parálisis motora completa (2 s).
 });
 
 /** Trituración de barrera canónica de la Fractura Basáltica (RF-04.2). */
@@ -621,6 +622,9 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
       ? codexDurationMs
       : null;
     const barrierShatter = verdict.reactionId === 'basalticFracture' ? CODEX_BARRIER_SHATTER : 0;
+    // Penetración del Colapso Crepuscular (RF-04.2, Hallazgo 6): el daño puro
+    // ignora el 100% de la barrera y toca la salud; el escudo queda intacto.
+    const isBarrierPiercing = tacticalEffect === 'barrierPiercing';
 
     const result = dummy.applySpellImpact({
       name: spell?.name,
@@ -631,6 +635,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
         crowdControlType: crowdControlType ?? 'none',
         ...(crowdControlDurationMs !== null ? { crowdControlDurationMs } : {}),
         ...(barrierShatter > 0 ? { barrierShatter } : {}),
+        ...(isBarrierPiercing ? { pierceBarrier: true } : {}),
       },
     });
 

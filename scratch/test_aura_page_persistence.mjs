@@ -361,6 +361,34 @@ const CATALOG = [
     description: 'Látigo de roca que alza escoria defensiva.',
     effects: { damage: 50, healing: 0, barrier: 25, crowdControlType: 'none' },
   },
+  // Página 6: Viento — cataliza la Ventisca Helada (agua) y la Deflagración (fuego).
+  {
+    id: 'spl_6', name: 'Ráfaga del Collado', circle: 2, elementalAffinity: 'wind', manaCost: 22,
+    castingTime: 'action', areaType: 'singleTarget', rangeType: 'ranged', durationType: 'instant',
+    magicSchool: 'evocation', hasVerbal: true, hasSomatic: false, hasMaterial: false,
+    incantationFormula: '¡Aire vivo, corre!',
+    description: 'Ráfaga de ladera que empuja al blanco.',
+    effects: { damage: 45, healing: 0, barrier: 0, crowdControlType: 'none' },
+  },
+  // Página 7: Luz — aura para el Colapso Crepuscular; porta barrera propia
+  // (renovación por valor dominante tras su impacto).
+  {
+    id: 'spl_7', name: 'Faro del Amanecer', circle: 3, elementalAffinity: 'light', manaCost: 32,
+    castingTime: 'action', areaType: 'singleTarget', rangeType: 'ranged', durationType: 'instant',
+    magicSchool: 'evocation', hasVerbal: true, hasSomatic: true, hasMaterial: false,
+    incantationFormula: '¡Luz del alba, guíanos!',
+    description: 'Haz sacro que revela al blanco y alza un velo radiante.',
+    effects: { damage: 40, healing: 0, barrier: 20, crowdControlType: 'none' },
+  },
+  // Página 8: Oscuridad — detonante del Colapso Crepuscular contra luz.
+  {
+    id: 'spl_8', name: 'Velo de Sombra', circle: 3, elementalAffinity: 'darkness', manaCost: 32,
+    castingTime: 'action', areaType: 'singleTarget', rangeType: 'ranged', durationType: 'instant',
+    magicSchool: 'necromancy', hasVerbal: true, hasSomatic: false, hasMaterial: false,
+    incantationFormula: '¡Sombra callada, envuélvenos!',
+    description: 'Zarcillo umbrío que devora la luz.',
+    effects: { damage: 40, healing: 0, barrier: 0, crowdControlType: 'none' },
+  },
 ];
 
 console.log('== ARNÉS TDD — Tarea 4.1: Persistencia de auras al hojear (SPEC-06) ==');
@@ -428,6 +456,20 @@ function buildView(overrides = {}) {
 /** Vuelo estándar del proyectil hasta el impacto (≈460 ms de lienzo). */
 function flyToImpact(scene) {
   scene.raf.run(30, 16);
+}
+
+/**
+ * Vuelve a la página 1 del tomo con previousPage() en cascada (la vista no
+ * expone saltos absolutos): el extremo izquierdo es inoperante, así que
+ * navegar hacia atrás de más es seguro. Luego avanza hasta la página
+ * solicitada. Guion robusto: cada fase declara su página ABSOLUTA y no
+ * depende de dónde quedó la fase anterior.
+ * @param {object} scene Superficie del arnés.
+ * @param {number} page Página destino (1-indexada).
+ */
+async function goToPage(scene, page) {
+  for (let i = 0; i < 12; i++) await scene.view.previousPage();
+  for (let i = 1; i < page; i++) await scene.view.nextPage();
 }
 
 const eventsOf = (scene, name) => scene.busEvents.filter((e) => e.name === name);
@@ -550,14 +592,12 @@ const afterCcExpiry = surface.view.getState();
 assertCondition(afterCcExpiry.dummy.activeCC === null, 'la atadura del Códice se disipa a su plazo (1.5 s, no 4 s)');
 assertCondition(afterCcExpiry.stunlockImmunity === true, 'la inmunidad sigue viva pasado el Hard CC');
 
-// Agua (reimbuye, página 3 → retrocede a la 1) y Rayo (página 3) dentro
-// de la ventana de inmunidad: el aura debe reimbuyirse antes de detonar.
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 1: Agua
+// Agua (página 1) y Rayo (página 3) dentro de la ventana de inmunidad:
+// el aura debe reimbuyirse antes de detonar.
+await goToPage(surface, 1);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
-await surface.view.nextPage();
-await surface.view.nextPage(); // página 3: Rayo
+await goToPage(surface, 3);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 
@@ -576,12 +616,10 @@ assertCondition(suppressedState.elementalAura.element === null, 'el aura tambié
 surface.raf.run(40, 16); // +640 ms: la inmunidad expira
 assertCondition(surface.view.getState().stunlockImmunity === false, 'la inmunidad expira a los 3 s exactos');
 await surface.view.restoreDummy(); // banco limpio: 500 PV, sin aura, sin tregua
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 1: Agua
+await goToPage(surface, 1);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
-await surface.view.nextPage();
-await surface.view.nextPage(); // página 3: Rayo
+await goToPage(surface, 3);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 const reappliedState = surface.view.getState();
@@ -593,9 +631,10 @@ assertCondition(eventsOf(surface, 'combo:stunlock-immunity-started').length === 
 // =====================================================================
 console.log('\n[5] Refresco del aura y neblina sin atadura');
 
-// La vista quedó en página 3 (Rayo) tras la fase 4: refresco con el
-// propio Rayo (el mismo elemento reinicia la ventana sin detonar).
+// Refresco con el propio Rayo (el mismo elemento reinicia la ventana sin
+// detonar): página 3 absoluta, sin depender de dónde quedó la fase previa.
 await surface.view.restoreDummy();
+await goToPage(surface, 3);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' }); // Rayo: imbuye
 flyToImpact(surface);
 const refreshedBefore = surface.view.getState().elementalAura.remainingMs;
@@ -620,11 +659,10 @@ assertCondition(
 
 // Agua + Fuego = Vaporización Arcana: neblina (Soft CC) sin atadura.
 await surface.view.restoreDummy();
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 1: Agua
+await goToPage(surface, 1);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
-await surface.view.nextPage(); // página 2: Fuego
+await goToPage(surface, 2);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 
@@ -644,13 +682,10 @@ assertCondition(
 console.log('\n[6] Resonancia Arcana Pura: amplificación ×1.25');
 
 // Página 1: Agua (aura) → página 4: Arcano Puro (catalizador).
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 1: Agua
+await goToPage(surface, 1);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' }); // aura de Agua
 flyToImpact(surface);
-await surface.view.nextPage();
-await surface.view.nextPage();
-await surface.view.nextPage(); // página 4: Arcano Puro
+await goToPage(surface, 4);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 
@@ -672,16 +707,12 @@ console.log('\n[7] Elemento no reactivo: sobreescritura con daño íntegro');
 // (Tierra solo reacciona con Agua y Rayo). Página 5: Tierra imbuye;
 // página 2: Fuego sobreescribe con daño íntegro.
 await surface.view.restoreDummy();
-await surface.view.nextPage();
-await surface.view.nextPage();
-await surface.view.nextPage(); // página 5: Tierra
+await goToPage(surface, 5);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 assertCondition(surface.view.getState().elementalAura.element === 'earth', 'Tierra se imbuye como aura previa');
 const reactionsBeforeOverwrite = eventsOf(surface, 'combo:reaction-triggered').length;
-await surface.view.previousPage();
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 2: Fuego
+await goToPage(surface, 2);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 
@@ -707,15 +738,12 @@ console.log('\n[8] La trituración anula la barrera sin tocar la salud');
 // Reinicio limpio y escudo fresco: página 5 (Tierra) alza su barrera de 25
 // con el impacto que imbuye el aura; página 3 (Rayo) detona la Fractura.
 await surface.view.restoreDummy();
-await surface.view.nextPage();
-await surface.view.nextPage();
-await surface.view.nextPage(); // página 5: Tierra
+await goToPage(surface, 5);
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 assertCondition(surface.view.getState().dummy.barrier === 25, 'el blanco queda escudado con 25 PV de barrera');
 const healthBeforeFracture = surface.view.getState().dummy.health;
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 3: Rayo
+await goToPage(surface, 3); // página 3: Rayo
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 
@@ -733,7 +761,8 @@ assertCondition(shatteredState.dummy.health === healthBeforeFracture - 135, 'el 
 console.log('\n[9] «Restaurar Maniquí» disipa el aura y la inmunidad');
 
 await surface.view.restoreDummy();
-await surface.view.castCurrentSpell({ triggerMethod: 'click' }); // imbuye de nuevo
+await goToPage(surface, 1); // Agua: imbuye de nuevo
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
 assertCondition(surface.view.getState().elementalAura.active === true, 'el aura vive antes de la restauración');
 await surface.view.restoreDummy();
@@ -790,15 +819,9 @@ assertCondition(surface.view.getState().elementalAura.active === true, 'la venta
 console.log('\n[9c] Ráfaga FIFO: el segundo impacto detona sobre la imbuición del primero');
 
 await surface.view.restoreDummy();
-// La vista queda en página 3 (Rayo) tras la fase anterior: dos invocaciones
-// casi simultáneas de Rayo con aterrizajes en cuadros consecutivos. Con la
-// lectura viva, el segundo NO puede refrescar: la primera imbuye y la
-// segunda refresca (mismo elemento) — así que encadenamos el guion:
-// página 1 (Agua) imbuye, luego rayo entra en la cola ANTES de que el
-// primer impacto se resuelva... Para forzar ese orden sin depender del
-// vuelo, encolamos vía castCurrentSpell doble con impacto manual:
-await surface.view.previousPage();
-await surface.view.previousPage(); // página 1: Agua
+// Ráfaga encadenada con páginas absolutas: Agua (página 1) imbuye y Rayo
+// (página 3) detona sobre esa imbuición recién aplicada (lectura VIVA).
+await goToPage(surface, 1);
 
 // Primer impacto: se resuelve AL INSTANTE al encolar (plan 3.3).
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
@@ -808,8 +831,7 @@ assertCondition(surface.view.getState().elementalAura.element === 'water', 'la r
 // Segundo impacto encolado mientras el reloj sigue en el MISMO cuadro de
 // resolución: debe leer el aura de Agua viva y detonar Electrocución con
 // el Rayo (página 3), no refrescar ni tratar el blanco como neutral.
-await surface.view.nextPage();
-await surface.view.nextPage(); // página 3: Rayo
+await goToPage(surface, 3);
 const reactionsBeforeBurst = eventsOf(surface, 'combo:reaction-triggered').length;
 await surface.view.castCurrentSpell({ triggerMethod: 'click' });
 flyToImpact(surface);
@@ -820,6 +842,80 @@ assertCondition(
   'el impacto de Rayo sobre el aura de Agua recién aplicada detona la reacción (lectura VIVA, RF-05.4)',
 );
 assertCondition(burstState.elementalAura.element === null, 'el aura se consume en la detonación de la ráfaga');
+
+// =====================================================================
+// [9d] Congelación y perforación en cliente (regresión del mapeo de
+//      efectos tácticos del Códice): la Ventisca Helada (Viento+Agua,
+//      freezeParalysis, Hard CC de 2 s) DEBE atar al maniquí vía la vista
+//      — sin el mapeo el CC se esfumaba en silencio — y el Colapso
+//      Crepuscular (Luz+Oscuridad, barrierPiercing) DEBE perforar la
+//      barrera: daño íntegro a la salud con el escudo intacto (RF-04.2,
+//      Hallazgo 6). Páginas: 6=Viento, 1=Agua, 7=Luz, 8=Oscuridad.
+// =====================================================================
+console.log('\n[9d] Ventisca Helada ata (freezeParalysis) y Colapso perfora (barrierPiercing)');
+
+// — Ventisca Helada: Viento imbuye, Agua detona congelación de 2 s —
+await surface.view.restoreDummy();
+await goToPage(surface, 6); // Viento
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+assertCondition(surface.view.getState().elementalAura.element === 'wind', 'Viento se imbuye como aura previa (fase 9d)');
+await goToPage(surface, 1); // Agua: detona la Ventisca Helada
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+
+const blizzardState = surface.view.getState();
+assertCondition(
+  eventsOf(surface, 'combo:reaction-triggered').some((e) => e.detail?.reactionId === 'glacialBlizzard'),
+  'Ventisca Helada detona en el pipeline cliente (Viento + Agua)',
+);
+assertCondition(blizzardState.dummy.activeCC === 'stun', 'la congelación del Códice ata al maniquí (freezeParalysis mapeado, no esfumado)');
+
+// La atadura dura 2 s (Códice) DESDE el impacto, y el vuelo del Agua ya
+// consumió ~480 ms: solo quedan ~1520 ms de atadura tras aterrizar.
+surface.raf.run(90, 16); // +1440 ms: total ≈1920 ms desde el impacto: viva
+assertCondition(surface.view.getState().dummy.activeCC === 'stun', 'la congelación de 2 s sigue viva a ~1.9 s desde el impacto');
+surface.raf.run(20, 16); // +320 ms: total ≈2240 ms, ya disipada
+assertCondition(surface.view.getState().dummy.activeCC === null, 'la congelación se disipa a su plazo del Códice (2 s)');
+
+// — Colapso Crepuscular: Luz imbuye, Oscuridad detona perforación —
+// Guion con escudo conviviente: Tierra alza 25 PV de barrera con su
+// impacto; la Luz (no reactiva con Tierra) sobreescribe el aura con daño
+// íntegro y el escudo SOBREVIVE (la renovación de barrera es por valor
+// dominante, y la Luz no porta barrera); el aura de Luz queda vigente.
+await surface.view.restoreDummy();
+await goToPage(surface, 5); // Tierra: escudo de 25 + aura
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+assertCondition(surface.view.getState().dummy.barrier === 25, 'la Tierra alza su escudo de 25 PV (fase 9d)');
+await goToPage(surface, 7); // Luz: sobreescritura, escudo intacto
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+assertCondition(surface.view.getState().elementalAura.element === 'light', 'Luz se imbuye como aura previa (fase 9d)');
+// La Luz absorbió el escudo de Tierra (25) con su daño, pero alzó el suyo
+// de 20: la renovación por valor dominante deja 20 PV vigentes.
+assertCondition(surface.view.getState().dummy.barrier === 20, 'la Luz alza su velo radiante de 20 PV vigentes');
+
+// Oscuridad detona el Colapso: el daño puro ceil(40×1.5)=60 perfora y
+// toca la salud sin absorberse, dejando la barrera INTACTA (RF-04.2).
+await goToPage(surface, 8);
+const healthBeforeCollapse = surface.view.getState().dummy.health;
+await surface.view.castCurrentSpell({ triggerMethod: 'click' });
+flyToImpact(surface);
+
+const collapseState = surface.view.getState();
+assertCondition(
+  eventsOf(surface, 'combo:reaction-triggered').some((e) => e.detail?.reactionId === 'twilightCollapse'),
+  'Colapso Crepuscular detona en el pipeline cliente (Luz + Oscuridad)',
+);
+assertCondition(
+  collapseState.dummy.health === healthBeforeCollapse - 60,
+  'el daño puro (60) toca la salud SIN absorción de escudo (RF-04.2)',
+);
+assertCondition(
+  collapseState.dummy.barrier === 20,
+  'la barrera queda INTACTA tras la penetración (RF-04.2, Hallazgo 6)',
+);
 
 // =====================================================================
 // [10] destroy() desmonta el aura
