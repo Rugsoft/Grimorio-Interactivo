@@ -21,7 +21,7 @@
   * **Hecho cuando:** Una base nueva creada desde `schema.sql` ya nace con la columna y su `CHECK`, y el catálogo de linajes sirve las 8 doctrinas en ambas granularidades en noble castellano.
   * **Verificación:** `scratch/test_lineage_migration.php` (fase de coherencia DDL) + revisión del catálogo servido
 
-- [ ] **Tarea 1.3: Repositorio del juramento (`src/Repositories/LineageOathRepository.php`)**
+- [x] **Tarea 1.3: Repositorio del juramento (`src/Repositories/LineageOathRepository.php`)**
   * **Alcance:** Implementar con `declare(strict_types=1);` y PDO exclusivamente preparado: `findAccountState(userId)` (linaje actual), `sealOathGuarded(userId, lineage, now)` — `UPDATE users SET lineage = :lineage WHERE id = :id AND lineage IS NULL` con `rowCount` como veredicto de carrera — y lectura del catálogo con `hasActiveClans` derivado de `clans`.
   * **Cubre:** `RF-03.1`, `RF-03.3`, `RF-02.1`
   * **Hecho cuando:** Todos los accesos usan `prepare()/execute()` con *binding* (cero concatenación), `sealOathGuarded` retorna «sellado ahora» o «ya linajado» según `rowCount`, y un segundo `sealOathGuarded` sobre cuenta linajada no muta nada.
