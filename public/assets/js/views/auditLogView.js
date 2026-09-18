@@ -115,6 +115,9 @@ export function createAuditLogView(mountRoot, options = {}) {
       SOVEREIGN_RESCUE: 'Rescate Soberano de una Obra',
       SOVEREIGN_ARCHIVE: 'Destierro Soberano del Canon',
       SOVEREIGN_POINTS_DEDUCTED: 'Deducción Retroactiva de Gloria',
+      // Actos del Juramento de Linaje (SPEC-09): la identidad arcana sellada
+      // en la ceremonia del primer acceso queda inscrita en la Bitácora.
+      LINEAGE_OATH_SWORN: 'Juramento de Linaje sellado',
     };
     return labels[actionType] ?? String(actionType);
   }

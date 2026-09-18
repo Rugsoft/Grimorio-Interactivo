@@ -119,7 +119,7 @@
   * **Hecho cuando:** El formulario de registro solo solicita alias, correo y frase de paso, no existe referencia alguna a `clanId` en su flujo, y el registro real contra el servidor de demo crea la cuenta y aterriza en la ceremonia.
   * **Verificación:** `scratch/test_lineage_retention_nav.mjs` (fase de registro) + verificación manual
 
-- [ ] **Tarea 5.2: Catálogo cerrado de la Bitácora (`AuditService`, `auditLogView.js`)**
+- [x] **Tarea 5.2: Catálogo cerrado de la Bitácora (`AuditService`, `auditLogView.js`)**
   * **Alcance:** Inscribir `LINEAGE_OATH_SWORN` en el catálogo cerrado de acciones (sin inventar actos) con su rótulo castellano «Juramento de Linaje sellado», manteniendo el aserto de rotulación cruzada (SPEC-03, TASK-08).
   * **Cubre:** `RF-03.1`, `RNF-06`, Artículo III.3
   * **Hecho cuando:** El asiento del juramento aparece en la Bitácora pública con su rótulo castellano, y el aserto que cruza catálogo ↔ vista sigue en verde.
