@@ -135,6 +135,11 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
   * Su estandarte heráldico, lema y blasón se exhibirán de forma prominente con corona dorada en el Gran Portal del santuario (SPEC-01).
   * Todos los conjuros validados creados por dicho clan lucirán un **ribete ceremonial dorado** en las páginas del Grimorio.
   * Su victoria quedará inscrita de forma perpetua en el **Salón de los Linajes** con la marca temporal, nombre del clan, patriarca en funciones y PDA alcanzados.
+
+  *Criterios de aceptación con cobertura de arnés (criterio 15 de la Sección 8):*
+  * CUANDO la corona cambie de manos entre semanas, ENTONCES el ribete dorado MIGRARÁ: el conjuro de la casa derrotada perderá el filo dorado y el de la nueva casa reina lo ceñirá — la corona es semanal, jamás perpetua. *Evidencia: `scratch/test_regent_ribbon_chain.mjs` (cadena completa del ribete).*
+  * SI el Catálogo del Tomo se pagina («Desenrollar más pergaminos») cuando el regente ya es conocido, ENTONCES las tarjetas de las páginas siguientes NACERÁN ya ceñidas con el ribete, sin esperar a un repintado posterior. *Evidencia: `scratch/test_regent_ribbon_chain.mjs` (fase de paginación).*
+  * La materia del ribete vendrá íntegramente de tokens del sistema de diseño (cero literales de color), con doble anillo interior cuyo pulso y el del aura del estandarte quedan ANULADOS bajo `prefers-reduced-motion` (RNF-03). *Evidencia: `scratch/test_regent_ribbon_chain.mjs` (fases de materia y movimiento reducido).*
 * **RF-04.5 [Desempate]:**  
   SI dos o más clanes concluyen el ciclo semanal empatados en el primer puesto con la misma cantidad exacta de PDA, ENTONCES el sistema DEBERÁ resolver el desempate mediante los siguientes criterios canónicos:
   1. *Primer Criterio:* Mayor número total de conjuros validados aportados durante la semana en curso.
@@ -162,6 +167,11 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
   * La clasificación en vivo del Dominio Semanal en curso (puesto, estandarte, linaje, PDA semanales y número de conjuros sellados).
   * La clasificación de Prestigio Histórico de todos los tiempos.
   * El Libro Mayor de Campeones con el historial cronológico de todas las semanas concluidas y sus clanes regentes.
+
+  *Criterios de aceptación con cobertura de arnés (criterio 18 de la Sección 8):*
+  * La base del santuario NACERÁ con el Libro Mayor prístino (cero actas en el repositorio de ciclos, jamás `null`); la lectura pública del Salón jamás contempla el estante vacío porque la salvaguarda perezosa corona la semana vigente al primer vistazo (plan 5, Decisión 1). *Evidencia: `scratch/test_hall_of_fame_contract.php` (fase del estante virgen).*
+  * Cada acta del Libro Mayor portará el contrato camelCase completo (`weekNumber`, `cycleYear`, `regentClanId`, `regentClanName`, `winningPoints`, `winnerSpellCount`, `closedAt`, `label`), con el nombre solemne del campeón resuelto y su rótulo «Año X · Semana NN» en noble castellano. *Evidencia: `scratch/test_hall_of_fame_contract.php` (fase del contrato de actas).*
+  * Las actas llegarán en cronología perpetua INVERSA (semana más reciente primero, por año y semana), y cada corte con instante inyectado (RNF-01) dejará la contienda viva a cero para la semana siguiente (RF-04.3). *Evidencia: `scratch/test_hall_of_fame_contract.php` (fases de cronología y lectura pública).*
 * **RF-06.2 [Ubicuo]:**  
   El sistema DEBERÁ permitir filtrar el Salón de los Linajes por Linaje Mágico rector, facilitando la contemplación de las casas dedicadas a cada una de las 8 artes elementales.
 
@@ -177,6 +187,11 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
   Todos los nombres de linajes, lemas, rangos nobiliarios (*Patriarca*, *Adepto*), estados (*Convaleciente*, *Regente*, *Herencia Ancestral*) y descripciones deberán formularse con solemnidad literaria en noble castellano (Artículos IV y V de la Constitución).
 * **RNF-04 (Transparencia y Bitácora Pública de Auditoría):**  
   Toda fundación de clan, expulsión de adeptos, renuncia, sucesión por inactividad, disolución y coronación de dominio semanal deberá inscribirse de forma inmutable en la Bitácora de Auditoría pública del santuario (SPEC-03 / Artículo III).
+
+  *Criterios de aceptación de la coronación con cobertura de arnés (criterio 15 de la Sección 8):*
+  * La coronación dejará EXACTAMENTE un asiento `DOMINION_WEEK_CONCLUDED` por semana concluida, inscrito por «El Santuario» (rol `system`, jamás una pluma individual), con la casa coronada como entidad objetivo y crónica en noble castellano que nombre campeón y gloria. *Evidencia: `scratch/test_dominion_coronation_audit.php` (fase del asiento canónico).*
+  * El asiento será visible en el endpoint público `GET /api/v1/audit/log` sin vínculo arcano, portando el contrato camelCase completo de la Bitácora. *Evidencia: `scratch/test_dominion_coronation_audit.php` (fase de la comunidad).*
+  * Un segundo latido del cron sobre la misma semana NO duplicará el asiento (idempotencia, RNF-01), y cada cambio de manos de la corona escribirá su propia crónica sin repetir jamás la historia. *Evidencia: `scratch/test_dominion_coronation_audit.php` (fases de idempotencia y segunda semana).*
 * **RNF-05 (Dogma Vanilla y Dualidad Lingüística):**  
   El módulo de clanes, linajes y dominio semanal se implementará íntegramente sin librerías externas; los identificadores técnicos, esquemas de base de datos y endpoints se formularán en inglés `camelCase` (`clanId`, `patriarchId`, `lineageType`, `dominionPoints`, `weeklyRank`, `convalescenceExpiresAt`, `dailySimulatorPoints`), preservando la interfaz en noble castellano (Artículos I y V de la Constitución).
 
@@ -232,10 +247,10 @@ El objetivo de esta especificación es definir el **Sistema de Clanes, Linajes y
 * [ ] Los favoritos de la comunidad otorgan $+5$ PDA con límite de un voto computable por usuario.
 * [ ] El ciclo semanal concluye los domingos a las 23:59:59 UTC, proclamando al Clan Regente e iniciando a 0 PDA los contadores semanales.
 * [ ] El empate en el primer puesto semanal se dirime primero por mayor número de conjuros validados en la semana y segundo por marca temporal anterior.
-* [ ] El Clan Regente exhibe su estandarte en el Gran Portal, ribete dorado en sus conjuros y crónica perpetua en el Salón de Linajes.
+* [ ] El Clan Regente exhibe su estandarte en el Gran Portal, ribete dorado en sus conjuros y crónica perpetua en el Salón de Linajes. *(Cobertura de arnés: ribete con migración de corona, nacimiento ceñido en paginación y reduced-motion en `test_regent_ribbon_chain.mjs` y `test_dominion_frontend_bridges.mjs`; crónica perpetua en `test_lineage_hall_component.mjs`.)*
 * [ ] Los conjuros validados son patrimonio inviolable del clan en que nacieron y nunca se transfieren al salir el autor.
 * [ ] Los clanes disueltos pasan a `archived`, su nombre queda permanentemente reservado y sus conjuros validados se preservan como «Herencia Ancestral».
-* [ ] El Salón de los Linajes permite consultar la clasificación semanal en vivo, la histórica total y el Libro Mayor de Campeones.
+* [ ] El Salón de los Linajes permite consultar la clasificación semanal en vivo, la histórica total y el Libro Mayor de Campeones. *(Cobertura de arnés: contrato REST completo del Libro Mayor — estante prístino, actas camelCase, cronología inversa — en `test_hall_of_fame_contract.php` y `test_dominion_controller.php`; asiento público de coronación en `test_dominion_coronation_audit.php`.)*
 * [ ] Cero dependencias externas y cumplimiento riguroso del Dogma Vanilla, el Velo Arcano y el Dualismo Lingüístico.
 * [ ] El blasón de cada hermandad y el sello de cada linaje se forjan como Sello Rúnico determinista (SPEC-02 RF-07): el identificador `coat_of_arms` jamás se imprime, el estado se declara por metal y forma, y la casa disuelta viste bronce con el anillo roto.
 
