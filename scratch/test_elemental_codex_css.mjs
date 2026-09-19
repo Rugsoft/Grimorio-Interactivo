@@ -168,7 +168,11 @@ assertCondition(
   monumentalScale !== null && Math.abs(parseFloat(monumentalScale[1]) - 1.3) < 0.001,
   'Escala monumental ×1.3 respecto a los impactos convencionales'
 );
-const reducedMotionBlock = css.match(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+// La hoja gobierna el movimiento reducido en VARIOS bloques @media (aura,
+// rueda, rescate): RNF-03 exige anular la animación en cualquiera de ellos,
+// así que el veredicto reúne el contenido de todos los bloques declarados.
+const reducedMotionBlocks = [...css.matchAll(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/g)].map((m) => m[1]);
+const reducedMotionBlock = reducedMotionBlocks.join('\n');
 assertCondition(
   reducedMotionBlock.includes('elemental-combat-text'),
   'Movimiento reducido (RNF-03): la deflagración monumental se anula'

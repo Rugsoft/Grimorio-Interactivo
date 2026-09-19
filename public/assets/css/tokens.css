@@ -314,6 +314,8 @@
      ----------------------------------------------------------------- */
   --z-modal-detail: 100;
   --z-modal-access: 200;
+  /* Nivel 3: la ceremonia del juramento, cúspide de la pila (SPEC-09). */
+  --z-modal-oath: 300;
 
   /* -----------------------------------------------------------------
      7. Movimiento arcano: transiciones y pausa respetuosa

@@ -17,7 +17,8 @@
  *   [1] El espejo `users.clan_id` sigue a la autoridad al contraer y al
  *       cerrar una membresía (sin divergencia observable).
  *   [2] Un mago puede consagrarse SIN linaje y quedar apto para fundar.
- *   [3] Consagrarse CON linaje inscribe la membresía en la autoridad.
+ *   [3] El juramento de SPEC-09 sella la identidad arcana; la afiliación
+ *       al clan es acto de SPEC-07 (la consagración ya no afilia).
  *   [4] El veto ético juzga los datos VIVOS, no el espejo.
  *   [5] Los dos servicios de conflicto comparten autoridad y veredicto.
  *   [6] La vía de ascenso legada alimenta la autoridad sin perder memoria.
@@ -208,41 +209,61 @@ assertCondition(
 );
 
 // =====================================================================
-// FASE 3 · Consagración con linaje
+// FASE 3 · Juramento de linaje (enmienda de SPEC-03 por SPEC-09)
 // =====================================================================
-echo "\n═══ FASE 3 · Consagración con linaje electo ═══\n";
-$withClan = $authService->consecrate(
-    'MagoConCasa',
-    'concasa@arcano.arc',
-    'palabra-secreta-larga',
-    'cln_espejo',
-    $now,
-);
-assertCondition(
-    authoritativeClan($canonical, $withClan->userId) === 'cln_espejo',
-    'La afiliación se inscribe en la AUTORIDAD al consagrarse'
-);
-assertCondition(
-    mirroredClan($canonical, $withClan->userId) === 'cln_espejo',
-    'El espejo se inscribe por el único escritor (ClanMemberRepository)'
-);
-assertCondition(
-    (string) $canonical->query(
-        "SELECT role FROM clan_members WHERE user_id = '" . $withClan->userId . "'"
-    )->fetchColumn() === 'adept',
-    'El recién consagrado ingresa como Adepto del Linaje (RF-01.3)'
+echo "\n═══ FASE 3 · La identidad arcana se contrae jurando ═══\n";
+// SPEC-09 movió el linaje de la consagración al juramento del primer
+// acceso: la consagración ignora cualquier clanId legado en silencio y
+// solo LineageOathService sella users.lineage. users.clan_id queda a
+// NULL al jurar: la afiliación a clanes es acto posterior e independiente
+// de SPEC-07 (membresía en la autoridad), no efecto del juramento.
+require_once $projectRoot . '/src/Repositories/LineageOathRepository.php';
+require_once $projectRoot . '/src/Dto/LineageOathResultDto.php';
+require_once $projectRoot . '/src/Services/LineageOathService.php';
+require_once $projectRoot . '/src/Exceptions/LineageOathException.php';
+
+$canonical->exec("INSERT INTO users (id, alias, email, password_hash, role, clan_id, lineage, created_at, updated_at)
+                  VALUES ('usr_jurado', 'MagoConCasa', 'concasa@arcano.arc', 'x', 'editor', NULL, NULL, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z'),
+                          ('usr_jurado_dos', 'MagoFantasma', 'fantasma@arcano.arc', 'x', 'editor', NULL, NULL, '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')");
+
+$lineageOath = new \Grimorio\Services\LineageOathService(
+    new \Grimorio\Repositories\LineageOathRepository($canonical),
+    new \Grimorio\Services\AuditService($canonical),
 );
 
-$ghostClanRejected = false;
+$sealed = $lineageOath->sealOath('usr_jurado', 'primordialFlame', 'editor', 'MagoConCasa', $now);
+assertCondition($sealed->sealedNow === true, 'El juramento sella el linaje canónico al primer acceso');
+assertCondition(
+    (string) $canonical->query("SELECT lineage FROM users WHERE id = 'usr_jurado'")->fetchColumn() === 'primordialFlame',
+    'La identidad arcana vive en users.lineage (SPEC-09)'
+);
+assertCondition(
+    mirroredClan($canonical, 'usr_jurado') === null && authoritativeClan($canonical, 'usr_jurado') === null,
+    'Jurar NO afilia a clan alguno: ni espejo ni autoridad se tocan (la membresía es acto de SPEC-07)'
+);
+
+$ghostLineageRejected = false;
 try {
-    $authService->consecrate('MagoFantasma', 'fantasma@arcano.arc', 'palabra-secreta-larga', 'cln_fantasma', $now);
-} catch (InvalidArgumentException) {
-    $ghostClanRejected = true;
+    $lineageOath->sealOath('usr_jurado_dos', 'cln_fantasma', 'editor', 'MagoFantasma', $now);
+} catch (\Grimorio\Exceptions\LineageOathException) {
+    $ghostLineageRejected = true;
 }
-assertCondition($ghostClanRejected, 'Un linaje inexistente sigue siendo rechazado al consagrarse');
+assertCondition($ghostLineageRejected, 'Un linaje fuera del canon de los 8 sigue siendo rechazado al jurar');
+
+$swornConflictRejected = false;
+try {
+    $lineageOath->sealOath('usr_jurado', 'celestialTides', 'editor', 'MagoConCasa', $now);
+} catch (\Grimorio\Exceptions\LineageOathException) {
+    $swornConflictRejected = true;
+}
+assertCondition($swornConflictRejected, 'El vínculo ya forjado es perpetuo: jurar otro linaje alza el conflicto solemne');
+assertCondition(
+    (string) $canonical->query("SELECT lineage FROM users WHERE id = 'usr_jurado'")->fetchColumn() === 'primordialFlame',
+    'El conflicto solemne no muta una sola fila (users.lineage intacto)'
+);
 assertCondition(
     (int) $canonical->query("SELECT COUNT(*) FROM users WHERE id LIKE 'usr_%' AND clan_id IS NULL")->fetchColumn() >= 1,
-    'La base convive con magos sin linaje y con magos afiliados'
+    'La base convive con magos sin clan y con magos de linaje jurado'
 );
 
 // =====================================================================
@@ -250,30 +271,33 @@ assertCondition(
 // =====================================================================
 echo "\n═══ FASE 4 · El veto lee la autoridad, no el espejo ═══\n";
 $validator = new ClanEthicsValidator($repository);
+// La afiliación al clan es acto de SPEC-07: el adepto ya juró su linaje
+// (FASE 3) y ahora milita en la Casa del Espejo vía el único escritor.
+$repository->addMember('clm_jurado', 'cln_espejo', 'usr_jurado', 'adept', '2026-01-01T00:00:00Z');
 assertCondition(
-    $validator->canMasterEvaluateSpell($withClan->userId, 'cln_espejo', $now) === false,
+    $validator->canMasterEvaluateSpell('usr_jurado', 'cln_espejo', $now) === false,
     'Quien milita en el linaje del conjuro queda vetado'
 );
 // Se desvanece la afiliación en la autoridad, sin tocar el espejo.
-$canonical->exec("UPDATE clan_members SET left_at = '2026-09-13T00:00:00Z' WHERE user_id = '" . $withClan->userId . "'");
+$canonical->exec("UPDATE clan_members SET left_at = '2026-09-13T00:00:00Z' WHERE user_id = 'usr_jurado'");
 assertCondition(
-    $validator->canMasterEvaluateSpell($withClan->userId, 'cln_espejo', $now) === false,
+    $validator->canMasterEvaluateSpell('usr_jurado', 'cln_espejo', $now) === false,
     'Recién salido (ayer), el veto histórico sigue vigente'
 );
 assertCondition(
-    $validator->canMasterEvaluateSpell($withClan->userId, 'cln_espejo', $now->modify('+31 days')) === true,
+    $validator->canMasterEvaluateSpell('usr_jurado', 'cln_espejo', $now->modify('+31 days')) === true,
     'Un mes después, el mismo Maestro queda admitido'
 );
 // Corromper el espejo NO cambia el veredicto: no es la autoridad. Se apunta
 // el espejo a un linaje REAL en el que no hay membresía alguna; si el espejo
 // mandase, el Maestro quedaría vetado por habitar el linaje del conjuro.
-$canonical->exec("UPDATE users SET clan_id = 'cln_primordial' WHERE id = '" . $withClan->userId . "'");
+$canonical->exec("UPDATE users SET clan_id = 'cln_primordial' WHERE id = 'usr_jurado'");
 assertCondition(
-    $validator->canMasterEvaluateSpell($withClan->userId, 'cln_primordial', $now) === true,
+    $validator->canMasterEvaluateSpell('usr_jurado', 'cln_primordial', $now) === true,
     'El veto ignora un espejo manipulado: manda el historial de membresía'
 );
 assertCondition(
-    $validator->canMasterEvaluateSpell($withClan->userId, 'cln_espejo', $now) === false,
+    $validator->canMasterEvaluateSpell('usr_jurado', 'cln_espejo', $now) === false,
     'Y el veto histórico sigue mordiendo pese al espejo manipulado'
 );
 

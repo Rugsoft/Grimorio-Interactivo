@@ -45,6 +45,10 @@ require __DIR__ . '/../src/Services/ConsecrationResult.php';
 require __DIR__ . '/../src/Services/RecoveryResult.php';
 require __DIR__ . '/../src/Repositories/ClanMemberRepository.php';
 require __DIR__ . '/../src/Services/AuthService.php';
+require __DIR__ . '/../src/Repositories/LineageOathRepository.php';
+require __DIR__ . '/../src/Dto/LineageOathResultDto.php';
+require __DIR__ . '/../src/Services/LineageOathService.php';
+require __DIR__ . '/../src/Exceptions/LineageOathException.php';
 require __DIR__ . '/../src/Controllers/AuthController.php';
 
 use Grimorio\Controllers\AuthController;
@@ -53,6 +57,7 @@ use Grimorio\Core\Request;
 use Grimorio\Core\Response;
 use Grimorio\Core\SessionManager;
 use Grimorio\Services\AuthService;
+use Grimorio\Services\LineageOathService;
 
 $assertsPassed = 0;
 $assertsFailed = 0;
@@ -141,11 +146,25 @@ $consecrateResponse = $authController->consecrate(forgeJsonRequest('POST', '/api
     'alias'      => 'RenuncianteAntiguo',
     'email'      => 'renunciante@sanctuario.arc',
     'passphrase' => 'frase-larga-del-renunciante-99',
+    // SPEC-09 (enmienda de SPEC-03): la consagración ignora clanId en
+    // silencio; la identidad arcana solo se contrae jurando (ceremonia).
     'clanId'     => 'cln_astral',
 ]));
 $consecrateBody = decodeJson($consecrateResponse);
 $userId = (string) ($consecrateBody['data']['user']['id'] ?? '');
 assertArcane($consecrateResponse->getStatusCode() === 201 && $userId !== '', 'El iniciado de prueba queda consagrado (201)');
+
+// La identidad arcana se contrae por la vía canónica de SPEC-09: el
+// juramento del primer acceso sella el linaje en users.lineage.
+$lineageOath = new LineageOathService(
+    new \Grimorio\Repositories\LineageOathRepository($pdo),
+    new \Grimorio\Services\AuditService($pdo),
+);
+$lineageOath->sealOath($userId, 'primordialFlame', 'editor', 'RenuncianteAntiguo', new \DateTimeImmutable('2026-09-12T12:00:00Z'));
+assertArcane(
+    (string) $pdo->query("SELECT lineage FROM users WHERE id = '" . $userId . "'")->fetchColumn() === 'primordialFlame',
+    'El linaje queda sellado por el juramento canónico (users.lineage)'
+);
 
 // La vía canónica del endpoint es la cookie física del navegador. En CLI
 // la cookie superglobal es legible por Request::getCookie, así que el
@@ -200,7 +219,7 @@ assertArcane(
     'La renuncia porta una leyenda solemne de despedida'
 );
 
-$userAfter = $pdo->prepare('SELECT alias, email, password_hash, recovery_token_hash, recovery_token_expires_at, role, clan_id FROM users WHERE id = :userId');
+$userAfter = $pdo->prepare('SELECT alias, email, password_hash, recovery_token_hash, recovery_token_expires_at, role, clan_id, lineage FROM users WHERE id = :userId');
 $userAfter->execute([':userId' => $userId]);
 $rowAfter = $userAfter->fetch(PDO::FETCH_ASSOC);
 
@@ -223,8 +242,13 @@ assertArcane(
     'El pergamino de restablecimiento queda purgado'
 );
 assertArcane(
-    is_array($rowAfter) && $rowAfter['role'] === 'editor' && $rowAfter['clan_id'] === 'cln_astral',
-    'El rol técnico y el linaje del registro anónimo permanecen estables (RF-09.2: puntuación del clan)'
+    is_array($rowAfter) && $rowAfter['role'] === 'editor'
+    // SPEC-09: el linaje del registro anónimo permanece estable para la
+    // puntuación histórica del clan (RF-09.2); users.clan_id ya no porta
+    // afiliación alguna tras la reconciliación de la autoridad.
+    && ($rowAfter['lineage'] ?? null) === 'primordialFlame'
+    && ($rowAfter['clan_id'] ?? null) === null,
+    'El rol, el linaje jurado y el espejo ausente del registro anónimo permanecen estables (RF-09.2: puntuación del clan)'
 );
 
 echo "\n[3] Las sesiones de la cuenta caen con la renuncia (disolución implícita)\n";

@@ -811,8 +811,15 @@ assertCondition(
     str_contains($serviceSource, 'insertDecree(') && str_contains($serviceSource, 'recordAction('),
     'El decreto y su memoria viajan por los canales unicos de las Tareas 1.4 y 1.3 de SPEC-03'
 );
+// Prohibición quirúrgica de reloj del sistema (RNF-01): llamadas reales
+// de función, no subcadenas casuales ("loadCandid**date(**" contiene
+// literalmente "date("). También se veta la época clásica de
+// DateTime en constructores sin zona explícita.
+$clockCalls = preg_match_all('/(?<![\w$])(time|mktime|gmmktime|strtotime)\s*\(/', $serviceSource)
+    + preg_match_all('/(?<![\w$\\])date\s*\(/', $serviceSource)
+    + preg_match_all('/new\s+\\?DateTime(Immutable)?\s*\(\s*(?!\'now\'|"now")/', $serviceSource);
 assertCondition(
-    !str_contains($serviceSource, 'time()') && !str_contains($serviceSource, 'date('),
+    $clockCalls === 0,
     'No lee el reloj del sistema: el instante se inyecta (RNF-01)'
 );
 assertCondition(

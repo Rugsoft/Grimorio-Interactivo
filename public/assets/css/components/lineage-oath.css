@@ -256,7 +256,16 @@
    --------------------------------------------------------------------- */
 
 #oathModal {
-  z-index: 300;
+  z-index: var(--z-modal-oath);
+}
+
+/* El anfitrión solemne (SPEC-09): sobre la base .modal, el modificador
+   ceremonial viste el diálogo del juramento con filo de oro vivo y halo
+   arcano — la solemnidad del acto se declara en el marco, no solo en
+   las leyendas interiores. */
+.modal--oath {
+  border-color: var(--color-gold-arcane);
+  box-shadow: var(--shadow-gold-glow), var(--shadow-arcane);
 }
 
 .oath-modal__panel {
