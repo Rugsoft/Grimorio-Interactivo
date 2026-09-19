@@ -91,11 +91,17 @@ Hoy, la consagración (registro, SPEC-03) exige elegir ese vínculo dentro de un
   * IF la carga del catálogo de linajes falla, THEN la ceremonia muestra un aviso solemne controlado («El canon no responde») con acción de reintento, sin exponer trazas y sin liberar la retención (RF-05.1).
 * **RF-02.2 [Dirigido por Eventos]:**
   CUANDO el adepto seleccione una tarjeta, el sistema DEBERÁ expandirla revelando la **doctrina íntegra** (2–4 frases canónicas del linaje) y la afirmación solemne del juramento (texto ceremonial en primera persona que nombre al linaje elegido). Tarjeta contraída y expandida derivan del mismo texto canónico único por linaje; no existen dos doctrinas independientes.
+  **Criterios de aceptación:**
+  * WHEN una tarjeta contraída reciba una activación (clic, Enter o espaciadora), THEN se expande y anuncia su expansión (`oath:lineage-expanded`).
+  * WHEN una tarjeta YA expandida reciba una nueva activación, THEN se pliegue de nuevo: la tarjeta es un **conmutador expandir/plegar**, no un botón de una sola vía.
+  * WHEN una tarjeta se pliegue, THEN su región de expansión quede oculta (`hidden`) y `aria-expanded` declare `false`, sin que la ceremonia pierda su estado ni su catálogo.
+  * IF el adepto pulse la acción de jurar sobre una tarjeta CONTRAÍDA, THEN el gesto se ignora de forma silenciosa y segura (sin error ni modal): la solemnidad del juramento exige contemplar primero la doctrina íntegra.
 * **RF-02.3 [Dirigido por Eventos]:**
   CUANDO el adepto pulse la acción de jurar sobre un linaje expandido, el sistema DEBERÁ presentar un **modal solemne de doble confirmación** que muestre el texto íntegro del juramento en primera persona junto a la advertencia de perpetuidad, exigiendo una segunda confirmación explícita («Sellar el juramento») para consumar el vínculo.
   **Criterios de aceptación:**
   * WHEN el modal se muestra, THEN la advertencia de irrevocabilidad es visible, explícita e ineludible (jamás letra menuda ni *tooltip*).
   * IF el adepto descarta el modal, THEN no se consume juramento alguno y la ceremonia permanece operativa.
+  * WHEN el modal convoque, THEN solo lo haga desde una tarjeta expandida (RF-02.2): el gesto «Jurar» sobre tarjeta contraída jamás abre el modal.
 
 ### RF-03: El Juramento — Confirmación Irrevocable
 * **RF-03.1 [Dirigido por Eventos]:**
