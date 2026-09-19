@@ -386,6 +386,8 @@ function buildFakeShell(initialUrl) {
     hidden: false,
     listeners: {},
     createElement: (tag) => createFakeElement(tag, fakeDocument),
+    // createElementNS: el sello heráldico del badge (SPEC-09, Tarea 3.3) lo exige.
+    createElementNS: (_namespace, tag) => createFakeElement(tag, fakeDocument),
     addEventListener(name, listener) { (fakeDocument.listeners[name] ??= []).push(listener); },
     removeEventListener(name, listener) {
       fakeDocument.listeners[name] = (fakeDocument.listeners[name] ?? []).filter((l) => l !== listener);
@@ -441,6 +443,7 @@ function activeCatalogMode(shell) {
 
 const SESSION_USER = {
   id: 'usr_visual', alias: 'Erudita Visual', role: 'editor',
+  lineage: 'primordialFlame', // SPEC-09: vínculo jurado; sin él la retención del juramento desvía la navegación a la ceremonia
   clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial',
 };
 
