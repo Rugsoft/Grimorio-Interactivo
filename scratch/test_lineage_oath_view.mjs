@@ -231,6 +231,26 @@ assertCondition(expandedLineageIds.filter((entry) => entry === 'expand:primordia
 cardFlame.setExpanded(false);
 assertCondition(cardFlame.element.getAttribute('aria-expanded') === 'false' && findLeafByText(cardFlame.element, CANON[0].doctrineFull).length === 0, 'Contraer oculta la íntegra y el estado declara false');
 
+// --- FASE B2: Conmutador expandir/plegar y gesto vedado (RF-02.2, criterios ratificados) ---
+console.log('\nFASE B2: La tarjeta es un conmutador; «Jurar» jamás procede contraída\n');
+const swearCountBeforeToggle = expandedLineageIds.filter((entry) => entry === 'swear:primordialFlame').length;
+
+// Activación real (clic sobre la tarjeta contraída): expande y notifica.
+fire(cardFlame.element, 'click');
+assertCondition(cardFlame.element.getAttribute('aria-expanded') === 'true', 'Una activación sobre la tarjeta contraída la expande');
+assertCondition(expandedLineageIds.filter((entry) => entry === 'expand:primordialFlame').length === 2, 'La expansión por activación notifica `oath:lineage-expanded`');
+
+// Segunda activación sobre la tarjeta YA expandida: la pliega (conmutador, no botón de una vía).
+fire(cardFlame.element, 'click');
+assertCondition(cardFlame.element.getAttribute('aria-expanded') === 'false' && cardFlame.isExpanded() === false, 'Una activación sobre la tarjeta expandida la PLEGA (conmutador expandir/plegar)');
+assertCondition(findByClass(cardFlame.element, 'lineage-card__swear').every((button) => isHiddenNode(button)), 'El plegado oculta de nuevo el botón «Jurar»');
+
+// Gesto vedado (capa componente): el botón vive DENTRO de la región de expansión,
+// así que contraída está oculto y la activación de tarjeta no lo alcanza (RF-02.2).
+// La guardia de expandedCard en la vista se exercise en la FASE G2.
+fire(swearButton, 'click');
+assertCondition(cardFlame.isExpanded() === false, 'El gesto vedado tampoco re-expande la tarjeta');
+
 // --- FASE C: Teclado (RNF-05) ---
 console.log('\nFASE C: Operable sin ratón\n');
 fire(cardFlame.element, 'keydown', { key: 'x' });
@@ -404,6 +424,30 @@ fire(findByClass(findByClass(mountRoot, 'lineage-card')[1], 'lineage-card__swear
 fire(findByClass(viewDialog, 'oath-modal__dismiss')[0], 'click');
 await wait();
 assertCondition(oathClient.calls.seal.length === 1, 'El descarte del modal no invoca sealOath (RF-02.3)');
+
+// --- FASE G2: Gesto vedado sobre tarjeta contraída (RF-02.2 ratificado) ---
+console.log('\nFASE G2: «Jurar» sobre tarjeta CONTRAÍDA jamás convoca el modal\n');
+// El visor fingido no implementa la propiedad `open` de <dialog>: el estado del
+// modal se lee por su región viva (`oath-modal__announce`), que muta con cada
+// apertura y descarte (leyendas canónicas de oathModalComponent).
+const tidesCardView = findByClass(mountRoot, 'lineage-card').find((node) => node.getAttribute('data-lineage-id') === 'celestialTides');
+fire(tidesCardView, 'click'); // pliega (conmutador)
+assertCondition(tidesCardView.getAttribute('aria-expanded') === 'false', 'La tarjeta Mareas queda contraída tras el plegado');
+const sealCallsBeforeVedado = oathClient.calls.seal.length;
+fire(findByClass(tidesCardView, 'lineage-card__swear')[0], 'click');
+await wait();
+const announceVedado = findByClass(viewDialog, 'oath-modal__announce')[0]?.textContent ?? '';
+assertCondition(!announceVedado.includes('abierto'), 'El modal NO convoca sobre tarjeta contraída');
+assertCondition(oathClient.calls.seal.length === sealCallsBeforeVedado, 'El gesto vedado no consume juramento alguno');
+// La ceremonia permanece operativa: la misma tarjeta re-expandida SÍ convoca.
+fire(tidesCardView, 'click');
+fire(findByClass(tidesCardView, 'lineage-card__swear')[0], 'click');
+await wait();
+const announceReabierto = findByClass(viewDialog, 'oath-modal__announce')[0]?.textContent ?? '';
+assertCondition(announceReabierto.includes('abierto'), 'Re-expandida, la misma tarjeta SÍ convoca el modal (ceremonia operativa)');
+const dismissButton = findByClass(viewDialog, 'oath-modal__dismiss')[0] ?? null;
+if (dismissButton) fire(dismissButton, 'click');
+await wait();
 
 // --- FASE H: Fallo del canon — aviso + reintento, retención intacta ---
 console.log('\nFASE H: El canon no responde (RF-02.1, RF-05.1)\n');
