@@ -255,7 +255,7 @@ $approved = new ClanApplicationDto(
 assertCondition($pending->isPending() && !$pending->wasApproved(), 'RF-01.5: postulación pendiente reconocida');
 assertCondition($approved->wasApproved() && !$approved->isPending(), 'RF-01.5: postulación admitida reconocida');
 assertCondition(ClanApplicationDto::MAX_PENDING_APPLICATIONS === 3, 'RF-01.5: tope de 3 postulaciones pendientes publicado');
-assertJsonContract($pending, ['id', 'clanId', 'clanName', 'userId', 'userAlias', 'status', 'createdAt', 'resolvedAt', 'isPending'], 'ClanApplicationDto');
+assertJsonContract($pending, ['id', 'clanId', 'clanName', 'userId', 'userAlias', 'status', 'createdAt', 'resolvedAt', 'verdictSeenAt', 'isPending'], 'ClanApplicationDto');
 assertRejects(static fn () => new ClanApplicationDto('a', 'c', 'u', 'enEspera'), 'Solicitud: estado inválido');
 assertRejects(static fn () => new ClanApplicationDto('a', 'c', 'u', 'pending', '', '', null, '2026-09-14T09:00:00Z'), 'Solicitud: pendiente con veredicto');
 

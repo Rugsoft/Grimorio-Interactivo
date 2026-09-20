@@ -38,6 +38,7 @@ namespace Grimorio\Repositories;
 
 use InvalidArgumentException;
 use PDO;
+use PDOException;
 use Throwable;
 
 /**
@@ -124,13 +125,27 @@ final class ClanApplicationRepository
                            AND status = :pendingStatus
                     )'
         );
-        $statement->bindValue(':applicationId', $applicationId);
-        $statement->bindValue(':clanId', $clanId);
-        $statement->bindValue(':userId', $userId);
-        $statement->bindValue(':pendingStatus', self::STATUS_PENDING);
-        $statement->bindValue(':createdAt', $createdAt);
-        $statement->bindValue(':maxPending', self::MAX_PENDING_APPLICATIONS, PDO::PARAM_INT);
-        $statement->execute();
+        try {
+            $statement->bindValue(':applicationId', $applicationId);
+            $statement->bindValue(':clanId', $clanId);
+            $statement->bindValue(':userId', $userId);
+            $statement->bindValue(':pendingStatus', self::STATUS_PENDING);
+            $statement->bindValue(':createdAt', $createdAt);
+            $statement->bindValue(':maxPending', self::MAX_PENDING_APPLICATIONS, PDO::PARAM_INT);
+            $statement->execute();
+        } catch (PDOException $exception) {
+            // Casa clausurada (SPEC-10, RF-03.1): el índice único
+            // `uq_clan_application_house` vela sobre CUALQUIER fila histórica
+            // de esa casa para esa cuenta — pendiente, aprobada, rechazada o
+            // cancelada. Se informa con null para que el servicio discierna
+            // la causa exacta (clausura, ya pendiente o cupo) sin propagar el
+            // detalle del motor de datos (Artículo I: PDO nativo).
+            if ($this->isUniqueConstraintViolation($exception)) {
+                return null;
+            }
+
+            throw $exception;
+        }
 
         if ($statement->rowCount() === 0) {
             // El tope de tres o una postulación duplicada detuvieron la pluma.
@@ -322,13 +337,10 @@ final class ClanApplicationRepository
             ]);
             $resolved = $statement->rowCount() > 0;
 
-            if ($resolved && $decision === self::STATUS_APPROVED) {
-                $this->cancelPendingApplications(
-                    (string) $application['user_id'],
-                    $applicationId,
-                    $resolvedAt
-                );
-            }
+            // La anulación de RESIDUALES ya no vive aquí (SPEC-10, RF-03.7):
+            // el servicio la orchesta para dejar un asiento de Bitácora por
+            // cada petición huérfana, y necesita la lectura de identificadores
+            // ANTES de que el UPDATE los consuma. Aquí solo se dictamina.
 
             if ($ownsTransaction) {
                 $this->pdo->commit();
@@ -342,6 +354,37 @@ final class ClanApplicationRepository
 
             throw $exception;
         }
+    }
+
+    /**
+     * Retira una petición PENDIENTE de la propia cuenta (SPEC-10, RF-03.3).
+     *
+     * La condición `status = pending` dentro del propio UPDATE serializa la
+     * carrera con el dictamen del Patriarca: quien llega segundo no muta fila
+     * alguna. La fila PERSISTE con estado `cancelled` y `resolved_at` fijado:
+     * junto con el índice único `uq_clan_application_house`, la retirada
+     * clausura la casa para la cuenta (RF-03.1) y libera el cupo de
+     * pendientes (la fila ya no cuenta como `pending`).
+     *
+     * @return bool Cierto si la petición estaba pendiente y quedó retirada.
+     */
+    public function withdrawApplication(string $applicationId, string $resolvedAt): bool
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE clan_applications
+                SET status = :cancelledStatus,
+                    resolved_at = :resolvedAt
+              WHERE id = :applicationId
+                AND status = :pendingStatus'
+        );
+        $statement->execute([
+            ':cancelledStatus' => self::STATUS_CANCELLED,
+            ':resolvedAt'      => $resolvedAt,
+            ':applicationId'   => $applicationId,
+            ':pendingStatus'   => self::STATUS_PENDING,
+        ]);
+
+        return $statement->rowCount() > 0;
     }
 
     /**
@@ -459,13 +502,38 @@ final class ClanApplicationRepository
      * se excluye mediante `$exceptApplicationId`; en el ingreso por régimen
      * abierto se pasa null y se cancelan todas las pendientes.
      *
-     * @return int Número de solicitudes canceladas.
+     * SPEC-10 (RF-03.7, plan §2.3): cada petición anulada debe dejar SU asiento
+     * en la Bitácora, así que el servicio necesita los IDENTIFICADORES de las
+     * residuales. La lectura se hace ANTES del UPDATE, dentro de la misma
+     * transacción que el llamante sostenga, para que la lista y la anulación
+     * sean un solo gesto.
+     *
+     * @return list<string> Identificadores de las peticiones canceladas.
      */
     public function cancelPendingApplications(
         string $userId,
         ?string $exceptApplicationId,
         string $resolvedAt
-    ): int {
+    ): array {
+        // Primero la lectura: los id de las pendientes que van a caer.
+        $readStatement = $this->pdo->prepare(
+            'SELECT id
+               FROM clan_applications
+              WHERE user_id = :userId
+                AND status = :pendingStatus
+                AND (:exceptApplicationId IS NULL OR id <> :exceptApplicationId)'
+        );
+        $readStatement->execute([
+            ':userId'              => $userId,
+            ':pendingStatus'       => self::STATUS_PENDING,
+            ':exceptApplicationId' => $exceptApplicationId,
+        ]);
+        $annulledIds = array_map(
+            static fn (array $row): string => (string) $row['id'],
+            $readStatement->fetchAll(PDO::FETCH_ASSOC),
+        );
+
+        // Después la anulación, con las mismas condiciones exactas.
         $statement = $this->pdo->prepare(
             'UPDATE clan_applications
                 SET status = :cancelledStatus,
@@ -482,7 +550,7 @@ final class ClanApplicationRepository
             ':exceptApplicationId' => $exceptApplicationId,
         ]);
 
-        return $statement->rowCount();
+        return $annulledIds;
     }
 
     /**
@@ -558,5 +626,26 @@ final class ClanApplicationRepository
                 'El expediente solo admite los estados pendiente, aprobada, rechazada o cancelada.'
             );
         }
+    }
+
+    /**
+     * Distingue una colisión de unicidad de cualquier otro fallo del motor.
+     *
+     * SQLite y MySQL responden con SQLSTATE 23000 («integrity constraint
+     * violation») acompañado de la leyenda de unicidad; PostgreSQL emplea
+     * 23505. Aísla la condición para traducirla a un resultado de negocio
+     * (casa clausurada por el índice único `uq_clan_application_house`,
+     * SPEC-10 RF-03.1) sin enmascarar el resto de errores.
+     */
+    private function isUniqueConstraintViolation(PDOException $exception): bool
+    {
+        $sqlState = (string) $exception->getCode();
+
+        if ($sqlState === '23505') {
+            return true;
+        }
+
+        return str_starts_with($sqlState, '23')
+            && preg_match('/unique|duplicate/i', $exception->getMessage()) === 1;
     }
 }

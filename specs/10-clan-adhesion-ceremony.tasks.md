@@ -20,32 +20,32 @@
 
 ## Fase 2 — Guardias y Ritos Backend
 
-- [ ] **Tarea 2.1 — Cuatro códigos canónicos en `ClanGovernanceException`**
+- [x] **Tarea 2.1 — Cuatro códigos canónicos en `ClanGovernanceException`**
   * **Qué:** fábricas nuevas `clanLineageMismatch()`, `clanLoyaltyBound()`, `adminLineageRequired()`, `applicationHouseClosed()` — código, HTTP 403, leyenda solemne del Anexo A del plan y `recoveryAction`.
   * **Cubre:** `RF-01.1` (Admin), `RF-02.3` (lealtad), `RF-03.1` (clausura), `RF-04.1` (linaje).
   * **Hecho cuando:** cada fábrica emite su código canónico, 403 y la leyenda exacta del Anexo A.
 
-- [ ] **Tarea 2.2 — Guardias de linaje, lealtad y Admin en el rito unificado**
+- [x] **Tarea 2.2 — Guardias de linaje, lealtad y Admin en el rito unificado**
   * **Qué:** `ClanService::applyToClan()` estrena `ADMIN_LINEAGE_REQUIRED` → `CLAN_LOYALTY_BOUND` (sustituye a `ALREADY_AFFILIATED` en esta vía, enmienda declarada en plan §5.3) → `CLAN_LINEAGE_MISMATCH`, antes de tocar persistencia; `foundClan()` estrena Admin + linaje.
   * **Cubre:** `RF-04.1`, `RF-02.3`, `RF-01.1`, `RF-04.2` (SPEC-09 RF-04.2 gana sustancia backend).
   * **Hecho cuando:** militante hacia otra casa → `CLAN_LOYALTY_BOUND`; linaje ajeno → `CLAN_LINEAGE_MISMATCH` en ingreso y fundación; Supremo sin linaje → `ADMIN_LINEAGE_REQUIRED`; `ALREADY_AFFILIATED` sigue canónico en `foundClan`.
 
-- [ ] **Tarea 2.3 — Molde de motivación y estampa de llegada**
+- [x] **Tarea 2.3 — Molde de motivación y estampa de llegada**
   * **Qué:** validación `motivation` 20–500 en el camino `byApplication` (`INVALID_MOTIVATION`, 400); `receivedAt` opcional con tolerancia de ±30 s, sustituida por el instante del servidor si falta o desconfía (plan §3.3).
   * **Cubre:** `RF-03.1` (molde), caso límite 8 (desempate por llegada).
   * **Hecho cuando:** motivaciones de 19, 20 y 501 caracteres producen 400 solo en casas `byApplication` y `receivedAt` manipulada queda sustituida por la del servidor.
 
-- [ ] **Tarea 2.4 — `withdrawApplication()` (retirada del postulante)**
+- [x] **Tarea 2.4 — `withdrawApplication()` (retirada del postulante)**
   * **Qué:** en `ClanService`: petición propia y `pending`, transacción, `status='cancelled'` + `resolved_at`, cupo liberado, asiento `CLAN_APPLICATION_WITHDRAWN`.
   * **Cubre:** `RF-03.3`, `RF-04.4`.
   * **Hecho cuando:** retirar libera el cupo de 3 y `hasSealedHouse()` pasa a `true` (la fila persiste y clausura la casa).
 
-- [ ] **Tarea 2.5 — `acknowledgeVerdict()` (veredicto contemplado)**
+- [x] **Tarea 2.5 — `acknowledgeVerdict()` (veredicto contemplado)**
   * **Qué:** en `ClanService`: fija `verdict_seen_at` solo sobre petición terminal propia; idempotente (reenvío → éxito sin mutación).
   * **Cubre:** `RF-03.4`, `RF-01.1` (rótulo).
   * **Hecho cuando:** el primer acknowledge fija el instante y el segundo responde éxito sin cambiar la columna.
 
-- [ ] **Tarea 2.6 — Enmienda del dictamen (`resolveApplication`)**
+- [x] **Tarea 2.6 — Enmienda del dictamen (`resolveApplication`)**
   * **Qué:** rechazo exige `motive` de 20–500 (`400` si falta); inscripción del asiento `CLAN_APPLICATION_VERDICT` con identidad, estampa y motivo (Artículo III.3); la aprobación no exige motivo y anula residuales como hoy.
   * **Cubre:** `RF-03.4`, `RF-04.4`, `RF-04.5` (contrato compartido), hallazgo 23.
   * **Hecho cuando:** rechazar sin `motive` responde 400, con `motive` inscribe el asiento con su motivo, y la batería de deliberación de SPEC-08 permanece verde.

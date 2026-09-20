@@ -228,18 +228,19 @@ function forgeServices(PDO $pdo): array
 }
 
 /** Consagra un mago en el plano con el rol indicado. */
-function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'editor'): User
+function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'editor', string $lineage = 'primordialFlame'): User
 {
     $stamp = '2026-01-01T00:00:00Z';
     $pdo->prepare(
-        'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
-         VALUES (:id, :alias, :email, :passwordHash, :role, NULL, :createdAt, :updatedAt)'
+        'INSERT INTO users (id, alias, email, password_hash, role, lineage, clan_id, created_at, updated_at)
+         VALUES (:id, :alias, :email, :passwordHash, :role, :lineage, NULL, :createdAt, :updatedAt)'
     )->execute([
         ':id'           => $userId,
         ':alias'        => $alias,
         ':email'        => $userId . '@arcano.arc',
         ':passwordHash' => str_repeat('x', 60),
         ':role'         => $role,
+        ':lineage'      => $role === 'reader' ? null : $lineage,
         ':createdAt'    => $stamp,
         ':updatedAt'    => $stamp,
     ]);
@@ -251,6 +252,7 @@ function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'edito
         role: $role,
         clanId: null,
         passwordHash: str_repeat('x', 60),
+        lineage: $role === 'reader' ? null : $lineage,
         createdAt: $stamp,
         updatedAt: $stamp,
     );
@@ -633,7 +635,7 @@ beginBlock('3 · Cupo máximo de treinta adeptos');
 $pdo = forgeRealm($projectRoot);
 [$clanService] = forgeServices($pdo);
 
-$patronCupo = seedUser($pdo, 'usr_cupo_patron', 'PatriarcaDelCupo', 'editor');
+$patronCupo = seedUser($pdo, 'usr_cupo_patron', 'PatriarcaDelCupo', 'editor', 'worldRoots');
 $casaCupo = $clanService->foundClan(
     $patronCupo,
     'Casa del Cupo Colmado',
@@ -646,7 +648,7 @@ $casaCupo = $clanService->foundClan(
 
 for ($index = 1; $index <= ClanMemberRepository::MAX_ACTIVE_MEMBERS - 1; $index++) {
     $clanService->applyToClan(
-        seedUser($pdo, 'usr_cupo_' . $index, 'Adepto del Cupo ' . $index, 'editor'),
+        seedUser($pdo, 'usr_cupo_' . $index, 'Adepto del Cupo ' . $index, 'editor', 'worldRoots'),
         $casaCupo->id,
         $now,
     );
@@ -666,7 +668,7 @@ assertCondition(
     'La ficha heráldica exhibe la ocupación «30/30»'
 );
 
-$aspiranteTrigésimoPrimero = seedUser($pdo, 'usr_cupo_31', 'ElTrigésimoPrimero', 'editor');
+$aspiranteTrigésimoPrimero = seedUser($pdo, 'usr_cupo_31', 'ElTrigésimoPrimero', 'editor', 'worldRoots');
 expectRejection(
     fn () => $clanService->applyToClan($aspiranteTrigésimoPrimero, $casaCupo->id, $now),
     ClanGovernanceException::CLAN_QUOTA_EXCEEDED,
@@ -701,10 +703,10 @@ assertCondition(
     'El canon declara un tope de tres solicitudes pendientes'
 );
 
-$postulante = seedUser($pdo, 'usr_postulante', 'ElCortejadorIncansable', 'editor');
+$postulante = seedUser($pdo, 'usr_postulante', 'ElCortejadorIncansable', 'editor', 'aetherWeavers');
 $casasHermeticas = [];
 for ($index = 1; $index <= 4; $index++) {
-    $fundadora = seedUser($pdo, 'usr_hermetica_' . $index, 'Fundadora Hermética ' . $index, 'editor');
+    $fundadora = seedUser($pdo, 'usr_hermetica_' . $index, 'Fundadora Hermética ' . $index, 'editor', 'aetherWeavers');
     $casasHermeticas[$index] = $clanService->foundClan(
         $fundadora,
         'Casa Hermética ' . $index,
@@ -718,7 +720,13 @@ for ($index = 1; $index <= 4; $index++) {
 
 $resoluciones = [];
 for ($index = 1; $index <= 3; $index++) {
-    $resoluciones[$index] = $clanService->applyToClan($postulante, $casasHermeticas[$index]->id, $now);
+    // El molde de SPEC-10 (RF-03.1) exige motivación en la petición formal.
+    $resoluciones[$index] = $clanService->applyToClan(
+        $postulante,
+        $casasHermeticas[$index]->id,
+        $now,
+        'Cortejo esta hermandad con voto de servicio y silencio.'
+    );
 }
 
 assertCondition(
@@ -735,7 +743,7 @@ assertCondition(
 );
 
 expectRejection(
-    fn () => $clanService->applyToClan($postulante, $casasHermeticas[4]->id, $now),
+    fn () => $clanService->applyToClan($postulante, $casasHermeticas[4]->id, $now, 'La cuarta postulación excede el cupo de tres pendientes.'),
     ClanGovernanceException::PENDING_APPLICATIONS_LIMIT,
     400,
     'La cuarta solicitud simultánea es rechazada (400 PENDING_APPLICATIONS_LIMIT)'
@@ -762,7 +770,7 @@ assertCondition(
 );
 
 expectRejection(
-    fn () => $clanService->applyToClan($postulante, $casasHermeticas[1]->id, $now),
+    fn () => $clanService->applyToClan($postulante, $casasHermeticas[1]->id, $now, 'Re-postulación vedada: la casa quedó clausurada.'),
     ClanGovernanceException::APPLICATION_ALREADY_PENDING,
     409,
     'Duplicar la postulación ante la misma casa se rechaza (409 APPLICATION_ALREADY_PENDING)'
@@ -778,7 +786,7 @@ beginBlock('5 · Convalecencia de catorce días naturales');
 $pdo = forgeRealm($projectRoot);
 [$clanService] = forgeServices($pdo);
 
-$patriarcaPartenza = seedUser($pdo, 'usr_partenza_patron', 'PatriarcaDeLaPartenza', 'editor');
+$patriarcaPartenza = seedUser($pdo, 'usr_partenza_patron', 'PatriarcaDeLaPartenza', 'editor', 'celestialTides');
 $casaPartenza = $clanService->foundClan(
     $patriarcaPartenza,
     'Casa del Adiós Meditado',
@@ -789,7 +797,7 @@ $casaPartenza = $clanService->foundClan(
     $now,
 );
 
-$partiente = seedUser($pdo, 'usr_partiente', 'ElQuePartió', 'editor');
+$partiente = seedUser($pdo, 'usr_partiente', 'ElQuePartió', 'editor', 'celestialTides');
 $clanService->applyToClan($partiente, $casaPartenza->id, $now);
 
 $departure = instantOf('2026-09-01T12:00:00Z');
@@ -815,7 +823,7 @@ expectRejection(
         'Casa Prematura',
         'Lema prematuro',
         'rune_prematura',
-        'dawnWinds',
+        'celestialTides',
         ClanDto::ADMISSION_OPEN,
         $departure,
     ),
@@ -829,7 +837,7 @@ expectRejection(
         'Casa CasiCumplida',
         'Lema casi cumplido',
         'rune_casi',
-        'dawnWinds',
+        'celestialTides',
         ClanDto::ADMISSION_OPEN,
         instantOf('2026-09-15T11:59:59Z'),
     ),
@@ -843,7 +851,7 @@ $casaRenacida = $clanService->foundClan(
     'Casa del Renacido',
     'Cumplida la meditación, la senda vuelve a abrirse',
     'rune_renacido',
-    'dawnWinds',
+    'celestialTides',
     ClanDto::ADMISSION_OPEN,
     instantOf('2026-09-15T12:00:00Z'),
 );
@@ -852,7 +860,7 @@ assertCondition(
     'Cumplidos los catorce días exactos, el mago recupera su libertad (frontera inclusiva)'
 );
 
-$expulsado = seedUser($pdo, 'usr_expulsado', 'ElExpulsado', 'editor');
+$expulsado = seedUser($pdo, 'usr_expulsado', 'ElExpulsado', 'editor', 'celestialTides');
 $clanService->applyToClan($expulsado, $casaPartenza->id, instantOf('2026-09-02T12:00:00Z'));
 $clanService->expelMember($patriarcaPartenza, $casaPartenza->id, $expulsado->getId(), instantOf('2026-09-10T09:00:00Z'));
 assertCondition(
@@ -1232,7 +1240,7 @@ beginBlock('10 · Inviolabilidad del Nombre Ancestral');
 $pdo = forgeRealm($projectRoot);
 [$clanService] = forgeServices($pdo);
 
-$fundadorAncestral = seedUser($pdo, 'usr_ancestral', 'FundadorDeLaHerencia', 'editor');
+$fundadorAncestral = seedUser($pdo, 'usr_ancestral', 'FundadorDeLaHerencia', 'editor', 'abyssalShadows');
 $casaAncestral = $clanService->foundClan(
     $fundadorAncestral,
     'Herencia de los Ancestros',
@@ -1250,14 +1258,14 @@ assertCondition(
     'La casa yace disuelta como Herencia Ancestral (status archived)'
 );
 
-$usurpador = seedUser($pdo, 'usr_usurpador', 'ElUsurpadorDeNombres', 'editor');
+$usurpador = seedUser($pdo, 'usr_usurpador', 'ElUsurpadorDeNombres', 'editor', 'abyssalShadows');
 expectRejection(
     fn () => $clanService->foundClan(
         $usurpador,
         'Herencia de los Ancestros',
         'Otro lema para el mismo nombre',
         'rune_usurpadora',
-        'worldRoots',
+        'abyssalShadows',
         ClanDto::ADMISSION_OPEN,
         $now,
     ),
@@ -1271,7 +1279,7 @@ expectRejection(
         '   Herencia de los Ancestros   ',
         'El mismo nombre con espacios sobrantes',
         'rune_usurpadora',
-        'worldRoots',
+        'abyssalShadows',
         ClanDto::ADMISSION_OPEN,
         $now,
     ),
@@ -1289,7 +1297,7 @@ $casaNueva = $clanService->foundClan(
     'Casa del Nuevo Albor',
     'Un nombre libre, un estandarte nuevo',
     'rune_albor',
-    'worldRoots',
+    'abyssalShadows',
     ClanDto::ADMISSION_OPEN,
     $now,
 );

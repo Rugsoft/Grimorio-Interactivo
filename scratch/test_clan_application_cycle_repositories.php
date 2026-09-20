@@ -313,10 +313,17 @@ assertCondition(
 );
 
 // --- FASE 8: Aprobación y cancelación de las demás (criterio «Hecho cuando») ---
-echo "\nFASE 8: Aprobacion que cancela las restantes pendientes (RF-01.5)\n";
+echo "\nFASE 8: Aprobacion que cancela las restantes pendientes (RF-01.5, SPEC-10 RF-03.7)\n";
+// SPEC-10: la orquestación de la anulación RESIDUAL vive en el servicio (con
+// su asiento por petición huérfana); el repositorio solo dictamina.
 assertCondition(
     $applications->resolveApplication('app_dos', 'approved', $verdictAt) === true,
     'resolveApplication() aprueba la postulacion a Mareas Celestiales'
+);
+$annulledIds = $applications->cancelPendingApplications('usr_postulante', 'app_dos', $verdictAt);
+assertCondition(
+    array_is_list($annulledIds) && array_diff($annulledIds, ['app_uno', 'app_tres']) === [],
+    'cancelPendingApplications() entrega los identificadores de las residuales anuladas (RF-03.7)'
 );
 assertCondition(
     ($applications->findById('app_dos')['status'] ?? null) === 'approved',
@@ -388,7 +395,7 @@ echo "\nFASE 12: Cancelacion de postulaciones al ingresar (regimen abierto)\n";
 $applications->createApplication('app_cuarto_uno', 'cln_llama', 'usr_cuarto', $now);
 $applications->createApplication('app_cuarto_dos', 'cln_mareas', 'usr_cuarto', $now);
 assertCondition(
-    $applications->cancelPendingApplications('usr_cuarto', null, $verdictAt) === 2,
+    $applications->cancelPendingApplications('usr_cuarto', null, $verdictAt) === ['app_cuarto_uno', 'app_cuarto_dos'],
     'La admision inmediata cancela TODAS las postulaciones pendientes del adepto'
 );
 assertCondition(
@@ -400,7 +407,7 @@ $applications->createApplication('app_quinto_uno', 'cln_llama', 'usr_quinto', $n
 $applications->createApplication('app_quinto_dos', 'cln_mareas', 'usr_quinto', $now);
 $applications->createApplication('app_quinto_tres', 'cln_tempestad', 'usr_quinto', $now);
 assertCondition(
-    $applications->cancelPendingApplications('usr_quinto', 'app_quinto_dos', $verdictAt) === 2,
+    count($applications->cancelPendingApplications('usr_quinto', 'app_quinto_dos', $verdictAt)) === 2,
     'La cancelacion con excepcion respeta la solicitud recien aprobada'
 );
 assertCondition(
@@ -408,7 +415,7 @@ assertCondition(
     'La solicitud excluida permanece viva'
 );
 assertCondition(
-    $applications->cancelPendingApplications('usr_quinto', 'app_quinto_dos', $verdictAt) === 0,
+    $applications->cancelPendingApplications('usr_quinto', 'app_quinto_dos', $verdictAt) === [],
     'La cancelacion es idempotente: sin pendientes que cancelar devuelve cero'
 );
 
@@ -420,13 +427,14 @@ assertCondition($applications->countPendingApplications('usr_sexto') === 2, 'El 
 
 $pdo->beginTransaction();
 $applications->resolveApplication('app_sexto_uno', 'approved', $verdictAt);
+$annulledInsideTransaction = $applications->cancelPendingApplications('usr_sexto', 'app_sexto_uno', $verdictAt);
 $pendingInsideTransaction = $applications->countPendingApplications('usr_sexto');
 $secondInsideTransaction = $applications->findById('app_sexto_dos')['status'] ?? null;
 $pdo->rollBack();
 
 assertCondition(
-    $pendingInsideTransaction === 0 && $secondInsideTransaction === 'cancelled',
-    'Dentro de la transaccion ajena, la aprobacion arrastra la cancelacion'
+    $pendingInsideTransaction === 0 && $secondInsideTransaction === 'cancelled' && $annulledInsideTransaction === ['app_sexto_dos'],
+    'Dentro de la transaccion ajena, la aprobacion arrastra la cancelacion (con id de la residual)'
 );
 assertCondition(
     $applications->countPendingApplications('usr_sexto') === 2

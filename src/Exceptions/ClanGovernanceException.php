@@ -48,6 +48,16 @@ final class ClanGovernanceException extends RuntimeException
     public const INVALID_DECISION = 'INVALID_DECISION';
     public const INELIGIBLE_SUCCESSOR = 'INELIGIBLE_SUCCESSOR';
 
+    // ── Códigos canónicos de la adhesión al propio linaje (SPEC-10, Tarea 2.1) ──
+    public const CLAN_LINEAGE_MISMATCH = 'CLAN_LINEAGE_MISMATCH';
+    public const CLAN_LOYALTY_BOUND = 'CLAN_LOYALTY_BOUND';
+    public const ADMIN_LINEAGE_REQUIRED = 'ADMIN_LINEAGE_REQUIRED';
+    public const APPLICATION_HOUSE_CLOSED = 'APPLICATION_HOUSE_CLOSED';
+    public const INVALID_MOTIVATION = 'INVALID_MOTIVATION';
+
+    /** El motivo del rechazo falta o desborda el molde (SPEC-10, Tarea 2.6). */
+    public const INVALID_VERDICT_MOTIVE = 'INVALID_VERDICT_MOTIVE';
+
     /**
      * @param string $errorCode      Código canónico del contrato REST.
      * @param int    $httpStatus     Estado HTTP que el controlador responderá.
@@ -283,6 +293,97 @@ final class ClanGovernanceException extends RuntimeException
             400,
             "El mago «{$userId}» no es un adepto activo de esta hermandad y no puede ceñir la corona.",
             'CHOOSE_ACTIVE_ADEPT',
+        );
+    }
+
+    /**
+     * Gesto hacia una casa de otro linaje (SPEC-10, RF-01.2, RF-04.1).
+     * Leyenda literal del Anexo A (1) del plan: el juramento ata a las casas
+     * de la propia sangre arcana.
+     */
+    public static function clanLineageMismatch(): self
+    {
+        return new self(
+            self::CLAN_LINEAGE_MISMATCH,
+            403,
+            'Ese estandarte porta otro linaje: tu juramento te ata a las casas de tu propia sangre.',
+            'CHOOSE_OWN_LINEAGE_CLAN',
+        );
+    }
+
+    /**
+     * Militante que apunta a otra casa (SPEC-10, RF-02.3). Leyenda literal del
+     * Anexo A (2) del plan con el nombre de la casa donde vive la lealtad.
+     * Sustituye a ALREADY_AFFILIATED SOLO en la vía de adhesión (enmienda
+     * declarada plan §5.3); en fundación, ALREADY_AFFILIATED permanece.
+     */
+    public static function clanLoyaltyBound(string $clanName): self
+    {
+        return new self(
+            self::CLAN_LOYALTY_BOUND,
+            403,
+            "Tu lealtad ya está empeñada en {$clanName}: solo renunciar a ella —y sobrevivir la convalecencia— abre de nuevo sus puertas.",
+            'HONOR_CURRENT_OATH',
+        );
+    }
+
+    /**
+     * Admin Supremo sin linaje ante el Vestíbulo (SPEC-10, RF-01.1). Leyenda
+     * literal del Anexo A (3): el Privilegio Fundacional exime del juramento,
+     * y sin linaje no hay casas que contemplar.
+     */
+    public static function adminLineageRequired(): self
+    {
+        return new self(
+            self::ADMIN_LINEAGE_REQUIRED,
+            403,
+            'El Privilegio Fundacional te exime del juramento; sin linaje jurado no hay hermandades que contemplar.',
+            'VIEW_PUBLIC_HALL',
+        );
+    }
+
+    /**
+     * Re-postulación sobre casa clausurada (SPEC-10, RF-03.1). Leyenda literal
+     * del Anexo A (4): la palabra ya pronunciada —rechazada o retirada—
+     * clausura la casa para siempre; no consume el cupo de pendientes.
+     */
+    public static function applicationHouseClosed(): self
+    {
+        return new self(
+            self::APPLICATION_HOUSE_CLOSED,
+            403,
+            'Ya pronunciaste tu palabra ante esta casa: rechazada o retirada, quedó clausurada para ti. Otras puertas aguardan.',
+            'CHOOSE_ANOTHER_CLAN',
+        );
+    }
+
+    /**
+     * La motivación escrita desborda el molde de 20–500 caracteres
+     * (SPEC-10, RF-03.1). El servicio solo aplica el MOLDE, jamás el tono:
+     * el Patriarca es la única guardia de este texto (plan §5.6).
+     */
+    public static function invalidMotivation(int $minLength, int $maxLength): self
+    {
+        return new self(
+            self::INVALID_MOTIVATION,
+            400,
+            "Tu petición debe contar entre {$minLength} y {$maxLength} caracteres: ni un susurro ni un tratado.",
+            'RESTATE_MOTIVATION',
+        );
+    }
+
+    /**
+     * El motivo del RECHAZO falta o desborda el molde de 20–500 caracteres
+     * (SPEC-10, Tarea 2.6; Artículo III.3): todo asiento de veredicto exige
+     * su motivo solemne. La aprobación no lo exige (el ingreso ES su motivo).
+     */
+    public static function invalidVerdictMotive(int $minLength, int $maxLength): self
+    {
+        return new self(
+            self::INVALID_VERDICT_MOTIVE,
+            400,
+            "El rechazo exige su motivo solemne: entre {$minLength} y {$maxLength} caracteres que lo justifiquen.",
+            'DECLARE_VERDICT_MOTIVE',
         );
     }
 

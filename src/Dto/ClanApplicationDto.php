@@ -53,7 +53,8 @@ final readonly class ClanApplicationDto implements JsonSerializable
      * @param string      $clanName   Nombre Canónico de la casa (noble castellano).
      * @param string      $userAlias  Nombre público del postulante (noble castellano).
      * @param string|null $createdAt  Marca ISO 8601 UTC de la postulación.
-     * @param string|null $resolvedAt Marca ISO 8601 UTC del veredicto; `null` mientras penda deliberación.
+     * @param string|null $resolvedAt      Marca ISO 8601 UTC del veredicto; `null` mientras penda deliberación.
+     * @param string|null $verdictSeenAt   Marca ISO 8601 UTC del contemplado (SPEC-10, RF-03.4); `null` con veredicto sin leer o pendiente.
      *
      * @throws InvalidArgumentException Si falta la identidad o el estado es ajeno al canon.
      */
@@ -66,6 +67,7 @@ final readonly class ClanApplicationDto implements JsonSerializable
         public string $userAlias = '',
         public ?string $createdAt = null,
         public ?string $resolvedAt = null,
+        public ?string $verdictSeenAt = null,
     ) {
         foreach (['id' => $this->id, 'clanId' => $this->clanId, 'userId' => $this->userId] as $attributeName => $attributeValue) {
             if (trim($attributeValue) === '') {
@@ -110,6 +112,7 @@ final readonly class ClanApplicationDto implements JsonSerializable
             userAlias: $readString('user_alias'),
             createdAt: $readNullableString('created_at'),
             resolvedAt: $readNullableString('resolved_at'),
+            verdictSeenAt: $readNullableString('verdict_seen_at'),
         );
     }
 
@@ -142,9 +145,10 @@ final readonly class ClanApplicationDto implements JsonSerializable
             'userId'     => $this->userId,
             'userAlias'  => $this->userAlias,
             'status'     => $this->status,
-            'createdAt'  => $this->createdAt,
-            'resolvedAt' => $this->resolvedAt,
-            'isPending'  => $this->isPending(),
+            'createdAt'      => $this->createdAt,
+            'resolvedAt'     => $this->resolvedAt,
+            'verdictSeenAt'  => $this->verdictSeenAt,
+            'isPending'      => $this->isPending(),
         ];
     }
 

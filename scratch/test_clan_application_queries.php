@@ -194,9 +194,9 @@ assertCondition($migratedRepository->hasSealedHouse('usr_1', 'cln_a') === true, 
 
 // --- Veredicto ---
 echo "\n=============================\n";
-echo "Asertos: {$assertsPassed} PASA / {$assertsFailed} FALLA\n";
+echo "Asertos: {$assertsPassed} PASA / {$assertsFailed} FALLOS\n";
 if ($assertsFailed > 0) {
-    echo "Las consultas del Vestíbulo NO cumplen aún su contrato.\n";
+    echo "Las consultas del Vestíbulo quedan ROJAS: no cumplen aún su contrato.\n";
     exit(1);
 }
 echo "Las cuatro consultas nuevas cumplen su contrato: expediente íntegro, clausura fiel, veredicto contemplado idempotente y rótulo exacto.\n";

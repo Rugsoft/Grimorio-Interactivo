@@ -121,7 +121,7 @@ function errorCodeOf(object $response): string
 function actor(\PDO $pdo, string $userId): User
 {
     $statement = $pdo->prepare(
-        'SELECT id, alias, email, password_hash, role, clan_id, created_at, updated_at
+        'SELECT id, alias, email, password_hash, role, lineage, clan_id, created_at, updated_at
            FROM users WHERE id = :userId'
     );
     $statement->execute([':userId' => $userId]);
@@ -137,11 +137,11 @@ function utcStamp(string $modifier = 'now'): string
 }
 
 /** Inscribe un mago en la tabla `users` (sin linaje salvo que se indique). */
-function seedUser(\PDO $pdo, string $userId, string $alias, string $role = 'editor', ?string $clanId = null): void
+function seedUser(\PDO $pdo, string $userId, string $alias, string $role = 'editor', ?string $clanId = null, ?string $lineage = null): void
 {
     $statement = $pdo->prepare(
-        'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
-         VALUES (:id, :alias, :email, :passwordHash, :role, :clanId, :now, :now)'
+        'INSERT INTO users (id, alias, email, password_hash, role, lineage, clan_id, created_at, updated_at)
+         VALUES (:id, :alias, :email, :passwordHash, :role, :lineage, :clanId, :now, :now)'
     );
     $statement->execute([
         ':id'           => $userId,
@@ -149,6 +149,7 @@ function seedUser(\PDO $pdo, string $userId, string $alias, string $role = 'edit
         ':email'        => $userId . '@sanctuario.arc',
         ':passwordHash' => str_repeat('x', 60),
         ':role'         => $role,
+        ':lineage'      => $lineage ?? ($role === 'reader' ? null : 'primordialFlame'),
         ':clanId'       => $clanId,
         ':now'          => utcStamp(),
     ]);
@@ -211,17 +212,18 @@ assert_truthy($seededClans >= 1, 'Las semillas del santuario aportan al menos un
 assert_truthy($seededMembers >= 1, 'El Patriarca fundacional milita en la AUTORIDAD (clan_members)');
 
 // Magos del arnés: dos editores libres, un lector, un maestro y un penitente.
-seedUser($pdo, 'usr_editor_free', 'EditorLibrе');
-seedUser($pdo, 'usr_editor_second', 'EditorSegundo');
+seedUser($pdo, 'usr_editor_free', 'EditorLibrе', 'editor', null, 'primordialFlame');
+seedUser($pdo, 'usr_editor_second', 'EditorSegundo', 'editor', null, 'eternalTempest');
+seedUser($pdo, 'usr_editor_third', 'EditorTercero', 'editor', null, 'primordialFlame');
 seedUser($pdo, 'usr_reader', 'LectorHumilde', 'reader');
-seedUser($pdo, 'usr_master_lord', 'MaestroSeñor', 'master');
-seedUser($pdo, 'usr_patriarch_ember', 'PatriarcaBrasa');
-seedUser($pdo, 'usr_ember_adept', 'AdeptoBrasa');
-seedUser($pdo, 'usr_patriarch_deliberation', 'PatriarcaDeliberante');
-seedUser($pdo, 'usr_solitary', 'UltimoHeredero');
-seedUser($pdo, 'usr_quota_stranger', 'ForasteroDelCupo');
-seedUser($pdo, 'usr_penitent', 'PenitenteErrante');
-seedUser($pdo, 'usr_applicant', 'PostulanteIncansable');
+seedUser($pdo, 'usr_master_lord', 'MaestroSeñor', 'master', null, 'solarCrown');
+seedUser($pdo, 'usr_patriarch_ember', 'PatriarcaBrasa', 'editor', null, 'eternalTempest');
+seedUser($pdo, 'usr_ember_adept', 'AdeptoBrasa', 'editor', null, 'eternalTempest');
+seedUser($pdo, 'usr_patriarch_deliberation', 'PatriarcaDeliberante', 'editor', null, 'solarCrown');
+seedUser($pdo, 'usr_solitary', 'UltimoHeredero', 'editor', null, 'celestialTides');
+seedUser($pdo, 'usr_quota_stranger', 'ForasteroDelCupo', 'editor', null, 'worldRoots');
+seedUser($pdo, 'usr_penitent', 'PenitenteErrante', 'editor', null, 'dawnWinds');
+seedUser($pdo, 'usr_applicant', 'PostulanteIncansable', 'editor', null, 'solarCrown');
 
 // Casa rival con régimen de deliberación y dos adeptos.
 seedClan($pdo, 'cln_ember', 'Heraldos de Brasas', 'eternalTempest', 'active', 'byApplication', 'usr_patriarch_ember', 120);
@@ -264,7 +266,7 @@ $pdo->prepare(
 // Postulante con tres solicitudes pendientes simultáneas (tope de RF-01.5).
 $applicationRepository = new ClanApplicationRepository($pdo);
 foreach ([1, 2, 3] as $index) {
-    seedClan($pdo, sprintf('cln_target_%d', $index), sprintf('Casa Pretendida %d', $index), 'dawnWinds');
+    seedClan($pdo, sprintf('cln_target_%d', $index), sprintf('Casa Pretendida %d', $index), 'dawnWinds', 'active', 'byApplication');
     $applicationRepository->createApplication(
         sprintf('app_pending_%d', $index),
         sprintf('cln_target_%d', $index),
@@ -357,16 +359,20 @@ assert_truthy(
     'La fundación queda inscrita en la Bitácora pública (RNF-04)',
 );
 
+// El duplicado lo intenta un tercer editor (primordialFlame, sin casa): con
+// el guardia de SPEC-10, solo un primordialFlame puede disputar ese nombre.
 $duplicateName = dispatch(
     'POST',
     '/api/v1/clans',
-    $secondEditor,
+    actor($pdo, 'usr_editor_third'),
     '{"name":"Custodios del Fuego Sagrado","lineageType":"primordialFlame"}'
 );
 assert_truthy(statusOf($duplicateName) === 409, 'Repetir un Nombre Canónico responde 409 Conflict');
 assert_truthy(errorCodeOf($duplicateName) === 'NAME_ALREADY_RESERVED', 'El 409 porta NAME_ALREADY_RESERVED');
 
-$alreadyAffiliated = dispatch('POST', '/api/v1/clans', $freeEditor, '{"name":"Segunda Casa del Editor","lineageType":"dawnWinds"}');
+// El editor libre ya fundó bajo primordialFlame; su segundo gesto apunta al
+// MISMO linaje para que el guardia de SPEC-10 no se adelante al de lealtad.
+$alreadyAffiliated = dispatch('POST', '/api/v1/clans', $freeEditor, '{"name":"Segunda Casa del Editor","lineageType":"primordialFlame"}');
 assert_truthy(statusOf($alreadyAffiliated) === 409, 'Quien ya milita no puede fundar otra casa (409)');
 assert_truthy(errorCodeOf($alreadyAffiliated) === 'ALREADY_AFFILIATED', 'El 409 porta ALREADY_AFFILIATED');
 
@@ -525,13 +531,22 @@ $penitentApply = dispatch('POST', '/api/v1/clans/cln_ember/applications', $penit
 assert_truthy(statusOf($penitentApply) === 403, 'La convalecencia veda el ingreso (403)');
 assert_truthy(errorCodeOf($penitentApply) === 'CONVALESCENCE_ACTIVE', 'El 403 del penitente porta CONVALESCENCE_ACTIVE');
 
+// cln_ember es eternalTempest: el militante apunta a OTRA casa, así que el
+// gesto porta CLAN_LOYALTY_BOUND (SPEC-10, enmienda declarada plan §5.3).
 $affiliatedApply = dispatch('POST', '/api/v1/clans/cln_ember/applications', $freeEditor);
-assert_truthy(statusOf($affiliatedApply) === 409, 'Quien ya milita no puede postularse (409)');
-assert_truthy(errorCodeOf($affiliatedApply) === 'ALREADY_AFFILIATED', 'El 409 de la afiliación porta ALREADY_AFFILIATED');
+assert_truthy(statusOf($affiliatedApply) === 403, 'Quien ya milita no puede postularse (403)');
+assert_truthy(errorCodeOf($affiliatedApply) === 'CLAN_LOYALTY_BOUND', 'El 403 de la adhesión porta CLAN_LOYALTY_BOUND (enmienda SPEC-10)');
 
 // El tope de tres postulaciones se mide sobre una casa de deliberación: en
 // régimen abierto el ingreso es inmediato y no llegaría a postularse.
-$pendingLimit = dispatch('POST', '/api/v1/clans/cln_deliberation/applications', $applicant);
+// La cuarta petición del postulante lleva motivación (el molde de SPEC-10
+// no debe adelantarse al tope de tres pendientes).
+$pendingLimit = dispatch(
+    'POST',
+    '/api/v1/clans/cln_deliberation/applications',
+    $applicant,
+    '{"motivation":"La cuarta petición excede el cupo de tres pendientes."}'
+);
 assert_truthy(statusOf($pendingLimit) === 400, 'La cuarta solicitud simultánea responde 400');
 assert_truthy(errorCodeOf($pendingLimit) === 'PENDING_APPLICATIONS_LIMIT', 'El 400 porta PENDING_APPLICATIONS_LIMIT');
 
@@ -547,14 +562,24 @@ assert_truthy(
 );
 
 // Casa de deliberación: solicitud formal pendiente de un maestro sin casa.
-$pendingAdmission = dispatch('POST', '/api/v1/clans/cln_deliberation/applications', $masterLord);
+$pendingAdmission = dispatch(
+    'POST',
+    '/api/v1/clans/cln_deliberation/applications',
+    $masterLord,
+    '{"motivation":"Cortejo esta casa con voto de estudio y servicio."}'
+);
 $pendingData = payloadOf($pendingAdmission)['data'] ?? [];
 assert_truthy(statusOf($pendingAdmission) === 201, 'En régimen de deliberación, la postulación responde 201');
 assert_truthy(($pendingData['mode'] ?? '') === 'pending', 'El desenlace queda pending');
 $pendingApplicationId = (string) ($pendingData['application']['id'] ?? '');
 assert_truthy($pendingApplicationId !== '', 'La solicitud pendiente porta su identificador para el veredicto');
 
-$duplicateApplication = dispatch('POST', '/api/v1/clans/cln_deliberation/applications', $masterLord);
+$duplicateApplication = dispatch(
+    'POST',
+    '/api/v1/clans/cln_deliberation/applications',
+    $masterLord,
+    '{"motivation":"Postulación duplicada sobre la misma casa."}'
+);
 assert_truthy(statusOf($duplicateApplication) === 409, 'Una segunda postulación sobre la misma casa responde 409');
 
 $quotaAttempt = dispatch('POST', '/api/v1/clans/cln_full/applications', $quotaStranger);
@@ -620,7 +645,7 @@ $quotaResolution = dispatch('POST', '/api/v1/clans/cln_full/applications/app_quo
 assert_truthy(statusOf($quotaResolution) === 409, 'Aprobar sobre una casa colmada responde 409');
 assert_truthy(errorCodeOf($quotaResolution) === 'CLAN_QUOTA_EXCEEDED', 'El 409 de la deliberación porta CLAN_QUOTA_EXCEEDED');
 
-$rejection = dispatch('POST', '/api/v1/clans/cln_full/applications/app_quota/resolve', actor($pdo, 'usr_patriarch_full'), '{"action":"reject"}');
+$rejection = dispatch('POST', '/api/v1/clans/cln_full/applications/app_quota/resolve', actor($pdo, 'usr_patriarch_full'), '{"action":"reject","motive":"La casa guarda plenitud de plumas: el cupo veda el ingreso por ahora."}');
 assert_truthy(statusOf($rejection) === 200, 'El rechazo se dicta sin tocar el cupo (200)');
 assert_truthy((payloadOf($rejection)['data']['mode'] ?? '') === 'rejected', 'El desenlace declara el rechazo');
 

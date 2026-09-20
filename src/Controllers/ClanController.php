@@ -402,10 +402,24 @@ final class ClanController
             return $this->unauthenticatedResponse();
         }
 
+        // La motivación y la estampa de llegada solo atañen a la petición
+        // formal (SPEC-10, RF-03.1, plan §3.3): el servicio las exige o
+        // descarta según el régimen real de la casa en el instante del gesto.
+        $payload = $request->getJsonBody();
+        $motivation = is_array($payload) && isset($payload['motivation']) && is_string($payload['motivation'])
+            ? $payload['motivation']
+            : null;
+        $receivedAt = is_array($payload) && isset($payload['receivedAt']) && is_string($payload['receivedAt'])
+            ? $payload['receivedAt']
+            : null;
+
         try {
             $admission = $this->clanService->applyToClan(
                 $applicant,
                 $this->readRouteValue($routeParams, 'id'),
+                now: null,
+                motivation: $motivation,
+                receivedAt: $receivedAt,
             );
         } catch (ClanGovernanceException $veto) {
             return $this->rejection($veto);
@@ -449,12 +463,19 @@ final class ClanController
             return $this->unprocessableResponse('La deliberación exige el veredicto en el campo «action».');
         }
 
+        // El motivo del rechazo (SPEC-10, Tarea 2.6): opcional en el payload
+        // — el servicio lo EXIGE solo para `reject` (400 si falta o desborda
+        // el molde); la aprobación no lo exige (el ingreso ES su motivo).
+        $motive = array_key_exists('motive', $payload) ? $this->readPayloadText($payload, 'motive') : null;
+
         try {
             $resolution = $this->clanService->resolveApplication(
                 $patriarch,
                 $this->readRouteValue($routeParams, 'id'),
                 $this->readRouteValue($routeParams, 'appId'),
                 $decision,
+                null,
+                $motive,
             );
         } catch (ClanGovernanceException $veto) {
             return $this->rejection($veto);

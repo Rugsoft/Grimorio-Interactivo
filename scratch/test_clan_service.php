@@ -118,13 +118,17 @@ function instantOf(string $isoUtc): DateTimeImmutable
     return new DateTimeImmutable($isoUtc, new DateTimeZone('UTC'));
 }
 
-/** Consagra un mago en el plano con el rol indicado. */
-function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'editor'): User
+/**
+ * Consagra un mago en el plano con el rol indicado. Desde SPEC-10 (Tarea 2.2)
+ * los adeptos nacen con el linaje jurado por defecto `primordialFlame`: los
+ * guardias del Vestíbulo (RF-04.1) exigen identidad arcana en los gestos.
+ */
+function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'editor', string $lineage = 'primordialFlame'): User
 {
     $now = '2026-01-01T00:00:00Z';
     $statement = $pdo->prepare(
-        'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
-         VALUES (:id, :alias, :email, :passwordHash, :role, NULL, :createdAt, :updatedAt)'
+        'INSERT INTO users (id, alias, email, password_hash, role, lineage, clan_id, created_at, updated_at)
+         VALUES (:id, :alias, :email, :passwordHash, :role, :lineage, NULL, :createdAt, :updatedAt)'
     );
     $statement->execute([
         ':id'           => $userId,
@@ -132,6 +136,7 @@ function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'edito
         ':email'        => $userId . '@arcano.arc',
         ':passwordHash' => str_repeat('x', 60),
         ':role'         => $role,
+        ':lineage'      => $role === 'reader' ? null : $lineage,
         ':createdAt'    => $now,
         ':updatedAt'    => $now,
     ]);
@@ -143,6 +148,7 @@ function seedUser(PDO $pdo, string $userId, string $alias, string $role = 'edito
         role: $role,
         clanId: null,
         passwordHash: str_repeat('x', 60),
+        lineage: $role === 'reader' ? null : $lineage,
         createdAt: $now,
         updatedAt: $now,
     );
@@ -205,7 +211,7 @@ expectRejection(
 );
 
 $clan = $clanService->foundClan(
-    $fundador,
+    $fundador, // linaje jurado primordialFlame (seedUser por defecto)
     'Custodios del Fuego Sagrado',
     'En la ceniza renace la llama inmortal',
     'rune_flame_shield',
@@ -254,9 +260,11 @@ expectRejection(
     'Un linaje ajeno a los ocho canónicos se rechaza (RF-02.1, 400)'
 );
 
-$rivalClan = $clanService->foundClan($rival, 'Eruditos Astrales', 'Saber sin ocaso', 'rune_astral', 'aetherWeavers', 'open', $now);
+// El rival postula bajo SU linaje jurado (guardia de SPEC-10: la fundación
+// solo cabe bajo la propia sangre arcana).
+$rivalClan = $clanService->foundClan($rival, 'Eruditos Astrales', 'Saber sin ocaso', 'rune_astral', 'primordialFlame', 'open', $now);
 expectRejection(
-    fn () => $clanService->foundClan($rival, 'Segunda Casa del Sabio', 'Lema', 'rune', 'dawnWinds', 'open', $now),
+    fn () => $clanService->foundClan($rival, 'Segunda Casa del Sabio', 'Lema', 'rune', 'primordialFlame', 'open', $now),
     ClanGovernanceException::ALREADY_AFFILIATED,
     409,
     'La lealtad mágica es indivisible: nadie funda dos casas (RF-01.1, 409)'
@@ -265,7 +273,7 @@ expectRejection(
 // Nombre del largo máximo: cincuenta caracteres exactos.
 $longName = str_repeat('A', ClanDto::NAME_MAX_LENGTH);
 $nombreLargo = $clanService->foundClan(
-    seedUser($pdo, 'usr_largo', 'NombreLargo', 'editor'),
+    seedUser($pdo, 'usr_largo', 'NombreLargo', 'editor', 'dawnWinds'),
     $longName,
     'Lema',
     'rune',
@@ -281,7 +289,7 @@ assertCondition($nombreLargo->name === $longName, 'Un nombre de cincuenta caract
 echo "\n═══ FASE 1 · El miembro número 31 ═══\n";
 
 $cupo = $clanService->foundClan(
-    seedUser($pdo, 'usr_cupo_0', 'FundadorDelCupo', 'editor'),
+    seedUser($pdo, 'usr_cupo_0', 'FundadorDelCupo', 'editor', 'worldRoots'),
     'Casa del Cupo Colmado',
     'Treinta hermanos y ni uno más',
     'rune_cupo',
@@ -290,9 +298,10 @@ $cupo = $clanService->foundClan(
     $now,
 );
 
-// El Patriarca ocupa la primera plaza: se incorporan veintinueve adeptos.
+// El Patriarca ocupa la primera plaza: se incorporan veintinueve adeptos
+// (todos de linaje worldRoots: la casa solo admite su propia sangre).
 for ($index = 1; $index <= ClanMemberRepository::MAX_ACTIVE_MEMBERS - 1; $index++) {
-    $adepto = seedUser($pdo, 'usr_cupo_' . $index, 'Adepto del Cupo ' . $index, 'editor');
+    $adepto = seedUser($pdo, 'usr_cupo_' . $index, 'Adepto del Cupo ' . $index, 'editor', 'worldRoots');
     $clanService->applyToClan($adepto, $cupo->id, $now);
 }
 
@@ -301,7 +310,7 @@ assertCondition(
     'La casa alcanza sus treinta adeptos activos (RF-01.4)'
 );
 
-$numeroTreintaYUno = seedUser($pdo, 'usr_cupo_31', 'ElTrigésimoPrimero', 'editor');
+$numeroTreintaYUno = seedUser($pdo, 'usr_cupo_31', 'ElTrigésimoPrimero', 'editor', 'worldRoots');
 expectRejection(
     fn () => $clanService->applyToClan($numeroTreintaYUno, $cupo->id, $now),
     ClanGovernanceException::CLAN_QUOTA_EXCEEDED,
@@ -323,7 +332,7 @@ assertCondition(
 echo "\n═══ FASE 2 · Convalecencia de catorce días ═══\n";
 
 $otraCasa = $clanService->foundClan(
-    seedUser($pdo, 'usr_acogedor', 'AnfitriónPiadoso', 'editor'),
+    seedUser($pdo, 'usr_acogedor', 'AnfitriónPiadoso', 'editor', 'celestialTides'),
     'Casa del Acogimiento',
     'Puertas abiertas al que medita',
     'rune_acogida',
@@ -332,7 +341,7 @@ $otraCasa = $clanService->foundClan(
     $now,
 );
 
-$renunciante = seedUser($pdo, 'usr_renunciante', 'AlguienQueSeMarcha', 'editor');
+$renunciante = seedUser($pdo, 'usr_renunciante', 'AlguienQueSeMarcha', 'editor', 'celestialTides');
 $clanService->applyToClan($renunciante, $otraCasa->id, $now);
 assertCondition(
     activeRole($pdo, 'usr_renunciante', $otraCasa->id) === ClanMemberDto::ROLE_ADEPT,
@@ -356,11 +365,11 @@ assertCondition(
 );
 
 $casaRefugio = $clanService->foundClan(
-    seedUser($pdo, 'usr_refugio', 'SeñorDelRefugio', 'editor'),
+    seedUser($pdo, 'usr_refugio', 'SeñorDelRefugio', 'editor', 'celestialTides'),
     'Casa del Refugio Lejano',
     'Aguarda la meditación ajena',
     'rune_refugio',
-    'solarCrown',
+    'celestialTides',
     'open',
     $now,
 );
@@ -372,7 +381,7 @@ expectRejection(
     'Un convaleciente no puede ingresar en otra casa (RF-01.6, 403)'
 );
 expectRejection(
-    fn () => $clanService->foundClan($renunciante, 'Casa del Impaciente', 'Lema', 'rune', 'worldRoots', 'open', $now),
+    fn () => $clanService->foundClan($renunciante, 'Casa del Impaciente', 'Lema', 'rune', 'celestialTides', 'open', $now),
     ClanGovernanceException::CONVALESCENCE_ACTIVE,
     403,
     'Un convaleciente tampoco puede fundar su propia casa (RF-01.6, 403)'
@@ -392,7 +401,7 @@ assertCondition(
 );
 
 // La expulsión abre la misma convalecencia que la renuncia.
-$expulsado = seedUser($pdo, 'usr_expulsado', 'AdeptoIndócil', 'editor');
+$expulsado = seedUser($pdo, 'usr_expulsado', 'AdeptoIndócil', 'editor', 'celestialTides');
 $clanService->applyToClan($expulsado, $otraCasa->id, $now);
 $patriarcaAcogedor = new User(
     id: 'usr_acogedor',
@@ -427,10 +436,10 @@ expectRejection(
 // =====================================================================
 echo "\n═══ FASE 3 · El velatorio de los cuarenta y cinco días ═══\n";
 
-$patriarcaDormido = seedUser($pdo, 'usr_patriarca_dormido', 'PatriarcaDormido', 'editor');
-$antiguo = seedUser($pdo, 'usr_adepto_antiguo', 'ElMásAntiguo', 'editor');
-$mediano = seedUser($pdo, 'usr_adepto_mediano', 'ElMediano', 'editor');
-$reciente = seedUser($pdo, 'usr_adepto_reciente', 'ElReciénLlegado', 'editor');
+$patriarcaDormido = seedUser($pdo, 'usr_patriarca_dormido', 'PatriarcaDormido', 'editor', 'abyssalShadows');
+$antiguo = seedUser($pdo, 'usr_adepto_antiguo', 'ElMásAntiguo', 'editor', 'abyssalShadows');
+$mediano = seedUser($pdo, 'usr_adepto_mediano', 'ElMediano', 'editor', 'abyssalShadows');
+$reciente = seedUser($pdo, 'usr_adepto_reciente', 'ElReciénLlegado', 'editor', 'abyssalShadows');
 
 $dinastia = $clanService->foundClan(
     $patriarcaDormido,
@@ -484,9 +493,9 @@ assertCondition(
 );
 
 // Desempate por PDA aportados entre adeptos de IDÉNTICA antigüedad.
-$coetaneoA = seedUser($pdo, 'usr_coetaneo_a', 'Coetáneo Austero', 'editor');
-$coetaneoB = seedUser($pdo, 'usr_coetaneo_b', 'Coetáneo Pródigo', 'editor');
-$patriarcaTercero = seedUser($pdo, 'usr_patriarca_tercero', 'PatriarcaDelEmpate', 'editor');
+$coetaneoA = seedUser($pdo, 'usr_coetaneo_a', 'Coetáneo Austero', 'editor', 'eternalTempest');
+$coetaneoB = seedUser($pdo, 'usr_coetaneo_b', 'Coetáneo Pródigo', 'editor', 'eternalTempest');
+$patriarcaTercero = seedUser($pdo, 'usr_patriarca_tercero', 'PatriarcaDelEmpate', 'editor', 'eternalTempest');
 $empate = $clanService->foundClan(
     $patriarcaTercero,
     'Casa del Empate Perfecto',
@@ -517,13 +526,13 @@ $tronoFirme = $clanService->evaluatePatriarchSuccession($empate->id, $now);
 assertCondition($tronoFirme->isDue() === false, 'Una hora de actividad basta para conservar el trono');
 
 // Orfandad de adeptos: la casa se disuelve como Herencia Ancestral (RF-05.3).
-$solitario = seedUser($pdo, 'usr_solitario', 'PatriarcaSolitario', 'editor');
+$solitario = seedUser($pdo, 'usr_solitario', 'PatriarcaSolitario', 'editor', 'celestialTides');
 $solaCasa = $clanService->foundClan(
     $solitario,
     'Casa del Último Morador',
     'Ni un adepto que herede',
     'rune_soledad',
-    'solarCrown',
+    'celestialTides',
     'open',
     $now,
 );
@@ -542,14 +551,14 @@ assertCondition(
     (string) $pdo->query("SELECT clan_id FROM users WHERE id = 'usr_solitario'")->fetchColumn() === '',
     'Sin corona ni casa, el espejo del Patriarca se vacía'
 );
-$solitarioLibre = $clanService->applyToClan($solitario, $otraCasa->id, $now);
+$solitarioLibre = $clanService->applyToClan($solitario, $otraCasa->id, $now); // el solitario es celestialTides como la casa
 assertCondition(
     $solitarioLibre->isAdmitted(),
     'La disolución no es pena: no abre convalecencia y el mago puede reingresar (RF-01.6)'
 );
 expectRejection(
     fn () => $clanService->foundClan(
-        seedUser($pdo, 'usr_usurpador', 'UsurpadorDeNombres', 'editor'),
+        seedUser($pdo, 'usr_usurpador', 'UsurpadorDeNombres', 'editor', 'worldRoots'),
         'Casa del Último Morador',
         'Lema',
         'rune',
@@ -614,7 +623,7 @@ assertCondition(
 echo "\n═══ FASE 5 · Postulaciones y deliberación ═══\n";
 
 $casaCerrada = $clanService->foundClan(
-    seedUser($pdo, 'usr_guardian', 'GuardiánDeLaPuerta', 'editor'),
+    seedUser($pdo, 'usr_guardian', 'GuardiánDeLaPuerta', 'editor', 'dawnWinds'),
     'Casa de la Puerta Cerrada',
     'Nadie entra sin deliberación',
     'rune_puerta',
@@ -633,8 +642,13 @@ $guardian = new User(
     updatedAt: '2026-01-01T00:00:00Z',
 );
 
-$postulante = seedUser($pdo, 'usr_postulante', 'AspiranteTenaz', 'editor');
-$postulacion = $clanService->applyToClan($postulante, $casaCerrada->id, $now);
+$postulante = seedUser($pdo, 'usr_postulante', 'AspiranteTenaz', 'editor', 'dawnWinds');
+$postulacion = $clanService->applyToClan(
+    $postulante,
+    $casaCerrada->id,
+    $now,
+    'Cortejo esta casa con voto de estudio y servicio.'
+);
 assertCondition($postulacion->isPending(), 'En régimen bajo petición, el ingreso aguarda deliberación (RF-01.5)');
 assertCondition(
     $postulacion->application?->status === ClanApplicationDto::STATUS_PENDING,
@@ -652,15 +666,15 @@ assertCondition(
 // El mismo aspirante corteja otras dos casas: la cuarta postulación se bloquea.
 foreach (['usr_casa_dos', 'usr_casa_tres'] as $index => $clanOwner) {
     $otra = $clanService->foundClan(
-        seedUser($pdo, $clanOwner, 'Señor de la Casa ' . ($index + 2), 'editor'),
+        seedUser($pdo, $clanOwner, 'Señor de la Casa ' . ($index + 2), 'editor', 'dawnWinds'),
         'Casa Cortejada Número ' . ($index + 2),
         'Lema',
         'rune',
-        'worldRoots',
+        'dawnWinds',
         ClanDto::ADMISSION_BY_APPLICATION,
         $now,
     );
-    $clanService->applyToClan($postulante, $otra->id, $now);
+    $clanService->applyToClan($postulante, $otra->id, $now, 'Cortejo esta segunda casa con igual devoción.');
 }
 assertCondition(
     (int) $pdo->query("SELECT COUNT(*) FROM clan_applications WHERE user_id = 'usr_postulante' AND status = 'pending'")->fetchColumn() === 3,
@@ -668,22 +682,22 @@ assertCondition(
 );
 
 $cuartaCasa = $clanService->foundClan(
-    seedUser($pdo, 'usr_casa_cuatro', 'Señor de la Cuarta Casa', 'editor'),
+    seedUser($pdo, 'usr_casa_cuatro', 'Señor de la Cuarta Casa', 'editor', 'dawnWinds'),
     'Casa Cortejada Número 4',
     'Lema',
     'rune',
-    'worldRoots',
+    'dawnWinds',
     ClanDto::ADMISSION_BY_APPLICATION,
     $now,
 );
 expectRejection(
-    fn () => $clanService->applyToClan($postulante, $cuartaCasa->id, $now),
+    fn () => $clanService->applyToClan($postulante, $cuartaCasa->id, $now, 'La cuarta petición excede el cupo de tres.'),
     ClanGovernanceException::PENDING_APPLICATIONS_LIMIT,
     400,
     'La cuarta solicitud pendiente queda bloqueada (RF-01.5, 400)'
 );
 expectRejection(
-    fn () => $clanService->applyToClan($postulante, $casaCerrada->id, $now),
+    fn () => $clanService->applyToClan($postulante, $casaCerrada->id, $now, 'Postulación duplicada sobre la primera casa.'),
     ClanGovernanceException::APPLICATION_ALREADY_PENDING,
     409,
     'No se admiten postulaciones duplicadas sobre la misma casa (409)'
@@ -727,14 +741,15 @@ expectRejection(
 );
 
 // Rechazo: no incorpora a nadie ni toca sus otras postulaciones.
-$rechazado = seedUser($pdo, 'usr_rechazado', 'AspiranteDesdeñado', 'editor');
-$solicitudAjena = $clanService->applyToClan($rechazado, $casaCerrada->id, $now);
+$rechazado = seedUser($pdo, 'usr_rechazado', 'AspiranteDesdeñado', 'editor', 'dawnWinds');
+$solicitudAjena = $clanService->applyToClan($rechazado, $casaCerrada->id, $now, 'Mi petición, para ser desdeñada con honor.');
 $rechazo = $clanService->resolveApplication(
     $guardian,
     $casaCerrada->id,
     (string) $solicitudAjena->application?->id,
     'reject',
     $now,
+    'La casa guarda plenitud de plumas: vuelve a otra luna con honor.'
 );
 assertCondition($rechazo->wasRejected(), 'El Patriarca rechaza la postulación (Endpoint 6)');
 assertCondition(
@@ -836,8 +851,8 @@ function forgeDormantRealm(string $projectRoot, string $suffix): array
     $service = new ClanService($pdo);
     $instant = instantOf('2026-09-14T12:00:00Z');
 
-    $patriarca = seedUser($pdo, 'usr_dormido_' . $suffix, 'Dormido ' . $suffix, 'editor');
-    $heredero = seedUser($pdo, 'usr_heredero_' . $suffix, 'Heredero ' . $suffix, 'editor');
+    $patriarca = seedUser($pdo, 'usr_dormido_' . $suffix, 'Dormido ' . $suffix, 'editor', 'worldRoots');
+    $heredero = seedUser($pdo, 'usr_heredero_' . $suffix, 'Heredero ' . $suffix, 'editor', 'worldRoots');
     $clan = $service->foundClan($patriarca, 'Casa Determinista', 'Lema', 'rune', 'worldRoots', 'open', $instant);
 
     (new ClanMemberRepository($pdo))->addMember(

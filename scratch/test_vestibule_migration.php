@@ -273,9 +273,9 @@ assertCondition(str_contains($schemaSource, 'CREATE TABLE IF NOT EXISTS clan_app
 
 // --- Veredicto ---
 echo "\n=============================\n";
-echo "Asertos: {$assertsPassed} PASA / {$assertsFailed} FALLA\n";
+echo "Asertos: {$assertsPassed} PASA / {$assertsFailed} FALLOS\n";
 if ($assertsFailed > 0) {
-    echo "La migración del Vestíbulo NO cumple aún su contrato.\n";
+    echo "La migración del Vestíbulo queda ROJA: no cumple aún su contrato.\n";
     exit(1);
 }
 echo "La migración 10_clan_vestibule.sql cumple su contrato: idempotente, deduplicada y con la clausura como invariante físico.\n";

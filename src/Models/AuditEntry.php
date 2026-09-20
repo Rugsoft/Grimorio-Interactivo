@@ -77,6 +77,14 @@ final class AuditEntry
         // Actos del Juramento de Linaje (TASKS-09, RF-03.1, RNF-06): el
         // vínculo perpetuo sellado en la ceremonia del primer acceso.
         'LINEAGE_OATH_SWORN',         // Juramento del linaje sellado en la ceremonia (SPEC-09)
+        // Actos del Vestíbulo de las Hermandades (TASKS-10, RF-03.3, RF-04.4):
+        // la retirada voluntaria del postulante se inscribe por su propio
+        // actor y el dictamen por el LADO DELIBERANTE (reparto por actor del
+        // plan §2.3). Las residuales anuladas dejan su asiento por petición
+        // (RF-03.7). Los dos actos restantes entran con la Tarea 3.3.
+        'CLAN_APPLICATION_WITHDRAWN',         // Retirada voluntaria de una petición formal (SPEC-10)
+        'CLAN_APPLICATION_VERDICT',           // Dictamen del Patriarca con su motivo (SPEC-10, Art. III.3)
+        'CLAN_APPLICATION_RESIDUALS_ANNULLED', // Anulación de oficio de una petición huérfana (SPEC-10, RF-03.7)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

@@ -29,6 +29,7 @@ declare(strict_types=1);
 
 namespace Grimorio\Services;
 
+use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use Grimorio\Dto\ClanApplicationDto;
@@ -66,6 +67,17 @@ final class ClanService
 
     /** Rango mínimo para fundar una casa o afiliarse (RF-01.1, RF-01.2). */
     private const ELIGIBLE_RANKS = ['editor', 'master', 'supremeAdmin'];
+
+    /** Molde de la motivación escrita de la petición formal (SPEC-10, RF-03.1). */
+    private const MOTIVATION_MIN_LENGTH = 20;
+    private const MOTIVATION_MAX_LENGTH = 500;
+
+    /**
+     * Tolerancia (segundos) de la estampa de llegada declarada por el cliente
+     * (plan §3.3, decisión 9): el criterio es la LLEGADA al santuario, no el
+     * reloj del cliente; fuera de la ventana, manda el instante del servidor.
+     */
+    private const ARRIVAL_TOLERANCE_SECONDS = 30;
 
     /** Conexión PDO del santuario (Singleton del front controller). */
     private PDO $pdo;
@@ -127,9 +139,18 @@ final class ClanService
         $instant = $this->instant($now);
         $nowUtc = $this->formatInstant($instant);
 
+        $this->requireOathLineageForGesture($founder);
         $this->requireEligibleRank($founder);
         $canonicalName = $this->requireCanonicalName($name);
         $this->requireCanonicalLineage($lineageType);
+
+        // El fundador solo puede alzar un estandarte de su propia sangre
+        // arcana (SPEC-10, RF-04.1): SPEC-09 RF-04.2 ata fundación y
+        // postulación al mismo filtro rector. Va tras el canon de linajes
+        // (orden del plan §3.2) y antes de reservar el nombre.
+        if ($founder->getLineage() !== $lineageType) {
+            throw ClanGovernanceException::clanLineageMismatch();
+        }
 
         if (!$this->clanRepository->isNameAvailable($canonicalName)) {
             throw ClanGovernanceException::nameAlreadyReserved($canonicalName);
@@ -267,29 +288,59 @@ final class ClanService
      * `byApplication` remite una solicitud formal. En ambos casos el cupo de
      * treinta adeptos y la convalecencia son barreras infranqueables.
      *
+     * @param string|null $motivation Motivación escrita de la petición formal
+     *                                (molde 20–500, RF-03.1 de SPEC-10); solo
+     *                                se exige en régimen `byApplication`.
+     * @param string|null $receivedAt Estampa de llegada del gesto declarada
+     *                                por el cliente (opcional, ±30 s, plan
+     *                                §3.3); el servidor fija la suya si falta
+     *                                o desconfía.
+     *
      * @throws ClanGovernanceException Si el canon se opone al ingreso.
      */
     public function applyToClan(
         User $applicant,
         string $clanId,
         ?DateTimeImmutable $now = null,
+        ?string $motivation = null,
+        ?string $receivedAt = null,
     ): ClanAdmissionResult {
         $instant = $this->instant($now);
         $nowUtc = $this->formatInstant($instant);
 
+        $this->requireOathLineageForGesture($applicant);
         $this->requireEligibleRank($applicant);
         $clan = $this->requireClan($clanId);
         $this->requireActiveClan($clan, $clanId);
         $this->requireFreedomFromConvalescence($applicant, $nowUtc);
 
         if ($this->memberRepository->findActiveMembership($applicant->getId()) !== null) {
-            throw ClanGovernanceException::alreadyAffiliated();
+            // SPEC-10 (RF-02.3, hallazgo 4): en la vía de adhesión el gesto
+            // del militante porta su propia leyenda con el nombre de la casa.
+            // ALREADY_AFFILIATED permanece canónico SOLO en la vía de
+            // fundación (enmienda declarada, plan §5.3).
+            throw ClanGovernanceException::clanLoyaltyBound(
+                $this->nameOfActiveMembership($applicant->getId())
+            );
+        }
+
+        // La guardia del juramento en el SERVIDOR (SPEC-10, RF-01.2, RF-04.1):
+        // el gesto hacia un estandarte de otro linaje jamás alcanza la
+        // persistencia, venga de la interfaz o de una llamada directa a la
+        // API. La lectura del catálogo jamás la dispara.
+        if ($clan->lineageType !== $applicant->getLineage()) {
+            throw ClanGovernanceException::clanLineageMismatch();
         }
 
         $this->assertVacancy($clanId);
 
         if ($clan->admissionMode === ClanDto::ADMISSION_BY_APPLICATION) {
-            return $this->registerApplication($applicant, $clan, $instant);
+            // El molde de la petición formal (SPEC-10, RF-03.1): en el rito de
+            // ingreso la pluma no redacta, así que aquí no se exige.
+            $canonicalMotivation = $this->requireCanonicalMotivation($motivation);
+            $arrival = $this->resolveArrivalInstant($receivedAt, $instant);
+
+            return $this->registerApplication($applicant, $clan, $arrival, $canonicalMotivation);
         }
 
         return $this->admitImmediately($applicant, $clan, $instant);
@@ -311,6 +362,7 @@ final class ClanService
         string $applicationId,
         string $decision,
         ?DateTimeImmutable $now = null,
+        ?string $motive = null,
     ): ClanAdmissionResult {
         $instant = $this->instant($now);
         $nowUtc = $this->formatInstant($instant);
@@ -334,6 +386,12 @@ final class ClanService
         $applicantId = (string) $application['user_id'];
 
         if ($decision === 'reject') {
+            // El rechazo EXIGE su motivo solemne (SPEC-10, Tarea 2.6; Artículo
+            // III.3, hallazgo 23): el mismo molde 20–500 de la petición formal,
+            // pero con código PROPIO — el dictamen no es una petición. La
+            // aprobación no lo exige: el ingreso ES su motivo.
+            $canonicalMotive = $this->requireCanonicalVerdictMotive($motive);
+
             $this->applicationRepository->resolveApplication(
                 $applicationId,
                 ClanApplicationDto::STATUS_REJECTED,
@@ -342,6 +400,19 @@ final class ClanService
 
             // La deliberación es vida del Patriarca (RF-01.9).
             $this->clanRepository->touchActivity($clanId, $nowUtc);
+
+            // Asiento del dictamen: LADO DELIBERANTE (SPEC-10, RF-04.4, plan
+            // §2.3) — identidad del Patriarca, estampa y motivo (Art. III.3).
+            // El lado del postulante jamás lo duplica.
+            $this->recordAudit(
+                $patriarch->getId(),
+                $patriarch->getAlias(),
+                $patriarch->getRole(),
+                'CLAN_APPLICATION_VERDICT',
+                $clanId,
+                "Rechaza la petición de «{$this->aliasFor($applicantId)}» con motivo: {$canonicalMotive}",
+                $instant,
+            );
 
             $rejected = $this->applicationRepository->findById($applicationId);
 
@@ -360,7 +431,10 @@ final class ClanService
             $applicantId,
             $clanId,
             $applicationId,
-            $nowUtc
+            $nowUtc,
+            $patriarch,
+            $clan,
+            $instant,
         ): ?array {
             $inscribed = $this->memberRepository->addMember(
                 $this->newIdentifier('clm'),
@@ -382,6 +456,26 @@ final class ClanService
                 $nowUtc,
             );
 
+            // Las residuales se anulan DE OFICIO (RF-03.7): la lealtad
+            // indivisible absuelve las peticiones huérfanas. Cada anulación
+            // deja SU asiento, inscrito por el postulante (RF-04.4).
+            $residualIds = $this->applicationRepository->cancelPendingApplications(
+                $applicantId,
+                $applicationId,
+                $nowUtc,
+            );
+            foreach ($residualIds as $residualId) {
+                $this->recordAudit(
+                    $patriarch->getId(),
+                    $patriarch->getAlias(),
+                    $patriarch->getRole(),
+                    'CLAN_APPLICATION_RESIDUALS_ANNULLED',
+                    $clanId,
+                    "La lealtad indivisible absuelve la petición huérfana de «{$this->aliasFor($applicantId)}» al entrar en «{$clan->name}».",
+                    $instant,
+                );
+            }
+
             $this->clanRepository->touchActivity($clanId, $nowUtc);
 
             return $inscribed;
@@ -391,7 +485,134 @@ final class ClanService
             throw ClanGovernanceException::alreadyAffiliated();
         }
 
+        // Asiento de la APROBACIÓN: LADO DELIBERANTE (SPEC-10, RF-04.4). El
+        // ingreso ES su motivo: no exige texto (Tarea 2.6, plan §2.2 Ep. 6).
+        $this->recordAudit(
+            $patriarch->getId(),
+            $patriarch->getAlias(),
+            $patriarch->getRole(),
+            'CLAN_APPLICATION_VERDICT',
+            $clanId,
+            "Aprueba la petición de «{$this->aliasFor($applicantId)}»: el ingreso a «{$clan->name}» es su propio motivo.",
+            $instant,
+        );
+
         return ClanAdmissionResult::admitted($this->toMemberDto($membership));
+    }
+
+    /**
+     * Retira una petición pendiente de la propia cuenta (SPEC-10, RF-03.3).
+     *
+     * El arrepentimiento antes del dictamen libera el cupo de pendientes, PERO
+     * la casa queda CLAUSURADA para la cuenta: la fila persiste con estado
+     * `cancelled` y el índice único `uq_clan_application_house` (Tarea 1.1)
+     * vela que jamás se vuelva a postular ante la misma casa — el veredicto
+     * del hallazgo 16: cada casa, una sola vez, con el estado que sea.
+     *
+     * La operación es transaccional y serializable: la carrera con el
+     * dictamen del Patriarca deja un solo desenlace (caso límite 5).
+     *
+     * @throws ClanGovernanceException Si la petición no existe, es ajena o
+     *                                  ya fue resuelta.
+     */
+    public function withdrawApplication(
+        User $postulant,
+        string $clanId,
+        string $applicationId,
+        ?DateTimeImmutable $now = null,
+    ): ClanAdmissionResult {
+        $instant = $this->instant($now);
+        $nowUtc = $this->formatInstant($instant);
+
+        $clan = $this->requireClan($clanId);
+
+        $application = $this->applicationRepository->findById($applicationId);
+        if (
+            $application === null
+            || (string) $application['clan_id'] !== $clanId
+            || (string) $application['user_id'] !== $postulant->getId()
+        ) {
+            throw ClanGovernanceException::applicationNotFound($applicationId);
+        }
+
+        if ((string) $application['status'] !== ClanApplicationDto::STATUS_PENDING) {
+            throw ClanGovernanceException::applicationAlreadyResolved();
+        }
+
+        $withdrawn = $this->runAtomically(function () use ($applicationId, $nowUtc): bool {
+            // La condición `status = pending` dentro del UPDATE serializa la
+            // carrera con el dictamen: quien llega segundo no muta nada.
+            return $this->applicationRepository->withdrawApplication(
+                $applicationId,
+                $nowUtc
+            );
+        });
+
+        if (!$withdrawn) {
+            // El dictamen ganó la carrera: la petición ya no está pendiente.
+            throw ClanGovernanceException::applicationAlreadyResolved();
+        }
+
+        // La retirada es acto del postulante (RF-04.4, reparto por actor).
+        $this->recordAudit(
+            $postulant->getId(),
+            $postulant->getAlias(),
+            $postulant->getRole(),
+            'CLAN_APPLICATION_WITHDRAWN',
+            $clanId,
+            "Retira su petición formal ante «{$clan->name}»: la casa queda clausurada para su cuenta.",
+            $instant,
+        );
+
+        $updated = $this->applicationRepository->findById($applicationId);
+
+        return ClanAdmissionResult::rejected(
+            $this->toApplicationDto($updated ?? $application)
+        );
+    }
+
+    /**
+     * Contempla el veredicto de una petición TERMINAL propia (SPEC-10, RF-03.4,
+     * Endpoint 4): fija `verdict_seen_at` y apaga el rótulo «Tienes dictámenes
+     * a la espera» (RF-01.1).
+     *
+     * Idempotente por diseño: un reenvío responde éxito SIN mutar la columna —
+     * el primer contemplado es el único instante que la historia registra.
+     * Sobre peticiones `pending` no actúa: nada hay que leer en una espera.
+     *
+     * @return ClanApplicationDto La petición con su veredicto ya contemplado.
+     *
+     * @throws ClanGovernanceException Si la petición no existe, es ajena o
+     *                                  aún pende de dictamen.
+     */
+    public function acknowledgeVerdict(
+        User $postulant,
+        string $applicationId,
+        ?DateTimeImmutable $now = null,
+    ): ClanApplicationDto {
+        $instant = $this->instant($now);
+        $nowUtc = $this->formatInstant($instant);
+
+        $application = $this->applicationRepository->findById($applicationId);
+        if (
+            $application === null
+            || (string) $application['user_id'] !== $postulant->getId()
+        ) {
+            throw ClanGovernanceException::applicationNotFound($applicationId);
+        }
+
+        if ((string) $application['status'] === ClanApplicationDto::STATUS_PENDING) {
+            throw ClanGovernanceException::applicationAlreadyPending();
+        }
+
+        // La triple guardia vive en el propio UPDATE (terminal + propia + sin
+        // leer): si la fila ya estaba contemplada, rowCount es 0 y el reenvío
+        // se responde con éxito sin mutación (idempotencia del Endpoint 4).
+        $this->applicationRepository->markVerdictSeen($applicationId, $postulant->getId(), $nowUtc);
+
+        $updated = $this->applicationRepository->findById($applicationId);
+
+        return $this->toApplicationDto($updated ?? $application);
     }
 
     /**
@@ -777,9 +998,17 @@ final class ClanService
     // ── Gobierno interno ─────────────────────────────────────────────────
 
     /**
-     * Inscribe la postulación formal de un adepto (RF-01.5).
+     * Inscribe la postulación formal de un adepto (RF-01.5, RF-03.1 de SPEC-10).
+     *
+     * `$instant` es la estampa de LLEGADA ya resuelta (cliente acotada o
+     * servidor): alimenta la cronología y el desempate de la última vacante.
      */
-    private function registerApplication(User $applicant, ClanDto $clan, DateTimeImmutable $instant): ClanAdmissionResult
+    private function registerApplication(
+        User $applicant,
+        ClanDto $clan,
+        DateTimeImmutable $instant,
+        string $motivation = '',
+    ): ClanAdmissionResult
     {
         $nowUtc = $this->formatInstant($instant);
         $applicationId = $this->newIdentifier('app');
@@ -793,9 +1022,18 @@ final class ClanService
 
         if ($registered === null) {
             // La guarda atómica bloqueó la pluma: se discierne la causa exacta
-            // para emitir la leyenda que el canon exige.
+            // para emitir la leyenda que el canon exige. Primero la pendiente
+            // viva de ESTA casa (idempotencia, caso límite 6: la petición ya
+            // remitida responde por idempotencia sin duplicar), después la
+            // clausura de la casa (SPEC-10, RF-03.1): CUALQUIER fila histórica
+            // —aprobada, rechazada o cancelada— veda la re-postulación, sin
+            // consumir cupo (hallazgo 16).
             if ($this->applicationRepository->findPendingApplicationForClan($applicant->getId(), $clan->id) !== null) {
                 throw ClanGovernanceException::applicationAlreadyPending();
+            }
+
+            if ($this->applicationRepository->hasSealedHouse($applicant->getId(), $clan->id)) {
+                throw ClanGovernanceException::applicationHouseClosed();
             }
 
             throw ClanGovernanceException::pendingApplicationsLimit(
@@ -841,6 +1079,81 @@ final class ClanService
         }
 
         return ClanAdmissionResult::admitted($this->toMemberDto($membership));
+    }
+
+    /**
+     * Valida y normaliza la motivación escrita de la petición formal
+     * (SPEC-10, RF-03.1): 20 a 500 caracteres.
+     *
+     * El Patriarca es la ÚNICA guardia del tono (plan §5.6): el molde es la
+     * única regla mecánica, determinista, que el backend aplica.
+     *
+     * @throws ClanGovernanceException INVALID_MOTIVATION si el texto falta o
+     *                                  desborda el molde.
+     */
+    private function requireCanonicalMotivation(?string $motivation): string
+    {
+        $canonicalMotivation = trim((string) $motivation);
+        $length = mb_strlen($canonicalMotivation);
+
+        if ($length < self::MOTIVATION_MIN_LENGTH || $length > self::MOTIVATION_MAX_LENGTH) {
+            throw ClanGovernanceException::invalidMotivation(
+                self::MOTIVATION_MIN_LENGTH,
+                self::MOTIVATION_MAX_LENGTH
+            );
+        }
+
+        return $canonicalMotivation;
+    }
+
+    /**
+     * El molde del MOTIVO DEL RECHAZO (SPEC-10, Tarea 2.6; Artículo III.3):
+     * el mismo acotamiento 20–500 que la petición formal, pero con código
+     * canónico propio (`INVALID_VERDICT_MOTIVE`) — el asiento del dictamen es
+     * acto del lado deliberante, no una petición del postulante.
+     *
+     * @throws ClanGovernanceException INVALID_VERDICT_MOTIVE si el motivo
+     *                                  falta o desborda el molde.
+     */
+    private function requireCanonicalVerdictMotive(?string $motive): string
+    {
+        $canonicalMotive = trim((string) $motive);
+        $length = mb_strlen($canonicalMotive);
+
+        if ($length < self::MOTIVATION_MIN_LENGTH || $length > self::MOTIVATION_MAX_LENGTH) {
+            throw ClanGovernanceException::invalidVerdictMotive(
+                self::MOTIVATION_MIN_LENGTH,
+                self::MOTIVATION_MAX_LENGTH
+            );
+        }
+
+        return $canonicalMotive;
+    }
+
+    /**
+     * Resuelve la estampa de llegada del gesto (plan §3.3, decisión 9).
+     *
+     * La llegada declarada por el cliente solo se honra dentro de una ventana
+     * de tolerancia de ±30 s respecto al instante del servidor; fuera de ella
+     * (o si falta) manda el instante del servidor: el criterio es la LLEGADA
+     * al santuario, jamás el reloj del cliente.
+     */
+    private function resolveArrivalInstant(?string $receivedAt, DateTimeImmutable $serverInstant): DateTimeImmutable
+    {
+        $declared = $this->parseInstant($receivedAt);
+        if ($declared === null) {
+            return $serverInstant;
+        }
+
+        $tolerance = new DateInterval('PT' . self::ARRIVAL_TOLERANCE_SECONDS . 'S');
+        $windowStart = $serverInstant->sub($tolerance);
+        $windowEnd = $serverInstant->add($tolerance);
+
+        if ($declared < $windowStart || $declared > $windowEnd) {
+            return $serverInstant;
+        }
+
+        return $declared;
     }
 
     /**
@@ -897,6 +1210,45 @@ final class ClanService
         if ($this->memberRepository->isUserInConvalescence($actor->getId(), $nowUtc)) {
             throw ClanGovernanceException::convalescenceActive();
         }
+    }
+
+    /**
+     * Exige el Privilegio Fundacional del Admin Supremo: sin linaje jurado no
+     * hay hermandades que contemplar ni gestos que consumar (SPEC-10, RF-01.1).
+     *
+     * El Supremo sin linaje está EXENTO de la retención de SPEC-09, de modo
+     * que jamás llegaría a LINEAGE_OATH_REQUIRED: esta guardia es su veredicto
+     * propio y solemne. El peregrino común no pasa por aquí: la retención de
+     * SPEC-09 lo detiene antes en producción (RF-04.3 de SPEC-10), y en el
+     * servidor su `lineage` null queda vedado por el guardia de mismidad
+     * contra el linaje de la casa (null ≠ lineageType).
+     */
+    private function requireOathLineageForGesture(User $actor): void
+    {
+        if ($actor->getRole() === 'supremeAdmin' && $actor->getLineage() === null) {
+            throw ClanGovernanceException::adminLineageRequired();
+        }
+    }
+
+    /**
+     * Resuelve el nombre solemne de la casa donde el adepto tiene su lealtad
+     * empeñada (SPEC-10, hallazgo 4): la leyenda nombra a la casa, no al id.
+     */
+    private function nameOfActiveMembership(string $userId): string
+    {
+        $membership = $this->memberRepository->findActiveMembership($userId);
+        if ($membership === null) {
+            return 'tu casa';
+        }
+
+        // La membresía llega como fila hidratada del repositorio (array).
+        $membershipClanId = is_array($membership)
+            ? (string) $membership['clan_id']
+            : $membership->clanId;
+
+        $clanRow = $this->clanRepository->findById($membershipClanId);
+
+        return $clanRow === null ? $membershipClanId : (string) $clanRow['name'];
     }
 
     /**
