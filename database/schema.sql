@@ -140,8 +140,38 @@ CREATE TABLE IF NOT EXISTS clan_applications (
                 CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
     created_at  TEXT NOT NULL,                                       -- Emisión (ISO 8601 UTC)
     resolved_at TEXT,                                                -- Veredicto (NULL = en deliberación)
+    verdict_seen_at TEXT,                                            -- Instante en que el postulante contempló el veredicto [SPEC-10]; NULL + estado terminal = sin leer
     FOREIGN KEY (clan_id) REFERENCES clans (id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+-- ---------------------------------------------------------------------
+-- Clausura perpetua por casa y cuenta [SPEC-10, RF-03.1]
+--
+-- Las filas JAMÁS se borran (los estados terminales persisten), así que
+-- este índice único convierte la regla «una sola petición por casa en
+-- la vida de la cuenta» en invariante físico: cualquier fila histórica
+-- de esa casa para esa cuenta (pendiente, aprobada, rechazada o
+-- cancelada) bloquea una nueva petición. El servicio discierne
+-- APPLICATION_HOUSE_CLOSED de APPLICATION_ALREADY_PENDING ante la
+-- violación de unicidad.
+-- ---------------------------------------------------------------------
+CREATE UNIQUE INDEX IF NOT EXISTS uq_clan_application_house
+    ON clan_applications (user_id, clan_id);
+
+-- Archivo espejo de los duplicados legados que la migración
+-- sql/10_clan_vestibule.sql retira antes de erigir el índice único
+-- [SPEC-10, plan §1.3]: no son clausura, son eco de escrituras previas
+-- a la regla.
+CREATE TABLE IF NOT EXISTS clan_applications_archive (
+    id          TEXT PRIMARY KEY,
+    clan_id     TEXT NOT NULL,
+    user_id     TEXT NOT NULL,
+    status      TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    resolved_at TEXT,
+    verdict_seen_at TEXT,
+    archived_at TEXT NOT NULL
 );
 
 -- ---------------------------------------------------------------------

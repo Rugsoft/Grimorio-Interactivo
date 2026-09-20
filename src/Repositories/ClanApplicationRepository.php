@@ -63,10 +63,17 @@ final class ClanApplicationRepository
     private const RESOLUTION_STATUSES = [self::STATUS_APPROVED, self::STATUS_REJECTED];
 
     /**
-     * Proyección canónica de una solicitud (columnas del esquema de SPEC-07).
-     * Declarada una sola vez para que toda lectura devuelva el mismo contrato.
+     * Estados TERMINALES: el veredicto ya fue dictado o la petición retirada.
+     * Solo sobre ellos existe «veredicto sin leer» (SPEC-10, RF-03.4).
      */
-    private const APPLICATION_COLUMNS = 'id, clan_id, user_id, status, created_at, resolved_at';
+    private const TERMINAL_STATUSES = [self::STATUS_APPROVED, self::STATUS_REJECTED, self::STATUS_CANCELLED];
+
+    /**
+     * Proyección canónica de una solicitud (columnas del esquema de SPEC-07
+     * más `verdict_seen_at` de SPEC-10). Declarada una sola vez para que toda
+     * lectura devuelva el mismo contrato.
+     */
+    private const APPLICATION_COLUMNS = 'id, clan_id, user_id, status, created_at, resolved_at, verdict_seen_at';
 
     /** Conexión PDO del santuario (Singleton del front controller). */
     private PDO $pdo;
@@ -338,6 +345,112 @@ final class ClanApplicationRepository
     }
 
     /**
+     * Expediente íntegro de solicitudes de un postulante, TODOS los estados
+     * (SPEC-10, RF-03.8): alimenta el inventario consolidado del Vestíbulo,
+     * donde las terminales exhiben su veredicto y las pendientes su espera.
+     *
+     * Se ordenan de la más antigua a la más reciente para que la cronología
+     * del postulante sea determinista (RNF-01).
+     *
+     * @return list<array{
+     *   id: string, clan_id: string, user_id: string, status: string,
+     *   created_at: string, resolved_at: string|null, verdict_seen_at: string|null
+     * }>
+     */
+    public function findApplicationsByUser(string $userId): array
+    {
+        return $this->findApplications(
+            'SELECT ' . self::APPLICATION_COLUMNS . '
+               FROM clan_applications
+              WHERE user_id = :userId
+              ORDER BY created_at ASC, id ASC',
+            [':userId' => $userId]
+        );
+    }
+
+    /**
+     * ¿Tiene esta cuenta ya UNA fila histórica sobre esa casa? (SPEC-10, RF-03.1)
+     *
+     * La clausura por casa es un INVARIANTE FÍSICO (el índice único
+     * `uq_clan_application_house`), de modo que esta consulta jamás decide la
+     * clausura: solo la traduce a leyenda. Cualquier estado (pendiente,
+     * aprobada, rechazada o cancelada) clausura la casa para la cuenta.
+     */
+    public function hasSealedHouse(string $userId, string $clanId): bool
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*)
+               FROM clan_applications
+              WHERE user_id = :userId
+                AND clan_id = :clanId'
+        );
+        $statement->execute([':userId' => $userId, ':clanId' => $clanId]);
+
+        return (int) $statement->fetchColumn() > 0;
+    }
+
+    /**
+     * Fija el instante en que el postulante contempló el veredicto
+     * (SPEC-10, RF-03.4).
+     *
+     * La guardia solo alcanza a peticiones TERMINALES del propio actuante:
+     * jamás se escribe sobre una petición `pending` (no hay veredicto que
+     * leer) ni sobre petición ajena. La condición `verdict_seen_at IS NULL`
+     * hace la operación naturalmente idempotente a nivel de persistencia: un
+     * reenvío no muta la columna (el segundo acknowledge ya no encuentra
+     * veredicto sin leer).
+     *
+     * @return bool Cierto si la columna quedó fijada en esta llamada.
+     */
+    public function markVerdictSeen(string $applicationId, string $userId, string $seenAt): bool
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE clan_applications
+                SET verdict_seen_at = :seenAt
+              WHERE id = :applicationId
+                AND user_id = :userId
+                AND status IN (:approvedStatus, :rejectedStatus, :cancelledStatus)
+                AND verdict_seen_at IS NULL'
+        );
+        $statement->execute([
+            ':seenAt'           => $seenAt,
+            ':applicationId'    => $applicationId,
+            ':userId'           => $userId,
+            ':approvedStatus'   => self::STATUS_APPROVED,
+            ':rejectedStatus'   => self::STATUS_REJECTED,
+            ':cancelledStatus'  => self::STATUS_CANCELLED,
+        ]);
+
+        return $statement->rowCount() > 0;
+    }
+
+    /**
+     * Cuenta los veredictos SIN CONTEMPLAR del postulante (SPEC-10, RF-03.1,
+     * RF-03.4): peticiones terminales cuyo `verdict_seen_at` aún es NULL.
+     *
+     * Es el combustible del rótulo «Tienes dictámenes a la espera» (RF-01.1).
+     * Las peticiones `pending` NO cuentan: nada hay que leer en una espera.
+     */
+    public function countUnreadVerdicts(string $userId): int
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*)
+               FROM clan_applications
+              WHERE user_id = :userId
+                AND status IN (:approvedStatus, :rejectedStatus, :cancelledStatus)
+                AND verdict_seen_at IS NULL'
+        );
+        $statement->execute([
+            ':userId'          => $userId,
+            ':approvedStatus'  => self::STATUS_APPROVED,
+            ':rejectedStatus'  => self::STATUS_REJECTED,
+            ':cancelledStatus' => self::STATUS_CANCELLED,
+        ]);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
      * Cancela las postulaciones pendientes de un adepto (RF-01.5).
      *
      * Se invoca al ingresar en una hermandad —tanto por aprobación de
@@ -380,7 +493,7 @@ final class ClanApplicationRepository
      *
      * @return list<array{
      *   id: string, clan_id: string, user_id: string, status: string,
-     *   created_at: string, resolved_at: string|null
+     *   created_at: string, resolved_at: string|null, verdict_seen_at: string|null
      * }>
      */
     private function findApplications(string $sql, array $parameters): array
@@ -403,18 +516,19 @@ final class ClanApplicationRepository
      *
      * @return array{
      *   id: string, clan_id: string, user_id: string, status: string,
-     *   created_at: string, resolved_at: string|null
+     *   created_at: string, resolved_at: string|null, verdict_seen_at: string|null
      * }
      */
     private function hydrate(array $row): array
     {
         return [
-            'id'          => (string) $row['id'],
-            'clan_id'     => (string) $row['clan_id'],
-            'user_id'     => (string) $row['user_id'],
-            'status'      => (string) $row['status'],
-            'created_at'  => (string) $row['created_at'],
-            'resolved_at' => $row['resolved_at'] === null ? null : (string) $row['resolved_at'],
+            'id'              => (string) $row['id'],
+            'clan_id'         => (string) $row['clan_id'],
+            'user_id'         => (string) $row['user_id'],
+            'status'          => (string) $row['status'],
+            'created_at'      => (string) $row['created_at'],
+            'resolved_at'     => $row['resolved_at'] === null ? null : (string) $row['resolved_at'],
+            'verdict_seen_at' => $row['verdict_seen_at'] === null ? null : (string) $row['verdict_seen_at'],
         ];
     }
 

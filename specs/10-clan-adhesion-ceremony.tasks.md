@@ -8,12 +8,12 @@
 
 ## Fase 1 — Persistencia y Migración
 
-- [ ] **Tarea 1.1 — Migración `10_clan_vestibule.sql`**
+- [x] **Tarea 1.1 — Migración `10_clan_vestibule.sql`**
   * **Qué:** migración idempotente: preflight de deduplicación (duplicados legados de `(user_id, clan_id)` a la tabla espejo `clan_applications_archive`), `CREATE UNIQUE INDEX uq_clan_application_house` y `ALTER TABLE clan_applications ADD COLUMN verdict_seen_at TEXT NULL`; actualización de `database/schema.sql`.
   * **Cubre:** `RF-03.1` (clausura), `RF-03.4` (veredicto leído), `RNF-05` (PDO/SQL nativo).
   * **Hecho cuando:** re-ejecutar la migración sobre una base ya migrada no falla ni duplica, y un segundo INSERT de `(user_id, clan_id)` existente recibe la violación del índice único.
 
-- [ ] **Tarea 1.2 — Consultas nuevas de `ClanApplicationRepository`**
+- [x] **Tarea 1.2 — Consultas nuevas de `ClanApplicationRepository`**
   * **Qué:** `findApplicationsByUser()` (todos los estados), `hasSealedHouse()`, `markVerdictSeen()` (solo sobre estados terminales propios) y `countUnreadVerdicts()` — PDO preparado, `camelCase`, comentarios en castellano.
   * **Cubre:** `RF-03.3` (cupo y clausura), `RF-03.4` (veredicto contemplado), `RF-03.8` (inventario).
   * **Hecho cuando:** las cuatro consultas responden contra una base sembrada y `countUnreadVerdicts()` ignora las peticiones `pending` (solo terminales con `verdict_seen_at` nulo).
