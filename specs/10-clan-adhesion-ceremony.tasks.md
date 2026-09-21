@@ -146,15 +146,15 @@
 
 ## Fase 8 — Arneses Frontend
 
-- [ ] **Tarea 8.1 — `scratch/test_vestibule_view.mjs` y `scratch/test_vestibule_card_states.mjs`**
+- [x] **Tarea 8.1 — `scratch/test_vestibule_view.mjs` y `scratch/test_vestibule_card_states.mjs`**
   * **Cubre:** `RF-01.2`, `RF-01.3`, `RF-01.4`, `RF-01.5`, `RF-03.5`.
   * **Hecho cuando:** en verde: render completo de tarjeta (sello, plenitud, régimen, corona), doble vía, estado vacío, fallo de catálogo con reintento, y los cinco estados de tarjeta pintados desde el DTO con la contemplación jamás bloqueada.
 
-- [ ] **Tarea 8.2 — `scratch/test_admission_modal.mjs` y `scratch/test_petition_composer.mjs`**
+- [x] **Tarea 8.2 — `scratch/test_admission_modal.mjs` y `scratch/test_petition_composer.mjs`**
   * **Cubre:** `RF-02.1`, `RF-03.1`, `RNF-03`.
   * **Hecho cuando:** en verde: advertencias en el cuerpo del modal, descarte sin mutación, foco atrapado y devuelto, Escape, ARIA, `prefers-reduced-motion`, molde con contador vivo.
 
-- [ ] **Tarea 8.3 — `scratch/test_petition_inventory.mjs` y `scratch/test_vestibule_client.mjs`**
+- [x] **Tarea 8.3 — `scratch/test_petition_inventory.mjs` y `scratch/test_vestibule_client.mjs`**
   * **Cubre:** `RF-03.3`, `RF-03.4`, `RF-03.8`, `RF-02.2`, `RF-03.2`.
   * **Hecho cuando:** en verde: inventario con retirada directa y veredictos sin leer, rótulo que se apaga al contemplar, y mapeo íntegro de códigos HTTP a leyendas canónicas.
 

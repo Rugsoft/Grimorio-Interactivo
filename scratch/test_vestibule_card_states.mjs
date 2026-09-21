@@ -9,6 +9,7 @@
  *       jamás decide.
  *   [2] RF-01.3: lema, Sello Rúnico forjado (SVG, SPEC-02 RF-07), «X de 30»,
  *       régimen rotulado en castellano, corona del Regente con los estilos
+ *       del kit, censo «X de 30», y la leyenda de plenitud de la casa llena
  *       del kit de SPEC-07 (`.podium-rank__crown`, sin ad hoc).
  *   [3] RF-03.5: gesto vedado (`gesture: null`) → leyenda solemne del DTO
  *       en lugar del control, sin error ni modal; contemplación íntegra.
@@ -233,6 +234,17 @@ const militante = createVestibuleClanCardComponent(clanDto({
 }), { elementFactory: factory, documentRef: svgDocument });
 const lealtadNode = findDescendant(militante.element, (node) => String(node.className).includes('vestibule-card__vedado'));
 assertCondition(lealtadNode.textContent.includes('Brasa Viva'), 'la leyenda de lealtad empeñada nombra la casa (RF-02.3)');
+
+// Casa en plenitud (RF-03.5, leyenda canónica de ClanVestibuleService):
+// el gesto join se retira y la leyenda nombra el límite del censo.
+const casaLlena = createVestibuleClanCardComponent(clanDto({
+  memberCount: 30,
+  gesture: null,
+  vedadoLegend: 'La hermandad ha alcanzado su plenitud de 30 adeptos activos: ningún ingreso cabe sin una partida.',
+}), { elementFactory: factory, documentRef: svgDocument });
+const plenitudNode = findDescendant(casaLlena.element, (node) => String(node.className).includes('vestibule-card__vedado'));
+assertCondition(plenitudNode !== null && plenitudNode.textContent.includes('plenitud de 30 adeptos'), 'la leyenda de plenitud nombra el límite del censo (RF-03.5)');
+assertCondition(findDescendant(casaLlena.element, (node) => String(node.className).includes('vestibule-card__gesture')) === null, 'la casa llena jamás ofrece gesto (sin botón de ingreso)');
 
 // Sin leyenda declarada: rótulo neutro, jamás cadena vacía ni texto técnico.
 const sinLeyenda = createVestibuleClanCardComponent(clanDto({ gesture: null, vedadoLegend: null }), {

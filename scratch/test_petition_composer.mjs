@@ -303,12 +303,22 @@ assertCondition(partsApi.composer.isValid() === true && partsApi.counter.textCon
 partsApi.composer.focus();
 assertCondition(true, 'focus() disponible para la vista orquestadora');
 
+// [4] Movimiento reducido y kit de controles (RNF-03, SPEC-02 RF-08.1/08.5)
+// =====================================================================
+console.log('\n[4] Movimiento reducido y kit de controles (RNF-03)');
+import { readFileSync } from 'node:fs';
+const vestibuleCss = readFileSync(new URL('../public/assets/css/components/vestibule.css', import.meta.url), 'utf8');
+const controlsCss = readFileSync(new URL('../public/assets/css/components/controls.css', import.meta.url), 'utf8');
+assertCondition(vestibuleCss.includes('@media (prefers-reduced-motion: reduce)'), 'la hoja del Vestíbulo declara su bloque prefers-reduced-motion (RNF-03)');
+assertCondition(controlsCss.includes('@media (prefers-reduced-motion: reduce)'), 'el Kit de Controles aquienta textarea y botones por sí mismo (SPEC-02 RF-08.5)');
+assertCondition(partsLive.root.className.includes('petition-composer') && partsLive.textarea.className.includes('controls-textarea'), 'el molde y su textarea visten el kit de controles de SPEC-02 (RF-08.1)');
+
 // =====================================================================
 // Resumen
 // =====================================================================
 console.log(`\n== RESUMEN == Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);
 if (assertsFailed === 0 && uncaughtErrors === 0) {
-  console.log('RESULTADO: EXITO — Remitir exige 20–500, el contador vive mientras se escribe y ninguna regla de estilo filtra el texto (Tarea 5.3).');
+  console.log('RESULTADO: EXITO — Remitir exige 20–500, el contador vive mientras se escribe, ninguna regla de estilo filtra el texto y el kit se aquienta bajo movimiento reducido (Tareas 5.3 y 8.2).');
   process.exit(0);
 }
 console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');

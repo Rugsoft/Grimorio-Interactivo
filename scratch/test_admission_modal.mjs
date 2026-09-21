@@ -14,6 +14,10 @@
  *   [3] RNF-03: el foco queda atrapado (Tab cicla) y REGRESA a la tarjeta
  *       originadora al cerrar; foco inicial en la confirmación.
  *   [4] RNF-03: región viva que anuncia apertura, descarte y confirmación.
+ *   [5] RNF-03: la hoja del Vestíbulo declara prefers-reduced-motion y el
+ *       componente viste el kit de controles (botones `.button`, SPEC-02
+ *       RF-08.1/08.5), que ya se aquienta por sí mismo bajo movimiento
+ *       reducido.
  *   [5] Eventos del plan §4: `vestibule:admission-opened` { clanId, mode },
  *       `vestibule:admission-dismissed` {}; la confirmación delega en
  *       onConfirm(clanId) — el modal JAMÁS llama a la API.
@@ -335,12 +339,21 @@ assertCondition(modalE.isOpen() === false && emittedEvents.length === eventsBefo
 
 assertCondition(uncaughtErrors === 0, `Ninguna excepción escapó sin control (${uncaughtErrors} cazadas)`);
 
+// [5] prefers-reduced-motion y kit de controles (RNF-03, SPEC-02 RF-08.5)
+// =====================================================================
+console.log('\n[5] Movimiento reducido y kit de controles (RNF-03)');
+import { readFileSync } from 'node:fs';
+const vestibuleCss = readFileSync(new URL('../public/assets/css/components/vestibule.css', import.meta.url), 'utf8');
+assertCondition(vestibuleCss.includes('@media (prefers-reduced-motion: reduce)'), 'la hoja del Vestíbulo declara su bloque prefers-reduced-motion (RNF-03)');
+assertCondition(vestibuleCss.includes('.admission-modal__confirm') && vestibuleCss.includes('.admission-modal__dismiss'), 'los botones del modal llevan su vestimenta declarada');
+assertCondition(confirmButton.className.includes('button button--primary') && dismissButton.className.includes('button button--secondary'), 'confirmación y descarte visten el kit de controles de SPEC-02 (RF-08.1)');
+
 // =====================================================================
 // Resumen
 // =====================================================================
 console.log(`\n== RESUMEN == Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);
 if (assertsFailed === 0 && uncaughtErrors === 0) {
-  console.log('RESULTADO: EXITO — La casa queda nombrada, las advertencias visten el cuerpo, el descarte no muta nada y el foco vuelve a la tarjeta (Tarea 5.2).');
+  console.log('RESULTADO: EXITO — La casa queda nombrada, las advertencias visten el cuerpo, el descarte no muta nada, el foco vuelve a la tarjeta y el kit se aquienta bajo movimiento reducido (Tareas 5.2 y 8.2).');
   process.exit(0);
 }
 console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');

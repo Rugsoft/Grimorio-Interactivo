@@ -9,7 +9,8 @@
  *   Endpoint 2 · fetchClans(params)                     GET  /api/v1/clans
  *   Endpoint 3 · fetchClan(clanId)                    GET  /api/v1/clans/{id}
  *   Endpoint 4 · updateClan(clanId, payload)          PATCH /api/v1/clans/{id}
- *   Endpoint 5 · applyToClan(clanId)                  POST /api/v1/clans/{id}/applications
+ *   Endpoint 5 · applyToClan(clanId|{clanId, motivation})
+ *                                       POST /api/v1/clans/{id}/applications
  *   Endpoint 6 · resolveApplication(clanId, applicationId, decision)
  *                                       POST /api/v1/clans/{id}/applications/{appId}/resolve
  *   Endpoint 7 · leaveClan(clanId)                    POST /api/v1/clans/{id}/leave
@@ -325,15 +326,29 @@ export function createClanClient(options = {}) {
     },
 
     /**
-     * Endpoint 5 (RF-01.5): postulación o ingreso según el régimen.
+     * Endpoint 5 (RF-01.5 de SPEC-07; enmendado por SPEC-10 RF-03.1):
+     * postulación o ingreso según el régimen. Acepta DOS firmas para no
+     * romper el contrato de SPEC-07:
+     *   - applyToClan(clanId)                    — gesto simple (ingreso abierto).
+     *   - applyToClan({ clanId, motivation })    — rito formal de SPEC-10:
+     *     el pergamino 20–500 viaja en el cuerpo JSON bajo `motivation`.
      *
-     * @param {string} clanId Identificador de la casa cortejada.
+     * @param {string|{clanId: string, motivation?: string}} request Casa
+     *   cortejada (string histórico) o sobre del rito formal (SPEC-10).
      * @returns {Promise<object>} 201 con el desenlace (`pending` o `active`),
-     *   400 PENDING_APPLICATIONS_LIMIT, 403 CONVALESCENCE_ACTIVE, 409
-     *   APPLICATION_ALREADY_PENDING / ALREADY_AFFILIATED / CLAN_QUOTA_EXCEEDED.
+     *   400 INVALID_MOTIVATION / PENDING_APPLICATIONS_LIMIT, 403
+     *   CONVALESCENCE_ACTIVE, 409 APPLICATION_ALREADY_PENDING /
+     *   ALREADY_AFFILIATED / CLAN_QUOTA_EXCEEDED.
      */
-    applyToClan(clanId) {
-      return requestJson(`${apiBase}/clans/${path(clanId)}/applications`, { method: 'POST' }, {});
+    applyToClan(request) {
+      const isFormalRite = typeof request === 'object' && request !== null;
+      const clanId = isFormalRite ? request.clanId : request;
+      const motivation = isFormalRite ? (request.motivation ?? null) : null;
+      return requestJson(
+        `${apiBase}/clans/${path(clanId)}/applications`,
+        { method: 'POST' },
+        motivation !== null ? { motivation } : {},
+      );
     },
 
     /**

@@ -8,7 +8,9 @@
  *   [4]  Endpoint 4 · acknowledgeVerdict(): contemplado idempotente (RF-03.4).
  *   [5]  Endpoint 5 · fetchUnreadVerdictsCount(): contador del rótulo (RF-01.1).
  *   [6]  Mapeo de errores: cada código canónico lleva su leyenda del Anexo A
- *        y la leyenda del santuario tiene precedencia.
+ *        y la leyenda del santuario tiene precedencia. Incluye los guardias
+ *        ratificados por la auditoría de la Fase 7: CONVALESCENCE_ACTIVE
+ *        (Tarea 7.2) y CLAN_QUOTA_EXCEEDED (Tarea 7.4).
  *   [7]  Nunca lanza: red caída, JSON ilegible y estados sin sobre.
  *   [8]  Credenciales: cookie de sesión ('same-origin') en TODAS las peticiones.
  *   [9]  Paridad de contratos con el Front Controller (anti-deriva): toda
@@ -232,6 +234,37 @@ assertCondition(
   'el molde excedido porta su leyenda del Anexo A (leyenda 6)'
 );
 
+// Guardias ratificados por la auditoría de la Fase 7 (Tareas 7.2 y 7.4):
+// convalecencia activa (403) y carrera de plenitud perdida (409) visten
+// sus leyendas canónicas del santuario.
+assertCondition(
+  VESTIBULE_CEREMONIAL_LEGENDS[VESTIBULE_ERROR_CODES.convalescenceActive] === 'Tu esencia mágica aún se encuentra en convalecencia tras disolver tu juramento anterior.',
+  'CONVALESCENCE_ACTIVE porta su leyenda canónica (RF-03.5, Tarea 7.2)'
+);
+assertCondition(
+  VESTIBULE_CEREMONIAL_LEGENDS[VESTIBULE_ERROR_CODES.clanQuotaExceeded] === 'La hermandad ha alcanzado su plenitud de treinta hermanos.',
+  'CLAN_QUOTA_EXCEEDED porta su leyenda de plenitud (RF-02.2, Tarea 7.4)'
+);
+for (const guardiaRatificado of [
+  { status: 403, code: 'CONVALESCENCE_ACTIVE' },
+  { status: 409, code: 'CLAN_QUOTA_EXCEEDED' },
+]) {
+  const stubGuardia = createFetchStub([
+    { match: () => true, status: guardiaRatificado.status, body: { success: false, error: { code: guardiaRatificado.code, message: '', recoveryAction: 'RETRY' } } },
+  ]);
+  const clientGuardia = createVestibuleClient({ fetch: stubGuardia });
+  // La vía real del gesto de adhesión es el rito de SPEC-07 (clanClient);
+  // aquí se ejercita la MISMA traducción de sobre a leyenda canónica.
+  const vedado = await clientGuardia.fetchVestibule();
+  assertCondition(
+    vedado.success === false
+      && vedado.status === guardiaRatificado.status
+      && vedado.error.code === guardiaRatificado.code
+      && ceremonialLegendFor(vedado) === VESTIBULE_CEREMONIAL_LEGENDS[guardiaRatificado.code],
+    `el guardia ${guardiaRatificado.code} se traduce a su leyenda con estado ${guardiaRatificado.status}`,
+  );
+}
+
 // Escenario real: cada estado del contrato se traduce sin exponer trazas.
 const escenariosError = [
   { status: 400, code: 'INVALID_MOTIVATION' },
@@ -438,7 +471,7 @@ if (!probe.ok) {
 // =====================================================================
 console.log(`\n== RESUMEN == Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);
 if (assertsFailed === 0) {
-  console.log('RESULTADO: EXITO — El cliente del Vestíbulo consume los cuatro endpoints y cada error viste su leyenda del Anexo A sin exponer trazas (Tarea 4.1).');
+  console.log('RESULTADO: EXITO — El cliente del Vestíbulo consume los cuatro endpoints y cada error viste su leyenda del Anexo A sin exponer trazas, incluidos los guardias ratificados en la Fase 7 (Tareas 4.1 y 8.3).');
   process.exit(0);
 }
 console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
