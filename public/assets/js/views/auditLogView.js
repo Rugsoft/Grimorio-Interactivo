@@ -118,9 +118,12 @@ export function createAuditLogView(mountRoot, options = {}) {
       // Actos del Juramento de Linaje (SPEC-09): la identidad arcana sellada
       // en la ceremonia del primer acceso queda inscrita en la Bitácora.
       LINEAGE_OATH_SWORN: 'Juramento de Linaje sellado',
-      // Actos del Vestíbulo de las Hermandades (SPEC-10): la retirada del
-      // postulante se lee con su nombre propio (lado postulante); el dictamen
-      // y las residuales anuladas, lado deliberante del reparto por actor.
+      // Actos del Vestíbulo de las Hermandades (SPEC-10): los actos del
+      // postulante (ingreso, remisión, retirada y residuales anuladas) se
+      // leen con su nombre propio; el dictamen queda en el lado deliberante
+      // del reparto por actor.
+      CLAN_MEMBER_JOINED: 'Ingreso en una Hermandad',
+      CLAN_APPLICATION_SUBMITTED: 'Remisión de una Petición de Ingreso',
       CLAN_APPLICATION_WITHDRAWN: 'Retirada de una Petición de Ingreso',
       CLAN_APPLICATION_VERDICT: 'Dictamen sobre una Petición de Ingreso',
       CLAN_APPLICATION_RESIDUALS_ANNULLED: 'Anulación de Peticiones Huérfanas',

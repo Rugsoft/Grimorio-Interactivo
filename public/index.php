@@ -56,6 +56,7 @@ use Grimorio\Controllers\AuthController;
 use Grimorio\Controllers\AuditController;
 use Grimorio\Controllers\LineageOathController;
 use Grimorio\Controllers\SpellCreatorController;
+use Grimorio\Controllers\VestibuleController;
 use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
@@ -70,6 +71,7 @@ use Grimorio\Repositories\ObjectionVerdictRepository;
 use Grimorio\Repositories\SpellReviewRepository;
 use Grimorio\Services\AuditService;
 use Grimorio\Services\ClanService;
+use Grimorio\Services\ClanVestibuleService;
 use Grimorio\Services\ConstitutionalEthicsValidator;
 use Grimorio\Services\LineageCatalogService;
 use Grimorio\Services\LineageOathService;
@@ -99,6 +101,13 @@ function buildRouter(): Router
         $connection,
         new ClanService($connection->getPdo(), new AuditService($connection->getPdo()), new LineageSynergyService()),
         $discoveryService,
+    );
+
+    // Vestíbulo de las Hermandades (SPEC-10, Tarea 3.4): el sobre único,
+    // la retirada, el veredicto contemplado y el contador del rótulo.
+    $vestibuleController = new VestibuleController(
+        new ClanVestibuleService($connection->getPdo()),
+        new ClanService($connection->getPdo(), new AuditService($connection->getPdo()), new LineageSynergyService()),
     );
 
     // Pila de autenticación (SPEC-03): gestor de sesiones y rate limiter
@@ -183,6 +192,16 @@ function buildRouter(): Router
     // `/leave`, `/expel/{userId}`, `/transfer-leadership`) no colisionan con
     // `/clans/{id}` porque su grupo nombrado excluye la barra.
     $router->addRoute('GET', '/api/v1/clans', fn (Request $request): Response => $clanController->index($request));
+    // Vestíbulo de las Hermandades (SPEC-10, Tarea 3.4): estado derivado,
+    // inventario consolidado, retirada, veredicto contemplado y contador del
+    // rótulo. Las rutas LITERALES (`/clans/vestibule`, `/clans/verdicts/
+    // unread-count`, `/clans/applications/{appId}/verdict-acknowledge`) se
+    // registran ANTES de los patrones con parámetro (`{id}`, `{appId}`) para
+    // que el enrutador —que discierne por orden de registro— no las sombra.
+    $router->addRoute('GET', '/api/v1/clans/vestibule', fn (Request $request): Response => $vestibuleController->show($request));
+    $router->addRoute('GET', '/api/v1/clans/verdicts/unread-count', fn (Request $request): Response => $vestibuleController->unreadCount($request));
+    $router->addRoute('POST', '/api/v1/clans/applications/{appId}/verdict-acknowledge', fn (Request $request, array $routeParams): Response => $vestibuleController->acknowledgeVerdict($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/clans/{id}/applications/{appId}/withdraw', fn (Request $request, array $routeParams): Response => $vestibuleController->withdraw($request, $routeParams));
     $router->addRoute('POST', '/api/v1/clans', fn (Request $request): Response => $clanController->store($request));
     $router->addRoute('GET', '/api/v1/clans/{id}', fn (Request $request, array $routeParams): Response => $clanController->show($request, $routeParams));
     // Legado Ancestral de la casa (Tarea 6.4, plan Endpoint 13): conjuros

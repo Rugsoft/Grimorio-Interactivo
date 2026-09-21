@@ -58,6 +58,8 @@ function forgeSeededDatabase(): PDO
         user_id TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT \'pending\'
             CHECK (status IN (\'pending\', \'approved\', \'rejected\', \'cancelled\')),
+        motivation TEXT,
+        verdict_motive TEXT,
         created_at TEXT NOT NULL,
         resolved_at TEXT,
         verdict_seen_at TEXT,

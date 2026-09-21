@@ -74,7 +74,7 @@ final class ClanApplicationRepository
      * más `verdict_seen_at` de SPEC-10). Declarada una sola vez para que toda
      * lectura devuelva el mismo contrato.
      */
-    private const APPLICATION_COLUMNS = 'id, clan_id, user_id, status, created_at, resolved_at, verdict_seen_at';
+    private const APPLICATION_COLUMNS = 'id, clan_id, user_id, status, motivation, verdict_motive, created_at, resolved_at, verdict_seen_at';
 
     /** Conexión PDO del santuario (Singleton del front controller). */
     private PDO $pdo;
@@ -106,11 +106,12 @@ final class ClanApplicationRepository
         string $applicationId,
         string $clanId,
         string $userId,
-        string $createdAt
+        string $createdAt,
+        string $motivation = ''
     ): ?array {
         $statement = $this->pdo->prepare(
-            'INSERT INTO clan_applications (id, clan_id, user_id, status, created_at, resolved_at)
-             SELECT :applicationId, :clanId, :userId, :pendingStatus, :createdAt, NULL
+            'INSERT INTO clan_applications (id, clan_id, user_id, status, motivation, created_at, resolved_at)
+             SELECT :applicationId, :clanId, :userId, :pendingStatus, :motivation, :createdAt, NULL
               WHERE (
                         SELECT COUNT(*)
                           FROM clan_applications
@@ -131,6 +132,7 @@ final class ClanApplicationRepository
             $statement->bindValue(':userId', $userId);
             $statement->bindValue(':pendingStatus', self::STATUS_PENDING);
             $statement->bindValue(':createdAt', $createdAt);
+            $statement->bindValue(':motivation', $motivation);
             $statement->bindValue(':maxPending', self::MAX_PENDING_APPLICATIONS, PDO::PARAM_INT);
             $statement->execute();
         } catch (PDOException $exception) {
@@ -305,7 +307,12 @@ final class ClanApplicationRepository
      *
      * @throws InvalidArgumentException Si el veredicto rompe el canon.
      */
-    public function resolveApplication(string $applicationId, string $decision, string $resolvedAt): bool
+    public function resolveApplication(
+        string $applicationId,
+        string $decision,
+        string $resolvedAt,
+        string $verdictMotive = ''
+    ): bool
     {
         $this->assertResolution($decision);
 
@@ -321,17 +328,21 @@ final class ClanApplicationRepository
 
         try {
             // La condición `status = pending` impide que dos deliberaciones
-            // simultáneas dicten veredicto sobre la misma solicitud.
+            // simultáneas dicten veredicto sobre la misma solicitud. El motivo
+            // solemne del rechazo viaja con el veredicto (SPEC-10, Tarea 3.2):
+            // sin él, el postulante no sabría por qué su casa le negó la puerta.
             $statement = $this->pdo->prepare(
                 'UPDATE clan_applications
                     SET status = :decision,
-                        resolved_at = :resolvedAt
+                        resolved_at = :resolvedAt,
+                        verdict_motive = :verdictMotive
                   WHERE id = :applicationId
                     AND status = :pendingStatus'
             );
             $statement->execute([
                 ':decision'      => $decision,
                 ':resolvedAt'    => $resolvedAt,
+                ':verdictMotive' => $verdictMotive,
                 ':applicationId' => $applicationId,
                 ':pendingStatus' => self::STATUS_PENDING,
             ]);
@@ -594,6 +605,8 @@ final class ClanApplicationRepository
             'clan_id'         => (string) $row['clan_id'],
             'user_id'         => (string) $row['user_id'],
             'status'          => (string) $row['status'],
+            'motivation'      => $row['motivation'] === null ? '' : (string) $row['motivation'],
+            'verdict_motive'  => $row['verdict_motive'] === null ? null : (string) $row['verdict_motive'],
             'created_at'      => (string) $row['created_at'],
             'resolved_at'     => $row['resolved_at'] === null ? null : (string) $row['resolved_at'],
             'verdict_seen_at' => $row['verdict_seen_at'] === null ? null : (string) $row['verdict_seen_at'],

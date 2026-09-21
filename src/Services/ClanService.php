@@ -396,6 +396,7 @@ final class ClanService
                 $applicationId,
                 ClanApplicationDto::STATUS_REJECTED,
                 $nowUtc,
+                $canonicalMotive,
             );
 
             // La deliberación es vida del Patriarca (RF-01.9).
@@ -494,6 +495,22 @@ final class ClanService
             'CLAN_APPLICATION_VERDICT',
             $clanId,
             "Aprueba la petición de «{$this->aliasFor($applicantId)}»: el ingreso a «{$clan->name}» es su propio motivo.",
+            $instant,
+        );
+
+        // Asiento del INGRESO POR APROBACIÓN: lado del postulante (SPEC-10,
+        // RF-04.4) — la membresía nace, sea cual fuere el rito que la trajo.
+        // El postulante no está en sesión: se lee su identidad del plano.
+        $postulantRow = $this->pdo->prepare('SELECT alias, role FROM users WHERE id = :userId');
+        $postulantRow->execute([':userId' => $applicantId]);
+        $postulantData = $postulantRow->fetch(PDO::FETCH_ASSOC) ?: ['alias' => $this->aliasFor($applicantId), 'role' => 'editor'];
+        $this->recordAudit(
+            $applicantId,
+            (string) $postulantData['alias'],
+            (string) $postulantData['role'],
+            'CLAN_MEMBER_JOINED',
+            $clanId,
+            "«{$postulantData['alias']}» cruza las puertas de «{$clan->name}» por dictamen favorable.",
             $instant,
         );
 
@@ -1018,6 +1035,7 @@ final class ClanService
             $clan->id,
             $applicant->getId(),
             $nowUtc,
+            $motivation,
         );
 
         if ($registered === null) {
@@ -1041,6 +1059,18 @@ final class ClanService
             );
         }
 
+        // Asiento de la REMISIÓN: lado del postulante (SPEC-10, RF-04.4,
+        // plan §2.3) — su palabra queda registrada ante la casa.
+        $this->recordAudit(
+            $applicant->getId(),
+            $applicant->getAlias(),
+            $applicant->getRole(),
+            'CLAN_APPLICATION_SUBMITTED',
+            $clan->id,
+            "«{$applicant->getAlias()}» remite su petición de ingreso ante «{$clan->name}».",
+            $instant,
+        );
+
         return ClanAdmissionResult::pending($this->toApplicationDto($registered));
     }
 
@@ -1051,7 +1081,7 @@ final class ClanService
     {
         $nowUtc = $this->formatInstant($instant);
 
-        $membership = $this->runAtomically(function () use ($applicant, $clan, $nowUtc): ?array {
+        $membership = $this->runAtomically(function () use ($applicant, $clan, $nowUtc, $instant): ?array {
             $inscribed = $this->memberRepository->addMember(
                 $this->newIdentifier('clm'),
                 $clan->id,
@@ -1064,12 +1094,25 @@ final class ClanService
                 return null;
             }
 
-            // Quien ingresa deja de cortejar a otras casas (RF-01.5).
-            $this->applicationRepository->cancelPendingApplications(
+            // Quien ingresa deja de cortejar a otras casas (RF-01.5). Cada
+            // petición huérfana deja SU asiento (SPEC-10, RF-03.7), inscrito
+            // por el postulante (lado postulante del reparto por actor).
+            $residualIds = $this->applicationRepository->cancelPendingApplications(
                 $applicant->getId(),
                 null,
                 $nowUtc,
             );
+            foreach ($residualIds as $residualId) {
+                $this->recordAudit(
+                    $applicant->getId(),
+                    $applicant->getAlias(),
+                    $applicant->getRole(),
+                    'CLAN_APPLICATION_RESIDUALS_ANNULLED',
+                    $clan->id,
+                    "La lealtad indivisible absuelve la petición huérfana de «{$applicant->getAlias()}» al entrar en «{$clan->name}».",
+                    $instant,
+                );
+            }
 
             return $inscribed;
         });
@@ -1077,6 +1120,18 @@ final class ClanService
         if ($membership === null) {
             throw ClanGovernanceException::alreadyAffiliated();
         }
+
+        // Asiento del INGRESO INMEDIATO: lado del postulante (SPEC-10,
+        // RF-04.4, plan §2.3) — la membresía nace y la Bitácora lo recuerda.
+        $this->recordAudit(
+            $applicant->getId(),
+            $applicant->getAlias(),
+            $applicant->getRole(),
+            'CLAN_MEMBER_JOINED',
+            $clan->id,
+            "«{$applicant->getAlias()}» cruza las puertas de «{$clan->name}» por admisión abierta.",
+            $instant,
+        );
 
         return ClanAdmissionResult::admitted($this->toMemberDto($membership));
     }

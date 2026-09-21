@@ -34,6 +34,8 @@ final class LineageOathException extends RuntimeException
     public const OATH_FORBIDDEN_ROLE = 'OATH_FORBIDDEN_ROLE';
     /** Nadie asciende al oficio validador desde la ventana sin linaje (RF-05.2, Art. III). */
     public const MASTER_REQUIRES_LINEAGE = 'MASTER_REQUIRES_LINEAGE';
+    /** Peregrino ante una ruta no permitida: la retención de SPEC-09 responde (RF-05.1; guardia en profundidad de SPEC-10). */
+    public const OATH_REQUIRED_CODE = 'LINEAGE_OATH_REQUIRED';
 
     /**
      * @param string $errorCode  Código canónico del contrato REST.
@@ -85,6 +87,21 @@ final class LineageOathException extends RuntimeException
             self::MASTER_REQUIRES_LINEAGE,
             403,
             "«{$alias}» aún no ha jurado linaje: nadie asciende al oficio de Maestro desde la ventana sin linaje jurado.",
+        );
+    }
+
+    /**
+     * La retención del peregrino (SPEC-09, RF-05.1), alzada desde la capa de
+     * servicio (SPEC-10, Tarea 3.2): el Vestíbulo jamás se contempla sin
+     * linaje jurado. La guardia HTTP vive en el middleware; esta fábrica
+     * sella la defensa en profundidad ante vías que la eludieran.
+     */
+    public static function lineageOathRequired(string $message): self
+    {
+        return new self(
+            self::OATH_REQUIRED_CODE,
+            403,
+            $message,
         );
     }
 }

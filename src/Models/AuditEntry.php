@@ -78,10 +78,11 @@ final class AuditEntry
         // vínculo perpetuo sellado en la ceremonia del primer acceso.
         'LINEAGE_OATH_SWORN',         // Juramento del linaje sellado en la ceremonia (SPEC-09)
         // Actos del Vestíbulo de las Hermandades (TASKS-10, RF-03.3, RF-04.4):
-        // la retirada voluntaria del postulante se inscribe por su propio
-        // actor y el dictamen por el LADO DELIBERANTE (reparto por actor del
-        // plan §2.3). Las residuales anuladas dejan su asiento por petición
-        // (RF-03.7). Los dos actos restantes entran con la Tarea 3.3.
+        // los actos del POSTULANTE (remisión, ingreso, retirada y cada
+        // residual anulada) se inscriben por su propio actor; el dictamen
+        // queda en el LADO DELIBERANTE (reparto por actor del plan §2.3).
+        'CLAN_MEMBER_JOINED',                 // Ingreso consumado: la membresía nace (SPEC-10)
+        'CLAN_APPLICATION_SUBMITTED',         // Petición formal remitida (SPEC-10)
         'CLAN_APPLICATION_WITHDRAWN',         // Retirada voluntaria de una petición formal (SPEC-10)
         'CLAN_APPLICATION_VERDICT',           // Dictamen del Patriarca con su motivo (SPEC-10, Art. III.3)
         'CLAN_APPLICATION_RESIDUALS_ANNULLED', // Anulación de oficio de una petición huérfana (SPEC-10, RF-03.7)

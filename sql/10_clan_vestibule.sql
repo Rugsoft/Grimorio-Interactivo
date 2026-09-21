@@ -92,6 +92,22 @@ PRAGMA foreign_keys = OFF;
 ALTER TABLE clan_applications ADD COLUMN verdict_seen_at TEXT NULL;
 
 -- ---------------------------------------------------------------------
+-- 1bis. LA MEMORIA DEL MOLDE (SPEC-10, Tarea 3.2)
+-- ---------------------------------------------------------------------
+-- El inventario consolidado del Vestíbulo (RF-03.8) y la sala de
+-- deliberaciones del Patriarca exigen el TEXTO íntegro: sin la
+-- motivación, el Patriarca delibera a ciegas; sin el motivo del
+-- dictamen, el postulante no sabe por qué fue rechazado (Art. III.3).
+-- Las tareas 2.3 y 2.6 ya aplicaban el molde 20–500; estas columnas
+-- hacen que el texto sobreviva a su validación.
+--
+-- Idempotencia: sobre una base ya migrada el «duplicate column name»
+-- se descarta por el mismo contrato del veredicto contemplado.
+-- ---------------------------------------------------------------------
+ALTER TABLE clan_applications ADD COLUMN motivation TEXT NULL;
+ALTER TABLE clan_applications ADD COLUMN verdict_motive TEXT NULL;
+
+-- ---------------------------------------------------------------------
 -- 2. PREFLIGHT DE DEDUPLICACIÓN (plan §1.3, punto 1)
 -- ---------------------------------------------------------------------
 -- Los duplicados legados de `(user_id, clan_id)` NO son clausura: son
@@ -107,6 +123,8 @@ CREATE TABLE IF NOT EXISTS clan_applications_archive (
     clan_id     TEXT NOT NULL,
     user_id     TEXT NOT NULL,
     status      TEXT NOT NULL,
+    motivation      TEXT,
+    verdict_motive  TEXT,
     created_at  TEXT NOT NULL,
     resolved_at TEXT,
     verdict_seen_at TEXT,
@@ -114,8 +132,8 @@ CREATE TABLE IF NOT EXISTS clan_applications_archive (
 );
 
 INSERT INTO clan_applications_archive
-       (id, clan_id, user_id, status, created_at, resolved_at, verdict_seen_at, archived_at)
-SELECT a.id, a.clan_id, a.user_id, a.status, a.created_at, a.resolved_at, a.verdict_seen_at,
+       (id, clan_id, user_id, status, motivation, verdict_motive, created_at, resolved_at, verdict_seen_at, archived_at)
+SELECT a.id, a.clan_id, a.user_id, a.status, a.motivation, a.verdict_motive, a.created_at, a.resolved_at, a.verdict_seen_at,
        strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
   FROM clan_applications a
  WHERE a.id NOT IN (

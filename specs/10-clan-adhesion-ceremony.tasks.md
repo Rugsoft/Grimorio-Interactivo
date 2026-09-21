@@ -52,22 +52,22 @@
 
 ## Fase 3 — Servicio y Controlador del Vestíbulo
 
-- [ ] **Tarea 3.1 — DTOs del Vestíbulo**
+- [x] **Tarea 3.1 — DTOs del Vestíbulo**
   * **Qué:** `VestibuleStateDto`, `VestibuleClanDto` y `ClanPetitionDto` con las llaves `camelCase` exactas del contrato del plan §2.2 (`adeptState`, `aptitude`, `myHouse`, `gesture`, `vedadoLegend`, `verdictSeen`…).
   * **Cubre:** `RF-01.3`, `RF-01.7`, `RF-03.8`.
   * **Hecho cuando:** `jsonSerialize()` produce exactamente las llaves del contrato y un arnés de DTOs las coteja una a una.
 
-- [ ] **Tarea 3.2 — `ClanVestibuleService` (el sobre único)**
+- [x] **Tarea 3.2 — `ClanVestibuleService` (el sobre único)**
   * **Qué:** catálogo derivado de sesión (solo linaje jurado, solo `active`, sin parámetro de filtro), `myHouse` legada divergente desde `clan_members`, aptitud conjuntiva por instante con `ceilDays` réplica de `ClanMemberDto::convalescenceDaysRemaining`, `unreadVerdictsCount`, peticiones propias.
   * **Cubre:** `RF-01.2`, `RF-01.7`, `RF-03.5`, `RF-03.8`, `RNF-04` (una carga).
   * **Hecho cuando:** un solo método sirve el sobre completo; un linajado sin casas recibe el estado vacío; un legado divergente recibe su `myHouse` con `isLegacyDivergent: true`.
 
-- [ ] **Tarea 3.3 — Actos de adhesión en la Bitácora**
+- [x] **Tarea 3.3 — Actos de adhesión en la Bitácora**
   * **Qué:** cinco actos en el catálogo cerrado de `AuditEntry` (`CLAN_MEMBER_JOINED`, `CLAN_APPLICATION_SUBMITTED`, `CLAN_APPLICATION_WITHDRAWN`, `CLAN_APPLICATION_RESIDUALS_ANNULLED`, `CLAN_APPLICATION_VERDICT`) con rótulos castellanos; inscripciones en ingreso, remisión, retirada y cada residual anulada.
   * **Cubre:** `RF-04.4` (reparto por actor), `RF-03.7` (asientos de residuales), `RNF-06`.
   * **Hecho cuando:** el aserto de catálogo cerrado de SPEC-03 pasa con los cinco actos y su rotulación, y cada acto queda inscrito por su actor.
 
-- [ ] **Tarea 3.4 — `VestibuleController` y registro de rutas**
+- [x] **Tarea 3.4 — `VestibuleController` y registro de rutas**
   * **Qué:** `show()`, `withdraw()`, `acknowledgeVerdict()`, `unreadCount()`; rutas registradas en `public/index.php` detrás de `AuthMiddleware → RbacMiddleware → LineageOathMiddleware`.
   * **Cubre:** `RF-01.1`, `RF-03.3`, `RF-03.4`, `RNF-04`.
   * **Hecho cuando:** los cuatro endpoints responden según contrato con la pila real de middleware y el peregrino sin linaje jamás los alcanza (`LINEAGE_OATH_REQUIRED` de SPEC-09 precede).

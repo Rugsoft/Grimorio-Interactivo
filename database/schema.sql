@@ -138,6 +138,8 @@ CREATE TABLE IF NOT EXISTS clan_applications (
     user_id     TEXT NOT NULL,                                       -- Usuario postulante
     status      TEXT NOT NULL DEFAULT 'pending'
                 CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+    motivation      TEXT,                                            -- Motivación escrita de la petición formal [SPEC-10, RF-03.1]; NULL en la vía de ingreso (el rito no redacta)
+    verdict_motive  TEXT,                                            -- Motivo solemne del dictamen de rechazo [SPEC-10, Art. III.3]; NULL en aprobación, retirada y pendientes
     created_at  TEXT NOT NULL,                                       -- Emisión (ISO 8601 UTC)
     resolved_at TEXT,                                                -- Veredicto (NULL = en deliberación)
     verdict_seen_at TEXT,                                            -- Instante en que el postulante contempló el veredicto [SPEC-10]; NULL + estado terminal = sin leer
@@ -168,6 +170,8 @@ CREATE TABLE IF NOT EXISTS clan_applications_archive (
     clan_id     TEXT NOT NULL,
     user_id     TEXT NOT NULL,
     status      TEXT NOT NULL,
+    motivation      TEXT,
+    verdict_motive  TEXT,
     created_at  TEXT NOT NULL,
     resolved_at TEXT,
     verdict_seen_at TEXT,
