@@ -104,6 +104,9 @@ export function createVestibuleView(mountRoot, options = {}) {
   let cardsHost = null;
   let liveRegion = null;
   let catalogErrorBox = null;
+  /** Referencias vivas del aviso de catálogo (leyenda y reintento). */
+  let catalogErrorLegend = null;
+  let catalogRetryButton = null;
   let admissionModal = null;
   let composerHost = null;
   let inventory = null;
@@ -308,8 +311,11 @@ export function createVestibuleView(mountRoot, options = {}) {
   /** Despliega el molde de la petición formal (Tarea 5.3) para una casa. */
   function openComposer(clanId) {
     if (composerHost === null) return;
-    composerHost.replaceChildren?.();
-    if (composerHost.children) composerHost.children.length = 0;
+    // Vaciado seguro del anfitrión: `children.length = 0` lanza TypeError
+    // sobre la HTMLCollection viva del navegador real (los dobles del DOM
+    // de los arneses lo toleraban). `replaceChildren()` sin argumentos es
+    // la vía nativa que limpia sin excepción.
+    composerHost.replaceChildren();
 
     const composer = createPetitionComposerComponent({
       clanId,
@@ -317,13 +323,11 @@ export function createVestibuleView(mountRoot, options = {}) {
       documentRef,
       windowRef: globalThis.window,
       onSubmit: (submittedClanId, motivation) => {
-        composerHost.replaceChildren?.();
-        if (composerHost.children) composerHost.children.length = 0;
+        composerHost.replaceChildren();
         void performAdmission(submittedClanId, motivation);
       },
       onCancel: () => {
-        composerHost.replaceChildren?.();
-        if (composerHost.children) composerHost.children.length = 0;
+        composerHost.replaceChildren();
       },
     });
     composerHost.appendChild(composer.element);
@@ -361,9 +365,10 @@ export function createVestibuleView(mountRoot, options = {}) {
     catalogErrorBox.className = 'vestibule-view__catalog-error';
     catalogErrorBox.setAttribute('role', 'alert');
     catalogErrorBox.setAttribute('hidden', '');
-    const errorLegend = elementFactory('p');
-    errorLegend.textContent = VESTIBULE_CATALOG_FAILED_LEGEND;
-    catalogErrorBox.appendChild(errorLegend);
+    catalogErrorLegend = elementFactory('p');
+    catalogErrorLegend.className = 'vestibule-view__error-legend';
+    catalogErrorLegend.textContent = VESTIBULE_CATALOG_FAILED_LEGEND;
+    catalogErrorBox.appendChild(catalogErrorLegend);
     const retryButton = elementFactory('button');
     retryButton.type = 'button';
     retryButton.className = 'vestibule-view__retry';
@@ -372,6 +377,7 @@ export function createVestibuleView(mountRoot, options = {}) {
       void retry();
     });
     catalogErrorBox.appendChild(retryButton);
+    catalogRetryButton = retryButton;
     viewRoot.appendChild(catalogErrorBox);
 
     // Anfitriones de los componentes de la Fase 5.
@@ -426,9 +432,29 @@ export function createVestibuleView(mountRoot, options = {}) {
 
     if (result?.success !== true) {
       // Ceremonia operativa: aviso solemne + reintento, sin desmontar nada.
+      // La leyenda del sobre manda (RF-03.5 de SPEC-09): la retención del
+      // peregrino (LINEAGE_OATH_REQUIRED) y el aviso del Supremo sin linaje
+      // (ADMIN_LINEAGE_REQUIRED) narran SU causa, jamás el falso aviso de
+      // red que enmudecería la retención de SPEC-09 en la carga AJAX.
       catalogErrorBox?.removeAttribute('hidden');
-      announce(VESTIBULE_CATALOG_FAILED_LEGEND);
-      emit(VESTIBULE_VIEW_EVENTS.catalogFailed, {});
+      const legend = ceremonialLegendFor(result);
+      const isRetention = result?.error?.code === 'LINEAGE_OATH_REQUIRED'
+        || result?.error?.code === 'ADMIN_LINEAGE_REQUIRED';
+      const failureLegend = isRetention
+        ? `${legend} Vuelve al Umbral para jurar tu linaje.`
+        : VESTIBULE_CATALOG_FAILED_LEGEND;
+      // Solo el fallo de corriente muestra el reintento; la retención
+      // conduce al juramento, no a reintentar lo vedado.
+      if (catalogRetryButton !== null) {
+        if (isRetention) {
+          catalogRetryButton.setAttribute('hidden', '');
+        } else {
+          catalogRetryButton.removeAttribute('hidden');
+        }
+      }
+      announce(failureLegend);
+      catalogErrorLegend?.replaceChildren(failureLegend);
+      emit(VESTIBULE_VIEW_EVENTS.catalogFailed, { code: result?.error?.code ?? 'UNKNOWN', legend: failureLegend });
       return;
     }
 
@@ -492,6 +518,8 @@ export function createVestibuleView(mountRoot, options = {}) {
     cardsHost = null;
     liveRegion = null;
     catalogErrorBox = null;
+    catalogErrorLegend = null;
+    catalogRetryButton = null;
     composerHost = null;
     currentState = null;
 

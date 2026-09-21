@@ -252,7 +252,7 @@ final class ClanVestibuleService
                 isRegent: $isRegent,
                 adeptRelation: VestibuleClanDto::RELATION_OWN_HOUSE,
                 gesture: null,
-                vedadoLegend: 'Ya habitas esta hermandad: tu lealtad vive en sus salas (Art. III.1).',
+                vedadoLegend: 'Ya habitas esta hermandad: tu lealtad vive en sus salas.',
             );
         }
 
@@ -284,12 +284,14 @@ final class ClanVestibuleService
         if ($houseSealed) {
             // Clausura perpetua por casa (RF-03.1): cualquier fila histórica
             // —aprobada, rechazada o cancelada— veda la re-postulación.
-            $vedadoLegend = 'Ya pronunciaste tu palabra ante esta casa: quedó clausurada para ti. Otras puertas aguardan (Art. III.2).';
+            $vedadoLegend = 'Ya pronunciaste tu palabra ante esta casa: quedó clausurada para ti. Otras puertas aguardan.';
         } elseif ($vedado === 'loyalty') {
-            $vedadoLegend = 'Tu lealtad ya está empeñada: solo renunciar a ella —y sobrevivir la convalecencia— abre de nuevo estas puertas (Art. III.1).';
+            $vedadoLegend = 'Tu lealtad ya está empeñada: solo renunciar a ella —y sobrevivir la convalecencia— abre de nuevo estas puertas.';
         } elseif ($vedado === 'convalescence') {
+            // La leyenda solemne jamás porta referencias técnicas de spec
+            // (Artículo V): el usuario lee el descanso, no el código.
             $vedadoLegend = "Descansa en Convalecencia Arcana: tus puertas se abren en {$convalescenceDaysRemaining} "
-                . ($convalescenceDaysRemaining === 1 ? 'día' : 'días') . ' (RF-01.6).';
+                . ($convalescenceDaysRemaining === 1 ? 'día' : 'días') . '.';
         } elseif (!$isApt) {
             $vedadoLegend = 'El santuario no discierne hoy tu gesto: contempla, y vuelve cuando tu juramento esté completo.';
         } elseif (!$clan->hasVacancy()) {

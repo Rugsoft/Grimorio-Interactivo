@@ -76,7 +76,7 @@ export const LINEAGE_HALL_NEUTRAL_CLAN_ID = 'cln_primordial';
 
 /** Leyenda del linaje neutro (Art. III). */
 export const LINEAGE_HALL_NEUTRAL_LEGEND =
-  'Linaje neutro: custodia el canon y no compite por el Dominio (Art. III).';
+  'Linaje neutro: custodia el canon y no compite por el Dominio.';
 
 /** Leyenda del clan que ciñe la corona del Dominio. */
 export const LINEAGE_HALL_REGENT_LABEL = 'Clan Regente de la semana en curso';

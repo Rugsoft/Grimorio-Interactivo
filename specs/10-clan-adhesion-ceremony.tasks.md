@@ -27,7 +27,7 @@
 
 - [x] **Tarea 2.2 — Guardias de linaje, lealtad y Admin en el rito unificado**
   * **Qué:** `ClanService::applyToClan()` estrena `ADMIN_LINEAGE_REQUIRED` → `CLAN_LOYALTY_BOUND` (sustituye a `ALREADY_AFFILIATED` en esta vía, enmienda declarada en plan §5.3) → `CLAN_LINEAGE_MISMATCH`, antes de tocar persistencia; `foundClan()` estrena Admin + linaje.
-  * **Cubre:** `RF-04.1`, `RF-02.3`, `RF-01.1`, `RF-04.2` (SPEC-09 RF-04.2 gana sustancia backend).
+  * **Cubre:** `RF-04.1`, `RF-02.3`, `RF-01.1`, `RF-04.2` (SPEC-09 RF-04.2 gana sustancia backend), `RF-03.6` (guardias ANTES de persistencia), `RF-04.3` (sin toques a `users.lineage`).
   * **Hecho cuando:** militante hacia otra casa → `CLAN_LOYALTY_BOUND`; linaje ajeno → `CLAN_LINEAGE_MISMATCH` en ingreso y fundación; Supremo sin linaje → `ADMIN_LINEAGE_REQUIRED`; `ALREADY_AFFILIATED` sigue canónico en `foundClan`.
 
 - [x] **Tarea 2.3 — Molde de motivación y estampa de llegada**
@@ -115,7 +115,7 @@
 
 - [x] **Tarea 6.1 — `vestibule.css` (Velo Arcano del Vestíbulo)**
   * **Qué:** hoja nueva solo con tokens de `tokens.css` (cero literales de color), consumo del Kit de Controles (`controls.css`, SPEC-02 RF-08), registro en `components.css`, cobertura total de clases emitidas.
-  * **Cubre:** `RNF-01`, `RNF-03`, `RNF-05`.
+  * **Cubre:** `RNF-01`, `RNF-03`, `RNF-05`, `RNF-02` (rótulos y leyendas del Vestíbulo en noble castellano).
   * **Hecho cuando:** `node scratch/test_css_coverage.mjs` pasa sin huérfanos y un grep de la hoja no halla literales de color.
 
 ## Fase 7 — Arneses Backend
@@ -160,17 +160,17 @@
 
 ## Fase 9 — Cierre y Verificación
 
-- [ ] **Tarea 9.1 — Regresión cruzada de la batería**
+- [x] **Tarea 9.1 — Regresión cruzada de la batería**
   * **Qué:** realineamiento de los arneses de SPEC-07 que asertaban `ALREADY_AFFILIATED` sobre `applyToClan` (enmienda plan §5.3) y ejecución íntegra de la batería de clanes/dominio + cobertura CSS.
   * **Cubre:** `RF-04.2`, `RNF-05`.
   * **Hecho cuando:** la batería de clanes íntegra y `test_css_coverage.mjs` pasan en verde tras el realineamiento, sin regresiones en deliberación (SPEC-08) ni dominio.
 
-- [ ] **Tarea 9.2 — Verificación manual en navegador**
+- [x] **Tarea 9.2 — Verificación manual en navegador**
   * **Qué:** los 8 pasos del plan §6.3 contra el servidor de demo (doble vía, ritos, dictamen, vedados, retención del peregrino, Supremo sin linaje, teclado, movimiento reducido).
   * **Cubre:** `RNF-01`, `RNF-03`, `RNF-04`, casos límite 9, 10, 12.
   * **Hecho cuando:** el recorrido completo queda documentado con evidencia y la consola del navegador queda limpia.
 
-- [ ] **Tarea 9.3 — Arnés de cierre formal `scratch/test_spec10_closure.php`**
+- [x] **Tarea 9.3 — Arnés de cierre formal `scratch/test_spec10_closure.php`**
   * **Qué:** al estilo de los cierres 07/08: cruce spec↔plan↔tasks, guardias del Dogma Vanilla (`declare(strict_types=1)`, parameter binding, cero CDNs, cero literales de color), Artículos II–V, batería íntegra y rendición de cuentas de los 10 criterios de finalización de la SPEC-10 con la suite que ejercita cada uno.
   * **Cubre:** todos los RF/RNF (certificación de cierre).
   * **Hecho cuando:** el arnés declara «SPEC-10 queda formalmente cerrada» con cero suites en rojo y los criterios de la Sección 8 de la spec con evidencia nombrada.
