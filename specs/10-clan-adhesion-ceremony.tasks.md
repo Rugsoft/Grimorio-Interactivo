@@ -86,27 +86,27 @@
 
 ## Fase 5 — Componentes y Vista
 
-- [ ] **Tarea 5.1 — `vestibuleClanCardComponent`**
+- [x] **Tarea 5.1 — `vestibuleClanCardComponent`**
   * **Qué:** tarjeta solemne: lema, Sello Rúnico (`runeSealComponent`, metal y forma por estado), «X de 30», régimen rotulado en castellano, corona del Regente (estilos del kit de SPEC-07, sin ad hoc), estado del adepto y UN gesto o su leyenda vedada; estado vacío con invitación discreta; enfocable con Enter/espaciadora.
   * **Cubre:** `RF-01.2`, `RF-01.3`, `RF-01.4`, `RF-03.5`, `RNF-03`.
   * **Hecho cuando:** los cinco estados de tarjeta (`none`, `join`, `petition`, `pending`, `own`) se pintan desde el DTO y el estado vacío muestra «Ninguna hermandad ruega aún tu linaje» con la invitación discreta.
 
-- [ ] **Tarea 5.2 — `admissionModalComponent`**
+- [x] **Tarea 5.2 — `admissionModalComponent`**
   * **Qué:** `<dialog>` nativo: nombre de la casa, lealtad indivisible y advertencia de convalecencia futura EN EL CUERPO, confirmación explícita, foco atrapado y devuelto, Escape = descarte seguro, región viva.
   * **Cubre:** `RF-02.1`, `RNF-03`.
   * **Hecho cuando:** el descarte no muta nada, el foco vuelve a la tarjeta y las advertencias son visibles sin letra menuda ni tooltip.
 
-- [ ] **Tarea 5.3 — `petitionComposerComponent`**
+- [x] **Tarea 5.3 — `petitionComposerComponent`**
   * **Qué:** `textarea` del kit de controles (SPEC-02 RF-08) con contador vivo 0/500, mínimo 20 para remitir y leyendas solemnes del molde (Anexo A 6).
   * **Cubre:** `RF-03.1`, `RNF-03`.
   * **Hecho cuando:** remitir exige 20–500 caracteres, el contador se ve mientras se escribe y ninguna regla de estilo filtra el texto (solo el molde).
 
-- [ ] **Tarea 5.4 — `petitionInventoryComponent`**
+- [x] **Tarea 5.4 — `petitionInventoryComponent`**
   * **Qué:** apéndice «Tus peticiones pendientes: N de 3» con estado de cada solicitud, retirada directa y veredictos sin leer marcados.
   * **Cubre:** `RF-03.8`, `RF-03.3`, `RF-03.4`.
   * **Hecho cuando:** retirar desde la lista actualiza tarjeta e inventario sin recarga y el límite de 3 y la clausura son visibles.
 
-- [ ] **Tarea 5.5 — `vestibuleView` (orquestador)**
+- [x] **Tarea 5.5 — `vestibuleView` (orquestador)**
   * **Qué:** una carga del sobre, montaje de componentes, emisión de los eventos `vestibule:*` del plan §4, aviso «Las hermandades no responden» con reintento, acknowledge de veredictos contemplados, región viva de veredictos.
   * **Cubre:** `RF-01.3`, `RF-02.2`, `RF-02.3`, `RF-03.4`, `RNF-03`, `RNF-04`.
   * **Hecho cuando:** el flujo feliz emite los eventos del plan en orden, el fallo de catálogo mantiene la ceremonia operativa con reintento y los veredictos vistos apagan el rótulo del acceso.

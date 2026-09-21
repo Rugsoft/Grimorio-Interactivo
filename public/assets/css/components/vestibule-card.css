@@ -1,0 +1,565 @@
+/* =======================================================================
+   vestibule-card.css — Tarjetas del Vestíbulo de las Hermandades
+   (SPEC-10, Tarea 5.1)
+   =======================================================================
+
+   Viste la tarjeta solemne de cada hermandad y su estado vacío. El idioma
+   visual es el del kit de SPEC-07 (`lineage-hall.css`): obsidiana de
+   superficie, oro arcánimo para el honor y pleno respeto a los tokens del
+   santuario — nada ad hoc.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): tokens del santuario; cero frameworks.
+     - Artículo V: clases semánticas kebab-case, comentarios en castellano.
+
+   Clases:
+     .vestibule-card              · tarjeta solemne (enfocable, RNF-03)
+     .vestibule-card--regent      · corona del Regente (kit SPEC-07)
+     .vestibule-card__crown       · glifo de corona del kit
+     .vestibule-card__identity    · nombre y lema
+     .vestibule-card__name        · h3 canónico
+     .vestibule-card__motto       · lema heráldico atenuado
+     .vestibule-card__facts       · censo y régimen
+     .vestibule-card__census      · «X de 30 adeptos»
+     .vestibule-card__regime      · régimen rotulado en castellano
+     .vestibule-card__status      · estado del adepto ante la casa
+     .vestibule-card__relation    · rótulo del estado (RF-01.7)
+     .vestibule-card__gesture     · botón del gesto disponible
+     .vestibule-card__vedado      · leyenda solemne del gesto vedado (RF-03.5)
+     .vestibule-empty             · estado vacío del catálogo (RF-01.4)
+     .vestibule-empty__legend     · «Ninguna hermandad ruega aún tu linaje»
+     .vestibule-empty__invitation · invitación discreta a fundar
+   ======================================================================= */
+
+.vestibule-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-secondary);
+}
+
+.vestibule-card:focus-visible {
+  outline: 2px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* El Regente de la semana viste el honor del kit de SPEC-07: oro radiante
+   sobre obsidiana elevada — jamás un estilo ad hoc. */
+.vestibule-card--regent {
+  border-color: var(--heraldry-regent-bright, var(--color-gold-bright));
+  background-color: var(--color-bg-obsidian-elevated);
+  box-shadow: var(--shadow-gold-glow);
+}
+
+.vestibule-card__crown {
+  position: absolute;
+  top: var(--space-ink-2);
+  right: var(--space-ink-2);
+}
+
+/* ---------------------------------------------------------------------
+   Identidad: sello, nombre y lema.
+   --------------------------------------------------------------------- */
+
+.vestibule-card__identity {
+  display: grid;
+  gap: var(--space-ink-1);
+  justify-items: center;
+  text-align: center;
+}
+
+.vestibule-card__name {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-section, 1.25rem);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.vestibule-card__motto {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------------
+   Plenitud y régimen.
+   --------------------------------------------------------------------- */
+
+.vestibule-card__facts {
+  display: grid;
+  gap: var(--space-ink-1);
+  text-align: center;
+}
+
+.vestibule-card__census {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+}
+
+.vestibule-card__census-count {
+  color: var(--color-gold-arcane);
+}
+
+.vestibule-card__census-label {
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-muted);
+}
+
+.vestibule-card__regime {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-secondary);
+}
+
+/* ---------------------------------------------------------------------
+   Estado del adepto y gesto (RF-01.7, RF-03.5).
+   --------------------------------------------------------------------- */
+
+.vestibule-card__status {
+  display: grid;
+  gap: var(--space-ink-1);
+  justify-items: center;
+  text-align: center;
+}
+
+.vestibule-card__relation {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.vestibule-card__gesture {
+  min-height: var(--touch-target-min);       /* Zona táctil mínima (RNF-04). */
+  padding: 0.35rem 1.1rem;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+
+  background-color: transparent;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane), color var(--transition-arcane);
+}
+
+.vestibule-card__gesture:hover,
+.vestibule-card__gesture:focus-visible {
+  background-color: var(--color-gold-arcane);
+  color: var(--color-surface);
+}
+
+.vestibule-card__vedado {
+  margin: 0;
+  padding: 0.35rem var(--space-ink-2);
+  border: 1px dashed var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+/* ---------------------------------------------------------------------
+   Estado vacío del catálogo (RF-01.4): leyenda solemne e invitación.
+   --------------------------------------------------------------------- */
+
+.vestibule-empty {
+  display: grid;
+  gap: var(--space-ink-1);
+  justify-items: center;
+  padding: var(--space-ink-4, 2rem) var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  text-align: center;
+}
+
+.vestibule-empty__legend {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  color: var(--color-gold-arcane);
+}
+
+.vestibule-empty__invitation {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+/* =======================================================================
+   Modal solemne del ingreso (SPEC-10, Tarea 5.2 — RF-02.1, RNF-03)
+
+   .admission-modal__panel         · panel central del <dialog> nativo
+   .admission-modal__title         · «Solicitud de ingreso»
+   .admission-modal__announce      · región viva (aria-live)
+   .admission-modal__intro         · la casa nombrada EN EL CUERPO
+   .admission-modal__loyalty       · lealtad indivisible (role=alert)
+   .admission-modal__convalescence · convalecencia futura (role=alert)
+   .admission-modal__confirm       · confirmación explícita
+   .admission-modal__dismiss       · «Aún no»: descarte sin mutación
+   .admission-modal__close         · × de degradación
+   ======================================================================= */
+
+.admission-modal {
+  border: 1px solid var(--color-gold-arcane);
+  border-radius: var(--radius-scroll);
+  background: var(--color-surface);
+  color: var(--color-text-body);
+  padding: var(--space-ink-3);
+}
+
+.admission-modal__panel {
+  display: grid;
+  gap: var(--space-ink-2);
+  min-width: min(26rem, 90vw);
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-secondary);
+}
+
+.admission-modal__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.admission-modal__announce {
+  margin: 0;
+  min-height: 1.4em;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.admission-modal__intro {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-secondary);
+}
+
+/* Las dos advertencias: a cuerpo de modal, jamás letra menuda ni tooltip
+   (RF-02.1). Tamaño de tinta ordinaria y borde de oro atenuado. */
+.admission-modal__loyalty,
+.admission-modal__convalescence {
+  margin: 0;
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-left-width: 3px;
+  border-radius: var(--radius-scroll);
+
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-body, 1rem);
+  color: var(--color-text-secondary);
+}
+
+.admission-modal__confirm,
+.admission-modal__dismiss {
+  min-height: var(--touch-target-min);
+  padding: 0.35rem 1.1rem;
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane), color var(--transition-arcane);
+}
+
+.admission-modal__confirm {
+  border: 1px solid var(--color-gold-arcane);
+  background-color: var(--color-gold-arcane);
+  color: var(--color-surface);
+}
+
+.admission-modal__confirm:hover,
+.admission-modal__confirm:focus-visible {
+  background-color: var(--color-gold-bright);
+  border-color: var(--color-gold-bright);
+}
+
+.admission-modal__dismiss {
+  border: 1px solid var(--color-gold-arcane-dim);
+  background-color: transparent;
+  color: var(--color-gold-arcane);
+}
+
+.admission-modal__dismiss:hover,
+.admission-modal__dismiss:focus-visible {
+  background-color: var(--color-surface-raised);
+}
+
+.admission-modal__close {
+  position: absolute;
+  top: var(--space-ink-2);
+  right: var(--space-ink-2);
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  border: none;
+  background: none;
+
+  color: var(--color-text-muted);
+  font-size: var(--font-size-ink-large);
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* =======================================================================
+   Molde de la petición formal (SPEC-10, Tarea 5.3 — RF-03.1, RNF-03)
+
+   El textarea consume el KIT de controles (`.controls-textarea`, SPEC-02
+   RF-08.1): aquí solo se viste el andamiaje propio del compositor.
+
+   .petition-composer              · raíz del molde
+   .petition-composer__title       · «Petición formal al Patriarca»
+   .petition-composer__label       · etiqueta asociada al textarea
+   .petition-composer__footer      · contador y leyenda
+   .petition-composer__counter     · cifra viva «N/500»
+   .petition-composer__counter--overflow · molde excedido (oro de aviso)
+   .petition-composer__legend      · leyenda solemne del molde (región viva)
+   .petition-composer__legend--visible   · estado visible
+   .petition-composer__actions     · remitir y descartar
+   ======================================================================= */
+
+.petition-composer {
+  display: grid;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-secondary);
+}
+
+.petition-composer__title {
+  margin: 0;
+  font-family: var(--font-arcane-title);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-arcane);
+}
+
+.petition-composer__label {
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-composer__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-1) var(--space-ink-2);
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.petition-composer__counter {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-composer__counter--overflow {
+  color: var(--color-ember-red);
+}
+
+.petition-composer__legend {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-composer__legend--visible {
+  color: var(--color-gold-arcane);
+}
+
+.petition-composer__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-ink-2);
+  justify-content: flex-end;
+}
+
+/* =====================================================================
+   petition-inventory__* — Inventario consolidado de peticiones (SPEC-10,
+   Tarea 5.4). «Tus peticiones pendientes: N de 3» con retirada directa,
+   veredictos sin leer marcados y la clausura por casa siempre visible.
+   ===================================================================== */
+
+.petition-inventory {
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+  padding: var(--space-ink-3);
+}
+
+.petition-inventory__title {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-arcane);
+}
+
+.petition-inventory__closure {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-inventory__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-2);
+}
+
+.petition-inventory__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-2);
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+}
+
+/* Veredicto terminal sin contemplar: marca solemne (RF-03.4). */
+.petition-inventory__item--unread {
+  border-color: var(--color-gold-arcane);
+}
+
+.petition-inventory__house {
+  font-family: var(--font-arcane-seal);
+  color: var(--color-text-body);
+}
+
+.petition-inventory__status {
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-inventory__unread {
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-arcane);
+}
+
+.petition-inventory__motive {
+  flex-basis: 100%;
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-inventory__empty {
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.petition-inventory__withdraw {
+  margin-left: auto;
+  padding: var(--space-ink-1) var(--space-ink-2);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-body);
+  background: transparent;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+}
+
+.petition-inventory__withdraw:hover {
+  border-color: var(--color-gold-arcane);
+  color: var(--color-gold-arcane);
+}
+
+.petition-inventory__withdraw:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+/* =====================================================================
+   vestibule-view__* — Vista orquestadora del Vestíbulo (SPEC-10, Tarea
+   5.5). Encabezado, región viva de veredictos, aviso de catálogo sin
+   respuesta con reintento y anfitriones de los componentes.
+   ===================================================================== */
+
+.vestibule-view {
+  padding: var(--space-ink-3) 0;
+}
+
+.vestibule-view__title {
+  margin: 0 0 var(--space-ink-3);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-arcane);
+}
+
+.vestibule-view__live {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-muted);
+}
+
+.vestibule-view__catalog-error {
+  border: 1px solid var(--color-ember-red);
+  border-radius: var(--radius-scroll);
+  padding: var(--space-ink-3);
+  margin-bottom: var(--space-ink-3);
+}
+
+.vestibule-view__catalog-error[hidden] {
+  display: none;
+}
+
+.vestibule-view__catalog-error p {
+  margin: 0 0 var(--space-ink-2);
+  font-family: var(--font-arcane-body);
+  color: var(--color-text-body);
+}
+
+.vestibule-view__retry {
+  padding: var(--space-ink-1) var(--space-ink-2);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-body);
+  background: transparent;
+  border: 1px solid var(--color-gold-arcane);
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+}
+
+.vestibule-view__retry:hover {
+  color: var(--color-gold-arcane);
+}
+
+.vestibule-view__retry:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+.vestibule-view__cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-3);
+  margin-bottom: var(--space-ink-3);
+}
+
+.vestibule-view__composer {
+  margin-bottom: var(--space-ink-3);
+}

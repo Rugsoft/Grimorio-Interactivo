@@ -42,6 +42,7 @@ import { createLibraryView } from './views/libraryView.js';
 // arnés, pero ya no se monta en la SPA.
 import { createLineageHallView } from './views/lineageHallView.js';
 import { createLineageOathView } from './views/lineageOathView.js';
+import { createVestibuleView } from './views/vestibuleView.js';
 import { createClanView } from './views/clanView.js';
 import { createClanClient } from './api/clanClient.js';
 import { createErrorView } from './views/errorView.js';
@@ -517,6 +518,30 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: 'juramento', instance: oathView };
       await oathView.render();
+      return;
+    }
+
+    if (viewName === 'vestibule') {
+      // Vestíbulo de las Hermandades (SPEC-10, Tarea 5.5): ceremonia de
+      // adhesión a clanes del propio linaje. El peregrino sin linaje jamás
+      // llega aquí: el interceptor de retención lo desvía a «juramento».
+      const vestibuleView = createVestibuleView(appRoot, {
+        vestibuleClient,
+        clanClient,
+        // Un ingreso consumado muda el vínculo del mago: la cabecera y los
+        // rótulos del shell se resincronizan (plan §4).
+        onMembershipChanged: () => {
+          void apiCheckSessionWrapper();
+        },
+        // Los veredictos contemplados apagan el rótulo del acceso (RF-03.4).
+        onVerdictsAcknowledged: () => {
+          setVestibuleBadgeCount(0);
+        },
+        elementFactory,
+        documentRef,
+      });
+      currentView = { name: 'vestibule', instance: vestibuleView };
+      await vestibuleView.render();
       return;
     }
 
