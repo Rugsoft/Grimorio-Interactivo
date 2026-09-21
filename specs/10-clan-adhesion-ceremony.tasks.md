@@ -120,27 +120,27 @@
 
 ## Fase 7 — Arneses Backend
 
-- [ ] **Tarea 7.1 — `scratch/test_vestibule_service.php`**
+- [x] **Tarea 7.1 — `scratch/test_vestibule_service.php`**
   * **Cubre:** `RF-01.1`, `RF-01.2`, `RF-01.7`, `RF-03.5`, `RF-03.8`.
   * **Hecho cuando:** en verde: catálogo solo del linaje jurado y `active`; `myHouse` legada; aptitud por instante; días con alza; `unreadVerdictsCount`; Supremo sin linaje → 403 `ADMIN_LINEAGE_REQUIRED`; peregrino jamás servido.
 
-- [ ] **Tarea 7.2 — `scratch/test_clan_admission_guards.php`**
+- [x] **Tarea 7.2 — `scratch/test_clan_admission_guards.php`**
   * **Cubre:** `RF-04.1`, `RF-02.3`, `RF-01.1`, `RF-04.2`.
   * **Hecho cuando:** en verde: los tres guardias en ambas vías, `ALREADY_AFFILIATED` intacto en fundación, convalecencia con su leyenda, y jamás `CLAN_LINEAGE_MISMATCH` por lectura de catálogo.
 
-- [ ] **Tarea 7.3 — `scratch/test_clan_application_closure.php`**
+- [x] **Tarea 7.3 — `scratch/test_clan_application_closure.php`**
   * **Cubre:** `RF-03.1`, `RF-03.3`, caso límite 13.
   * **Hecho cuando:** en verde: rechazo y retirada clausuran sin consumir cupo; re-postulación → 403 `APPLICATION_HOUSE_CLOSED`; bordes del molde 19/20/501.
 
-- [ ] **Tarea 7.4 — `scratch/test_clan_admission_race.php`**
+- [x] **Tarea 7.4 — `scratch/test_clan_admission_race.php`**
   * **Cubre:** `RF-02.2`, `RF-02.3`, casos límite 1, 2, 5, 6, 8.
   * **Hecho cuando:** en verde: última vacante con desempate por estampa de llegada más antigua; casa que muta jamás convierte el gesto; doble envío idempotente; retirada y dictamen concurrentes con un solo desenlace.
 
-- [ ] **Tarea 7.5 — `scratch/test_clan_vestibule_audit.php`**
+- [x] **Tarea 7.5 — `scratch/test_clan_vestibule_audit.php`**
   * **Cubre:** `RF-04.4`, `RF-03.7`, `RF-04.5`, `RNF-06`, hallazgo 23.
   * **Hecho cuando:** en verde: reparto por actor verificado (los cinco actos, cada uno por su actor), un asiento por residual anulada, dictamen con motivo, y rechazo sin `motive` → 400.
 
-- [ ] **Tarea 7.6 — `scratch/test_vestibule_migration.php`**
+- [x] **Tarea 7.6 — `scratch/test_vestibule_migration.php`**
   * **Cubre:** `RF-03.1`, `RF-03.4`, `RNF-05`.
   * **Hecho cuando:** en verde: migración idempotente al re-ejecutar, deduplicación a archivo espejo, índice único presente, acknowledge idempotente.
 

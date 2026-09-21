@@ -272,6 +272,48 @@ foreach ($anulaciones as $asiento) {
 $ingresos = auditEntriesOf($pdo, 'CLAN_MEMBER_JOINED');
 assertCondition(count($ingresos) === 3, 'El ingreso del tercer adepto deja su asiento también (3 en total)');
 
+// --- FASE 6b: El dictamen desfavorable exige su motivo (Art. III.3) -------
+echo "\nFASE 6b: El rechazo con y sin motivo solemne\n";
+// Una cuarta casa de deliberación para el dictamen desfavorable: su
+// Patriarca rechazará una petición y el asiento deberá portar el motivo.
+$patriarcaEstio = seedUser($pdo, 'usr_patriarca_estio', 'ElPatriarcaDelEstio', 'editor', 'celestialTides');
+$casaEstio = $service->foundClan($patriarcaEstio, 'Casa del Estio', 'Lema del Estio', 'rune_estio', 'celestialTides', Grimorio\Dto\ClanDto::ADMISSION_BY_APPLICATION);
+
+$postulanteRechazo = seedUser($pdo, 'usr_post_rechazo', 'LaPostulanteDelRechazo', 'editor', 'celestialTides');
+$service->applyToClan($postulanteRechazo, $casaEstio->id, $now, 'Ruego un lugar a la sombra del mediodía.');
+$expedienteRechazo = $service->listPendingApplications($patriarcaEstio, $casaEstio->id);
+
+// El rechazo SIN motivo es vedado: 400 INVALID_VERDICT_MOTIVE (Tarea 2.6).
+$sinMotivo = null;
+try {
+    $service->resolveApplication($patriarcaEstio, $casaEstio->id, (string) $expedienteRechazo[0]->id, 'reject', $now, '   ');
+} catch (ClanGovernanceException $governance) {
+    $sinMotivo = $governance;
+}
+assertCondition($sinMotivo !== null && $sinMotivo->errorCode === ClanGovernanceException::INVALID_VERDICT_MOTIVE, 'El rechazo sin motivo responde 400 INVALID_VERDICT_MOTIVE');
+assertCondition($sinMotivo !== null && $sinMotivo->httpStatus === 400, 'El motivo ausente responde 400');
+
+// Sin asiento de dictamen NUEVO: la pluma deliberante no escribió (delta).
+$verdictosAntesDeEstio = count(auditEntriesOf($pdo, 'CLAN_APPLICATION_VERDICT'));
+// (la Fase 5 dejó el asiento de la aprobación: el delta del rechazo fallido es 0)
+
+// El rechazo CON motivo: el asiento porta el texto íntegro del Patriarca.
+// El conteo es DELTA sobre la casa del Estío: la Fase 5 ya dejó su asiento
+// de aprobación en la casa del Ocaso (bitácora global).
+$verdictosAntesDeEstio = count(auditEntriesOf($pdo, 'CLAN_APPLICATION_VERDICT'));
+$service->resolveApplication($patriarcaEstio, $casaEstio->id, (string) $expedienteRechazo[0]->id, 'reject', $now, 'Tu vocación aún no ha florecido: vuelve cuando el estío te llame.');
+$asientosVeredicto = auditEntriesOf($pdo, 'CLAN_APPLICATION_VERDICT');
+assertCondition(count($asientosVeredicto) - $verdictosAntesDeEstio === 1, 'El rechazo con motivo deja UN asiento CLAN_APPLICATION_VERDICT');
+$asientoEstio = $asientosVeredicto[count($asientosVeredicto) - 1];
+assertCondition($asientoEstio['actor_user_id'] === 'usr_patriarca_estio', 'El dictamen desfavorable lo inscribe el PATRIARCA (lado deliberante)');
+assertCondition(str_contains($asientoEstio['justification'], 'Tu vocación aún no ha florecido'), 'El asiento del dictamen porta el motivo íntegro (Art. III.3)');
+assertCondition(str_contains($asientoEstio['justification'], 'LaPostulanteDelRechazo'), 'La justificación nombra a la postulante juzgada');
+
+// Y la fila conservó el motivo en su columna (RF-04.5: contrato compartido).
+$filaVeredicto = $pdo->prepare('SELECT verdict_motive FROM clan_applications WHERE id = :id');
+$filaVeredicto->execute([':id' => (string) $expedienteRechazo[0]->id]);
+assertCondition(str_contains((string) $filaVeredicto->fetchColumn(), 'florecido'), 'La fila conservó el motivo del dictamen (contrato único compartido, RF-04.5)');
+
 // --- FASE 7: Sin duplicación del dictamen en el lado postulante -----------
 echo "\nFASE 7: El reparto por actor no se duplica\n";
 $rechazosPostulante = 0;

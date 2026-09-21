@@ -17,6 +17,10 @@ declare(strict_types=1);
  *   4. La columna `verdict_seen_at` existe y es anulable.
  *   5. Coherencia guion↔esquema: una base nueva desde `database/schema.sql`
  *      nace ya con índice, columna y tabla archivo.
+ *   6. El acknowledge del veredicto (RF-03.4) es idempotente sobre la base
+ *      migrada: el primer contemplado fija la columna, el reenvío responde
+ *      sin mutación, las peticiones `pending` y ajenas jamás se escriben y
+ *      el rótulo de dictámenes sin leer se apaga.
  *
  * Fases:
  *   [0]  Superficie: el guion existe y declara sus piezas.
@@ -25,6 +29,10 @@ declare(strict_types=1);
  *   [2]  Segunda aplicación: idempotencia sin error ni mutación.
  *   [3]  Muralla del índice: la clausura por casa es invariante físico.
  *   [4]  Coherencia: base nueva desde schema.sql ya porta las tres piezas.
+ *   [5]  Acknowledge idempotente (RF-03.4) con el repositorio real.
+ *
+ * Verificación doble: Tarea 1.1 (la migración) y Tarea 7.6 (la auditoría
+ * del arnés frente al «Hecho cuando» completo).
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): PDO nativo, sin librerías externas.
@@ -270,6 +278,77 @@ assertCondition(in_array('uq_clan_application_house', indexNamesOf($canonical, '
 assertCondition(columnExists($canonical, 'clan_applications', 'verdict_seen_at'), 'schema.sql nace con la columna verdict_seen_at');
 $schemaSource = (string) file_get_contents($projectRoot . '/database/schema.sql');
 assertCondition(str_contains($schemaSource, 'CREATE TABLE IF NOT EXISTS clan_applications_archive'), 'schema.sql nace con la tabla archivo de duplicados legados');
+
+// --- FASE 5: El veredicto contemplado sobre la base migrada (RF-03.4) ---
+echo "\nFASE 5: El acknowledge es idempotente sobre la base migrada\n";
+
+require_once $projectRoot . '/src/Models/User.php';
+require_once $projectRoot . '/src/Repositories/ClanApplicationRepository.php';
+
+// El postulante de la fila terminal rechazada (app_old_1, legado de la
+// deduplicación) y la cuenta peticionaria pendiente (app_solo).
+$instantOfOath = '2026-01-01T00:00:00Z';
+$postulante = new Grimorio\Models\User(
+    id: 'usr_1',
+    alias: 'Galaedriel',
+    email: 'galaedriel@santuario.test',
+    role: 'editor',
+    clanId: null,
+    passwordHash: 'x',
+    lineage: 'primordialFlame',
+    createdAt: $instantOfOath,
+    updatedAt: $instantOfOath,
+);
+$repository = new Grimorio\Repositories\ClanApplicationRepository($legacy);
+
+// [1] El primer contemplado fija la columna con el instante narrado.
+$primerInstante = '2026-09-20T12:00:00Z';
+assertCondition(
+    $repository->markVerdictSeen('app_old_1', 'usr_1', $primerInstante) === true,
+    'El primer acknowledge sobre un veredicto terminal propio queda fijado'
+);
+assertCondition(
+    $legacy->query("SELECT verdict_seen_at FROM clan_applications WHERE id = 'app_old_1'")->fetchColumn() === $primerInstante,
+    'La columna verdict_seen_at registra el instante del primer contemplado'
+);
+
+// [2] El reenvío (doble clic, reintento de red) responde sin mutación.
+assertCondition(
+    $repository->markVerdictSeen('app_old_1', 'usr_1', '2026-09-20T13:00:00Z') === false,
+    'El reenvío del acknowledge NO vuelve a mutar (idempotencia)'
+);
+assertCondition(
+    $legacy->query("SELECT verdict_seen_at FROM clan_applications WHERE id = 'app_old_1'")->fetchColumn() === $primerInstante,
+    'El historial conserva el PRIMER instante contemplado, no el último'
+);
+
+// [3] Una petición `pending` jamás se contempla: nada hay que leer.
+assertCondition(
+    $repository->markVerdictSeen('app_solo', 'usr_2', $primerInstante) === false,
+    'El acknowledge sobre una petición PENDIENTE no escribe'
+);
+assertCondition(
+    $legacy->query("SELECT verdict_seen_at FROM clan_applications WHERE id = 'app_solo'")->fetchColumn() === null,
+    'La petición pendiente conserva su veredicto sin contemplar (NULL)'
+);
+
+// [4] La petición ajena jamás se escribe: la guardia vela por dueño.
+assertCondition(
+    $repository->markVerdictSeen('app_solo', 'usr_1', $primerInstante) === false,
+    'El acknowledge sobre una petición AJENA no escribe'
+);
+
+// [5] El rótulo de dictámenes sin leer se apaga con el contemplado.
+//     Se siembra un rechazo nuevo para usr_2 (la clausura solo vela por
+//     casa repetida; usr_2 jamás peticionó a cln_a).
+$legacy->prepare(
+    'INSERT INTO clan_applications (id, clan_id, user_id, status, created_at, resolved_at)
+     VALUES (:id, :clanId, :userId, :status, :createdAt, :resolvedAt)'
+)->execute([':id' => 'app_rech', ':clanId' => 'cln_a', ':userId' => 'usr_2', ':status' => 'rejected', ':createdAt' => '2026-09-19T10:00:00Z', ':resolvedAt' => '2026-09-19T11:00:00Z']);
+assertCondition($repository->countUnreadVerdicts('usr_2') === 1, 'El rótulo cuenta el rechazo sin contemplar de usr_2 (1)');
+assertCondition($repository->countUnreadVerdicts('usr_1') === 0, 'El rótulo de usr_1 ya calla tras su contemplado (0)');
+$repository->markVerdictSeen('app_rech', 'usr_2', $primerInstante);
+assertCondition($repository->countUnreadVerdicts('usr_2') === 0, 'El acknowledge APAGA el rótulo de dictámenes a la espera');
 
 // --- Veredicto ---
 echo "\n=============================\n";

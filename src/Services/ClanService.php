@@ -315,10 +315,21 @@ final class ClanService
         $this->requireFreedomFromConvalescence($applicant, $nowUtc);
 
         if ($this->memberRepository->findActiveMembership($applicant->getId()) !== null) {
+            // SPEC-10 (RF-02.3, caso límite 6): el militante que repite el
+            // gesto sobre SU casa recibe éxito sin mutación alguna (doble
+            // clic, reintento de red, segunda pestaña) — la idempotencia
+            // devuelve la membresía vigente como desenlace admitted.
+            $ownHouseId = (string) ($this->memberRepository
+                ->findActiveMembership($applicant->getId())['clan_id'] ?? '');
+            if ($ownHouseId === $clan->id) {
+                $ownMembership = $this->memberRepository->findActiveMembership($applicant->getId());
+                return ClanAdmissionResult::admitted($this->toMemberDto($ownMembership ?? []));
+            }
+
             // SPEC-10 (RF-02.3, hallazgo 4): en la vía de adhesión el gesto
-            // del militante porta su propia leyenda con el nombre de la casa.
-            // ALREADY_AFFILIATED permanece canónico SOLO en la vía de
-            // fundación (enmienda declarada, plan §5.3).
+            // del militante hacia OTRA casa porta su propia leyenda con el
+            // nombre de la suya. ALREADY_AFFILIATED permanece canónico SOLO
+            // en la vía de fundación (enmienda declarada, plan §5.3).
             throw ClanGovernanceException::clanLoyaltyBound(
                 $this->nameOfActiveMembership($applicant->getId())
             );

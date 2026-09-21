@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * test_vestibule_service.php — Verificación de la Tarea 3.2 de TASKS-10.
+ * test_vestibule_service.php — Verificación de la Tarea 3.2 (sobre único) y
+ * de la Tarea 7.1 (arnés de la auditoría de estabilización) de TASKS-10.
  *
  * Valida `ClanVestibuleService::vestibuleStateFor()` — el sobre único del
  * Endpoint 1 (plan §2.2) — contra el «Hecho cuando» de la tarea:
@@ -434,6 +435,43 @@ try {
     $alzado = $governance->errorCode === 'ADMIN_LINEAGE_REQUIRED' && $governance->httpStatus === 403;
 }
 assertCondition($alzado, 'El Supremo sin linaje recibe su aviso solemne propio (hallazgos 13/19)');
+
+// --- FASE 6b: La convalecencia con alza, día a día (RF-03.5, plan §3.1) -----
+echo "\nFASE 6b: La convalecencia con alza, día a día\n";
+$pdoConv = forgeRealm($projectRoot);
+$vestibuleConv = new ClanVestibuleService($pdoConv);
+seedClan($pdoConv, 'cln_conv', 'Casa del Descanso', 'celestialTides', 'open');
+$convaleciente = seedUser($pdoConv, 'usr_conv', 'ElConvaleciente', 'editor', 'celestialTides');
+
+// Salida el 2026-09-19T10:00Z + 14 días = vence 2026-10-03T10:00:00Z.
+// La convalecencia vive en una fila CERRADA (left_at fijado): es la huella
+// de una partida, no una membresía vigente (idioma de ClanService::leaveClan).
+// El instante de lectura es $now = 2026-09-20T12:00:00Z:
+//   restan 12 DÍAS y 22 HORAS → el día parcial SE ALZA a 13 días (techo).
+seedMembership($pdoConv, 'cln_conv', 'usr_conv', '2026-10-03T10:00:00Z', '2026-09-19T10:00:00Z');
+// La partida: la fila se cierra con la misma estampa del ingreso original.
+$pdoConv->prepare('UPDATE clan_members SET left_at = :leftAt WHERE user_id = :userId')
+    ->execute([':leftAt' => '2026-09-19T10:00:00Z', ':userId' => 'usr_conv']);
+$estadoConv = json_decode(json_encode($vestibuleConv->vestibuleStateFor($convaleciente, $now)), true);
+$diasRestantes = (int) $estadoConv['adeptState']['aptitude']['convalescenceDaysRemaining'];
+assertCondition($diasRestantes === 13, "El día parcial se alza al entero superior (12d 22h → {$diasRestantes} días)");
+assertCondition($estadoConv['adeptState']['aptitude']['isApt'] === false, 'El convaleciente jamás es apto (RF-03.5)');
+assertCondition($estadoConv['adeptState']['aptitude']['vedado'] === 'convalescence', 'El vedado nombra la convalecencia como causa');
+
+// La leyenda de la tarjeta nombra los días alzados, no el resto decimal.
+$tarjetaConv = clanOf($estadoConv, 'cln_conv');
+assertCondition(
+    is_string($tarjetaConv['vedadoLegend']) && str_contains((string) $tarjetaConv['vedadoLegend'], '13'),
+    'La leyenda de descanso nombra los días con alza (13)',
+);
+
+// Frontera exacta: el INSTANTE de vencimiento apaga el vedado sin tocar datos.
+$instanteVencido = instantOf('2026-10-03T10:00:00Z');
+$estadoLibre = json_decode(json_encode($vestibuleConv->vestibuleStateFor($convaleciente, $instanteVencido)), true);
+assertCondition($estadoLibre['adeptState']['aptitude']['isApt'] === true, 'Al vencer el plazo el instante restaura la aptitud (estado derivado, RF-03.5)');
+assertCondition($estadoLibre['adeptState']['aptitude']['convalescenceDaysRemaining'] === 0, 'Los días restantes caen a 0 al vencer');
+assertCondition(clanOf($estadoLibre, 'cln_conv')['gesture'] === 'join', 'La casa abierta vuelve a ofrecer el gesto de ingreso');
+assertCondition(clanOf($estadoLibre, 'cln_conv')['vedadoLegend'] === null, 'La leyenda de descanso calla al volver el gesto');
 
 // --- FASE 7: Determinismo del instante (RNF-01) ----------------------------
 echo "\nFASE 7: El instante gobierna, jamás el reloj\n";

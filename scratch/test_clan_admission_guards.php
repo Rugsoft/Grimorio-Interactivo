@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 /**
- * test_clan_admission_guards.php — Verificación de la Tarea 2.2 de TASKS-10.
+ * test_clan_admission_guards.php — Verificación de la Tarea 2.2 (guardias
+ * de gestos) y de la Tarea 7.2 (arnés de la auditoría de estabilización)
+ * de TASKS-10.
  *
  * Valida los tres guardias nuevos de la Ceremonia de Adhesión (SPEC-10) contra
  * el «Hecho cuando» de la tarea:
@@ -192,6 +194,34 @@ assertCondition((int) $statement->fetchColumn() === 1, 'El gesto vedado jamás t
 // Supremo sin linaje en el gesto:
 $e = captureException(static fn () => $service->applyToClan($supremo, $clanMareas->id, $now));
 assertCondition($e instanceof ClanGovernanceException && $e->errorCode === ClanGovernanceException::ADMIN_LINEAGE_REQUIRED, 'El Supremo sin linaje en el gesto: ADMIN_LINEAGE_REQUIRED, jamás CLAN_LINEAGE_MISMATCH');
+
+// --- FASE 3b: La convalecencia con su leyenda (RF-04.2, plan §6.2) --------
+echo "\nFASE 3b: La convalecencia veda el ingreso con su leyenda propia\n";
+// Un adepto de la Casa de las Mareas parte: su fila CERRADA (left_at fijado
+// + convalescence_expires_at a 14 días, idioma de ClanService::leaveClan)
+// es la huella que el guardia de convalecencia lee en el instante.
+$viajero = oathUser($pdo, 'usr_viajero', 'ElViajeroQuePartio', 'editor', 'celestialTides');
+$service->applyToClan($viajero, $clanMareas->id, $now);
+$service->leaveClan($viajero, $clanMareas->id, $now);
+$e = captureException(static fn () => $service->applyToClan($viajero, $clanMareas->id, $now));
+assertCondition($e instanceof ClanGovernanceException, 'El renunciante no puede reingresar durante el descanso');
+// Orden canónico del plan §3.2: la lealtad murió con la partida, la
+// convalecencia es la causa viva del vedado — jamás CLAN_LOYALTY_BOUND.
+assertCondition($e !== null && $e->errorCode === ClanGovernanceException::CONVALESCENCE_ACTIVE, 'El vedado es CONVALESCENCE_ACTIVE, jamás CLAN_LOYALTY_BOUND (la lealtad murió con la partida)');
+assertCondition($e !== null && $e->httpStatus === 403, 'La convalecencia responde 403');
+assertCondition($e !== null && str_contains($e->getMessage(), 'Convalecencia Arcana'), 'La leyenda nombra la Convalecencia Arcana');
+assertCondition($e !== null && str_contains($e->getMessage(), 'catorce días'), 'La leyenda anuncia los catorce días del descanso (RF-04.2)');
+assertCondition($e !== null && $e->recoveryAction === 'AWAIT_CONVALESCENCE_END', 'La acción de recuperación indica esperar el fin del descanso');
+
+// Frontera exacta: un segundo antes del plazo la meditación sigue viva.
+$instanteFrontera = new DateTimeImmutable('2026-10-04T11:59:59Z', new DateTimeZone('UTC'));
+$e = captureException(static fn () => $service->applyToClan($viajero, $clanMareas->id, $instanteFrontera));
+assertCondition($e !== null && $e->errorCode === ClanGovernanceException::CONVALESCENCE_ACTIVE, 'Un segundo antes del plazo, la meditación sigue vedando el gesto');
+
+// Y el gesto vedado no tocó la casa: el censo de Mareas sigue siendo 1.
+$statement = $pdo->prepare('SELECT COUNT(*) FROM clan_members WHERE clan_id = :clanId AND left_at IS NULL');
+$statement->execute([':clanId' => $clanMareas->id]);
+assertCondition((int) $statement->fetchColumn() === 1, 'El gesto vedado por descanso jamás tocó la persistencia (censo intacto)');
 
 // --- FASE 4: La lectura del catálogo jamás dispara el guardia ---
 echo "\nFASE 4: La contemplación es libre (browseClans sin guardias de gesto)\n";

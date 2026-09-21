@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 /**
- * test_clan_application_closure.php — Verificación de la Tarea 2.3 de TASKS-10.
+ * test_clan_application_closure.php — Verificación de la Tarea 2.3 (molde y
+ * estampa de llegada) y de la Tarea 7.3 (arnés de la auditoría de
+ * estabilización) de TASKS-10.
  *
  * Valida el molde de motivación y la estampa de llegada (SPEC-10) contra el
  * «Hecho cuando» de la tarea:
@@ -222,6 +224,42 @@ $e = captureException(static fn () => $service->applyToClan(
     $postulanteTenaz, $casasRegresion[4]->id, $now, 'La cuarta petición del cupo de tres pendientes.'
 ));
 assertCondition($e instanceof ClanGovernanceException && $e->errorCode === ClanGovernanceException::PENDING_APPLICATIONS_LIMIT, 'El tope de tres pendientes permanece canónico (400)');
+
+// --- FASE 5: El rechazo clausura sin consumir cupo (RF-03.1, hallazgo 16) ---
+echo "\nFASE 5: El rechazo clausura la casa y libera el cupo (RF-03.1)\n";
+// Un postulante llena su cupo con una petición y recibe el dictamen
+// desfavorable del Patriarca: la casa queda clausurada PARA ÉL, pero el
+// cupo de pendientes vuelve a respirar (el rechazo no es una petición viva).
+$coutureFounder = oathUser($pdo, 'usr_couture', 'FundadoraCouture', 'editor');
+$houseCouture = $service->foundClan(
+    $coutureFounder, 'Casa de la Aguja Fina', 'Se delibera con hilo de oro', 'rune_aguja', 'primordialFlame', 'byApplication', $now
+);
+$postulanteRechazado = oathUser($pdo, 'usr_rechazado', 'ElPostulanteRechazado', 'editor');
+$peticion = $service->applyToClan($postulanteRechazado, $houseCouture->id, $now, 'Pido un lugar entre las agujas que bordan el destino.');
+$service->resolveApplication($coutureFounder, $houseCouture->id, $peticion->application?->id ?? '', 'reject', $now, 'Tu vocación aún no ha florecido.');
+
+// Re-postulación sobre la casa rechazada: clausura, no idempotencia.
+$e = captureException(static fn () => $service->applyToClan(
+    $postulanteRechazado, $houseCouture->id, $now, 'Insisto: la aguja me llama.'
+));
+assertCondition($e instanceof ClanGovernanceException && $e->errorCode === ClanGovernanceException::APPLICATION_HOUSE_CLOSED, 'Re-postulación tras RECHAZO: 403 APPLICATION_HOUSE_CLOSED (RF-03.1)');
+assertCondition($e !== null && $e->httpStatus === 403, 'La clausura responde 403');
+
+// El cupo: el rechazo no cuenta como pendiente; tres peticiones nuevas caben.
+$casasCouture = [];
+foreach ([1, 2, 3] as $index) {
+    $fundadoraAux = oathUser($pdo, 'usr_aux' . $index, 'FundadoraAuxiliar' . $index, 'editor');
+    $casasCouture[$index] = $service->foundClan(
+        $fundadoraAux, 'Casa Auxiliar ' . $index, 'Lema', 'rune_aux' . $index, 'primordialFlame', 'byApplication', $now
+    );
+    $service->applyToClan($postulanteRechazado, $casasCouture[$index]->id, $now, 'Petición número ' . $index . ' tras el rechazo liberador.');
+}
+assertCondition(true, 'El cupo respira tras el rechazo: tres peticiones vivas coexisten con la casa clausurada');
+
+// La fila persiste clausurada para siempre (el índice único la vela).
+$statement = $pdo->prepare("SELECT COUNT(*) FROM clan_applications WHERE user_id = :userId AND clan_id = :clanId AND status = 'rejected'");
+$statement->execute([':userId' => 'usr_rechazado', ':clanId' => $houseCouture->id]);
+assertCondition((int) $statement->fetchColumn() === 1, 'La fila rechazada PERSISTE: la clausura es perpetua (caso límite 13)');
 
 // --- Veredicto ---
 echo "\n=============================\n";
