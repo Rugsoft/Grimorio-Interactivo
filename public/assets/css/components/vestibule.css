@@ -1,5 +1,5 @@
 /* =======================================================================
-   vestibule-card.css — Tarjetas del Vestíbulo de las Hermandades
+   vestibule.css — Velo Arcano del Vestíbulo de las Hermandades
    (SPEC-10, Tarea 5.1)
    =======================================================================
 
@@ -43,8 +43,9 @@
 }
 
 .vestibule-card:focus-visible {
-  outline: 2px solid var(--color-parchment-border-focus);
+  outline: 3px solid var(--color-gold-arcane);
   outline-offset: 2px;
+  box-shadow: var(--shadow-gold-glow);
 }
 
 /* El Regente de la semana viste el honor del kit de SPEC-07: oro radiante
@@ -138,7 +139,7 @@
 
 .vestibule-card__gesture {
   min-height: var(--touch-target-min);       /* Zona táctil mínima (RNF-04). */
-  padding: 0.35rem 1.1rem;
+  padding: var(--space-ink-1) var(--space-ink-3);
   border: 1px solid var(--color-gold-arcane-dim);
   border-radius: var(--radius-scroll);
 
@@ -267,7 +268,7 @@
 .admission-modal__confirm,
 .admission-modal__dismiss {
   min-height: var(--touch-target-min);
-  padding: 0.35rem 1.1rem;
+  padding: var(--space-ink-1) var(--space-ink-3);
   border-radius: var(--radius-scroll);
   font-family: var(--font-arcane-body);
   cursor: pointer;
@@ -488,8 +489,9 @@
 }
 
 .petition-inventory__withdraw:focus-visible {
-  outline: 2px solid var(--color-gold-arcane);
+  outline: 3px solid var(--color-gold-arcane);
   outline-offset: 2px;
+  box-shadow: var(--shadow-gold-glow);
 }
 
 /* =====================================================================
@@ -549,8 +551,9 @@
 }
 
 .vestibule-view__retry:focus-visible {
-  outline: 2px solid var(--color-gold-arcane);
+  outline: 3px solid var(--color-gold-arcane);
   outline-offset: 2px;
+  box-shadow: var(--shadow-gold-glow);
 }
 
 .vestibule-view__cards {
@@ -562,4 +565,18 @@
 
 .vestibule-view__composer {
   margin-bottom: var(--space-ink-3);
+}
+
+/* Respeto a prefers-reduced-motion (RNF-03): las transiciones solemnes
+   propias del Vestíbulo se aquietan sin perder el estado de hover/foco —
+   el contraste queda íntegro, solo cesa el movimiento. Los botones del
+   modal y del compositor visten `.button` del kit (SPEC-02 RF-08.5), que
+   ya se aquienta por sí mismo: aquí solo las clases propias. */
+@media (prefers-reduced-motion: reduce) {
+  .vestibule-card,
+  .vestibule-card__gesture,
+  .petition-inventory__withdraw,
+  .vestibule-view__retry {
+    transition: none;
+  }
 }

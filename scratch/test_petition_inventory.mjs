@@ -343,7 +343,7 @@ const { readFileSync } = await import('node:fs');
 const componentSource = readFileSync(new URL('../public/assets/js/components/petitionInventoryComponent.js', import.meta.url), 'utf8');
 assertCondition(!/innerHTML\s*=/.test(componentSource), 'Dogma Vanilla: innerHTML jamás asignado en el componente');
 assertCondition(
-  readFileSync(new URL('../public/assets/css/components/vestibule-card.css', import.meta.url), 'utf8').includes('petition-inventory__item--unread'),
+  readFileSync(new URL('../public/assets/css/components/vestibule.css', import.meta.url), 'utf8').includes('petition-inventory__item--unread'),
   'el CSS de la marca de veredicto sin leer está cubierto en el kit del Vestíbulo',
 );
 

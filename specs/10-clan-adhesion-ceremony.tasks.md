@@ -113,7 +113,7 @@
 
 ## Fase 6 — Vestimenta CSS
 
-- [ ] **Tarea 6.1 — `vestibule.css` (Velo Arcano del Vestíbulo)**
+- [x] **Tarea 6.1 — `vestibule.css` (Velo Arcano del Vestíbulo)**
   * **Qué:** hoja nueva solo con tokens de `tokens.css` (cero literales de color), consumo del Kit de Controles (`controls.css`, SPEC-02 RF-08), registro en `components.css`, cobertura total de clases emitidas.
   * **Cubre:** `RNF-01`, `RNF-03`, `RNF-05`.
   * **Hecho cuando:** `node scratch/test_css_coverage.mjs` pasa sin huérfanos y un grep de la hoja no halla literales de color.
