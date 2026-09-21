@@ -64,6 +64,8 @@ final class LineageOathMiddleware
     private const RETAINABLE_VIEWS = [
         'landing', 'library', 'codex', 'clans', 'simulator', 'creator',
         'experimentalHall', 'tower', 'auditLog', 'clan',
+        // SPEC-10 (Tarea 4.2): el Vestíbulo de las Hermandades.
+        'vestibule',
     ];
 
     /**
@@ -196,6 +198,9 @@ final class LineageOathMiddleware
             '#/atrio'             => 'experimentalHall',
             '#/torre'             => 'tower',
             '#/bitacora'          => 'auditLog',
+            // SPEC-10 (Tarea 4.2): el Vestíbulo es vista de gestión; su hash
+            // es retenible para que el peregrino retorne tras jurar.
+            '#/vestibulo'         => 'vestibule',
         ];
         $viewName = $hashToView[$candidate] ?? null;
         if (!is_string($viewName) || !in_array($viewName, self::RETAINABLE_VIEWS, true)) {

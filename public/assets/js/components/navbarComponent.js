@@ -26,6 +26,11 @@
  * no identidad — el rótulo «Peregrino sin Linaje» y la heráldica del jurado
  * viven en el distintivo de sesión (userProfileBadge), que es quien consume
  * el sobre data.user con su campo lineage.
+ *
+ * SPEC-10 (Tarea 4.2, RF-01.1): el enlace «Hermandades» conduce al Vestíbulo
+ * y luce el distintivo «Tienes dictámenes a la espera», alimentado por el
+ * contador del Endpoint 5 vía setVestibuleBadgeCount(). Es SOLO INFORMATIVO:
+ * el enlace navega siempre — el distintivo jamás bloquea ni intercepta.
  */
 
 /** Enlaces persistentes de la cabecera (orden del plan, RF-02.1). */
@@ -34,6 +39,9 @@ export const NAV_LINKS = Object.freeze([
   { view: 'library', hash: '#/biblioteca', label: 'Biblioteca de Hechizos' },
   { view: 'codex', hash: '#/codex', label: 'Códice de Afinidades' },
   { view: 'clans', hash: '#/linajes', label: 'Salón de Linajes' },
+  // El Vestíbulo (SPEC-10): la gestión de hermandades del propio linaje.
+  // Con sesión activa, su acceso luce el distintivo de dictámenes (RF-01.1).
+  { view: 'vestibule', hash: '#/vestibulo', label: 'Hermandades', badge: 'vestibuleBadge' },
   // El Simulador es público: su Tomo Canónico se abre a todo visitante
   // (RF-01.2 de SPEC-05). El tomo privado de Ensayos se guarda en el umbral
   // del orquestador, no en el enlace.
@@ -90,6 +98,35 @@ export function createNavbarComponent(navRoot, componentOptions) {
 
   /** Guardia de binding: los re-renders no apilan listeners duplicados. */
   let shellListenersBound = false;
+
+  /**
+   * Dictámenes sin contemplar (SPEC-10, RF-01.1). 0 = distintivo apagado.
+   * La autoridad del número vive en el orquestador (Endpoint 5); aquí solo
+   * se pinta lo que se declara.
+   */
+  let vestibuleBadgeCount = 0;
+
+  /** Elemento del distintivo una vez renderizado. */
+  let vestibuleBadgeElement = null;
+
+  /**
+   * Repinta el distintivo del acceso al Vestíbulo. Idempotente: sin cambio
+   * de cifra no toca el DOM; apagado (0) vacía el portador (el nodo vive
+   * dentro del enlace y sobrevive a los ciclos de encendido/apagado).
+   */
+  function renderVestibuleBadge() {
+    if (vestibuleBadgeElement === null) return;
+    const nextCount = Number(vestibuleBadgeCount) || 0;
+    if (nextCount <= 0) {
+      // Apagado: sin texto ni cifra; el portador permanece vacío y oculto
+      // (el CSS del kit gobierna su visibilidad por [data-count]).
+      vestibuleBadgeElement.textContent = '';
+      vestibuleBadgeElement.removeAttribute('data-count');
+      return;
+    }
+    vestibuleBadgeElement.textContent = `Tienes ${nextCount} ${nextCount === 1 ? 'dictamen' : 'dictámenes'} a la espera`;
+    vestibuleBadgeElement.setAttribute('data-count', String(nextCount));
+  }
 
   /**
    * Activa un enlace: navega si es público, intercepta si está reservado.
@@ -213,6 +250,18 @@ export function createNavbarComponent(navRoot, componentOptions) {
         linkElement.setAttribute('data-reserved', 'true');
       }
 
+      if (navLink.badge === 'vestibuleBadge') {
+        // Distintivo del rótulo (SPEC-10, RF-01.1): portador informático
+        // accesible; nace APAGADO y el orquestador lo enciende con datos.
+        const badgeElement = elementFactory('span');
+        badgeElement.setAttribute('class', 'nav-link__badge');
+        badgeElement.setAttribute('data-badge', 'vestibuleBadge');
+        badgeElement.setAttribute('role', 'status');
+        linkElement.appendChild(badgeElement);
+        vestibuleBadgeElement = badgeElement;
+        renderVestibuleBadge();
+      }
+
       linkElement.addEventListener('click', handleLinkActivation);
       linkElement.addEventListener('keydown', handleLinkActivation);
       linksList.appendChild(linkElement);
@@ -267,6 +316,19 @@ export function createNavbarComponent(navRoot, componentOptions) {
     shellListenersBound = false;
   }
 
+  /**
+   * Fija la cifra del rótulo de dictámenes (SPEC-10, RF-01.1) y repinta el
+   * distintivo. Idempotente; el orquestador es la única autoridad del número.
+   *
+   * @param {number} count Veredictos terminales sin contemplar (0 = apagado).
+   */
+  function setVestibuleBadgeCount(count) {
+    const nextCount = Number(count) || 0;
+    if (nextCount === vestibuleBadgeCount) return;
+    vestibuleBadgeCount = nextCount;
+    renderVestibuleBadge();
+  }
+
   return {
     render,
     setSession,
@@ -274,5 +336,6 @@ export function createNavbarComponent(navRoot, componentOptions) {
     // Expuestos para pruebas y orquestador:
     closeMobileMenu,
     handleMenuKeydown,
+    setVestibuleBadgeCount,
   };
 }

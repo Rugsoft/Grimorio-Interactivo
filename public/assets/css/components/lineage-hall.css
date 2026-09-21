@@ -71,6 +71,31 @@
   color: var(--color-text-muted);
 }
 
+/* Llamamiento al Vestíbulo (SPEC-10, Tarea 4.2 — doble vía de acceso):
+   CTA discreto en la cabecera del Salón; oro atenuado en reposo, tinta
+   oscura al posarse — la puerta se anuncia, jamás grita. */
+.lineage-hall__vestibule-call {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  margin-left: var(--space-ink-2);
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  text-decoration: none;
+  transition: background-color var(--transition-arcane), color var(--transition-arcane);
+}
+
+.lineage-hall__vestibule-call:hover,
+.lineage-hall__vestibule-call:focus-visible {
+  background-color: var(--color-gold-arcane);
+  color: var(--color-surface);
+}
+
 /* =======================================================================
    2. Pestañas ceremoniales (clasificación viva · prestigio · libro mayor)
    ======================================================================= */

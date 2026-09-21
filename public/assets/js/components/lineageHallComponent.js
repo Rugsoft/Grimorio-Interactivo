@@ -99,6 +99,8 @@ function ordinalLabel(position) {
  * @param {Array<object>} [options.lineages] Catálogo de los 8 linajes (Endpoint 10).
  * @param {object|null} [options.hall] Salón del Dominio (Endpoint 11), o null.
  * @param {() => void} [options.onRetry] Reintento desde el error temático.
+ * @param {() => void} [options.onOpenVestibule] Llamamiento al Vestíbulo de
+ *        las Hermandades (SPEC-10, Tarea 4.2): el CTA de la cabecera.
  * @param {(clanId: string) => void} [options.onClanSelect] Selección de una casa.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
@@ -112,6 +114,7 @@ export function createLineageHallComponent(mountRoot, options = {}) {
     lineages = [],
     hall = null,
     onRetry,
+    onOpenVestibule,
     onClanSelect,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
@@ -261,6 +264,23 @@ export function createLineageHallComponent(mountRoot, options = {}) {
     const title = appendTextElement(header, 'h1', 'lineage-hall__title', LINEAGE_HALL_TITLE);
     title.setAttribute('id', 'lineageHallTitle');
     appendTextElement(header, 'p', 'lineage-hall__hint', LINEAGE_HALL_HINT);
+
+    // Llamamiento al Vestíbulo (SPEC-10, Tarea 4.2 — doble vía de acceso):
+    // la contemplación pública del Salón ofrece el paso a la gestión de
+    // hermandades. Sin callback (visitante anónimo en arnés) no se monta:
+    // el Vestíbulo decidirá por sí mismo qué exige sesión.
+    if (typeof onOpenVestibule === 'function') {
+      const vestibuleCall = track(elementFactory('a'));
+      vestibuleCall.className = 'lineage-hall__vestibule-call';
+      vestibuleCall.setAttribute('href', '#/vestibulo');
+      vestibuleCall.setAttribute('data-view', 'vestibule');
+      vestibuleCall.textContent = 'Entrar al Vestíbulo de las Hermandades';
+      vestibuleCall.addEventListener('click', (clickEvent) => {
+        clickEvent.preventDefault?.();
+        onOpenVestibule();
+      });
+      header.appendChild(vestibuleCall);
+    }
 
     buildTabs();
     buildFilterBar();

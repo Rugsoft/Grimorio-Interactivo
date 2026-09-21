@@ -74,12 +74,12 @@
 
 ## Fase 4 — Cliente y Esqueleto Frontend
 
-- [ ] **Tarea 4.1 — `vestibuleClient.js`**
+- [x] **Tarea 4.1 — `vestibuleClient.js`**
   * **Qué:** cliente `fetch` nativo (`credentials: 'same-origin'`) de los cuatro endpoints, con mapeo de 200/400/403/404/409 a veredictos de la vista portando las leyendas canónicas.
   * **Cubre:** `RF-02.2`, `RF-03.2`, `RNF-05`.
   * **Hecho cuando:** cada código de error se traduce a la leyenda del Anexo A y ninguna respuesta interna expone trazas.
 
-- [ ] **Tarea 4.2 — Ruta, doble vía y rótulo de dictámenes**
+- [x] **Tarea 4.2 — Ruta, doble vía y rótulo de dictámenes**
   * **Qué:** `#/vestibulo → 'vestibule'` en `main.js`; rótulo «Hermandades» en `navbarComponent`; llamamiento en `lineageHallView`; distintivo «Tienes dictámenes a la espera» alimentado por `unread-count` y apagado tras acknowledge.
   * **Cubre:** `RF-01.1`, `RF-01.6`, `RF-03.4`.
   * **Hecho cuando:** ambas vías conducen al mismo Vestíbulo, el rótulo luce solo con veredictos sin leer y se apaga al contemplarlos sin bloquear navegación alguna.

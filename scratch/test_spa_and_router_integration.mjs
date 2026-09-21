@@ -304,16 +304,17 @@ const navVisitor = createNavbarComponent(shell2.navRoot, {
 navVisitor.render();
 
 const renderedVisitorLinks = linksList2.children.filter((c) => c.tagName === 'A');
-assertCondition(renderedVisitorLinks.length === 8, `El visitante ve exactamente 8 enlaces públicos (hallados ${renderedVisitorLinks.length})`);
+assertCondition(renderedVisitorLinks.length === 9, `El visitante ve exactamente 9 enlaces públicos, incluidas las Hermandades de SPEC-10 (hallados ${renderedVisitorLinks.length})`);
 assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'codex'), 'Códice de Afinidades (#/codex) está presente para todos');
 assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'experimentalHall'), 'Atrio de Pruebas (#/atrio) está presente para todos');
 assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'auditLog'), 'Bitácora de Auditoría (#/bitacora) está presente para todos');
+assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'vestibule'), 'Hermandades (#/vestibulo, SPEC-10) está presente para todos');
 assertCondition(!renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'tower'), 'Torre de Deliberación (#/torre) está OCULTA para rol reader');
 
 // 2.2 Enlace condicional para master
 navVisitor.setSession(true, 'master');
 const renderedMasterLinks = linksList2.children.filter((c) => c.tagName === 'A');
-assertCondition(renderedMasterLinks.length === 9, `El Maestro ve 9 enlaces incluyendo la Torre de Deliberación (hallados ${renderedMasterLinks.length})`);
+assertCondition(renderedMasterLinks.length === 10, `El Maestro ve 10 enlaces incluyendo la Torre de Deliberación (hallados ${renderedMasterLinks.length})`);
 assertCondition(renderedMasterLinks.some((l) => l.getAttribute('data-view') === 'tower'), 'Torre de Deliberación (#/torre) es visible para rol master');
 
 // 2.3 Enlace condicional para supremeAdmin

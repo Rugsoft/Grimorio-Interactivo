@@ -69,8 +69,8 @@ import {
 import {
   retainRoute as apiRetainRoute,
   fetchOathCatalog as apiFetchOathCatalog,
-  sealOath as apiSealOath,
-} from './api/lineageOathClient.js';
+  sealOath as apiSealOath,} from './api/lineageOathClient.js';
+import { createVestibuleClient } from './api/vestibuleClient.js';
 import { createCodexView } from './views/elementalCodexView.js';
 import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
 import { createExperimentalHallView } from './views/experimentalHallView.js';
@@ -97,6 +97,9 @@ export const HASH_TO_VIEW_MAP = Object.freeze({
   // (deep-linkable, decisión §5.9 del plan): el error LINEAGE_OATH_REQUIRED
   // del backend y el desvío del interceptor conducen a este hash.
   '#/juramento': 'juramento',
+  // El Vestíbulo de las Hermandades (SPEC-10, Tarea 4.2): ruta propia,
+  // deep-linkable; el peregrino sin linaje queda retenido por el interceptor.
+  '#/vestibulo': 'vestibule',
 });
 
 /** Mapeo canónico de vista a hash de URL. */
@@ -111,6 +114,7 @@ export const VIEW_TO_HASH_MAP = Object.freeze({
   tower: '#/torre',
   auditLog: '#/bitacora',
   juramento: '#/juramento',
+  vestibule: '#/vestibulo',
 });
 
 /**
@@ -197,6 +201,16 @@ export function createGrimoireApp(options = {}) {
   let sessionBadge = null;
   let convalescenceNotice = null;
   let historyManager = null;
+
+  /**
+   * Rótulo de dictámenes a la espera (SPEC-10, Tarea 4.2 — RF-01.1):
+   * distintivo del acceso al Vestíbulo en la cabecera. Se alimenta del
+   * Endpoint 5 (unread-count) tras cada mudanza de sesión y se APAGA en
+   * cuanto el Vestíbulo contempla sus veredictos — sin bloquear nunca la
+   * navegación: su fallo es inocuo (best-effort).
+   */
+  const vestibuleClient = createVestibuleClient();
+  let vestibuleBadgeCount = 0;
   let errorView = null;
   let isDestroyed = false;
   /** Bandera del listener `oath:sealed` del bus del shell (SPEC-09). */
@@ -330,6 +344,11 @@ export function createGrimoireApp(options = {}) {
         // Pulsar una casa del podio abre su ficha (Tarea 6.4).
         onClanSelect: (clanId) => {
           void navigate('clan', { clanId });
+        },
+        // Doble vía de acceso al Vestíbulo (SPEC-10, Tarea 4.2): el peregrino
+        // sin linaje será retenido por el interceptor, como toda vista de gestión.
+        onOpenVestibule: () => {
+          void navigate('vestibule');
         },
         elementFactory,
         // Los sellos del podio se forjan en el documento del orquestador.
@@ -716,6 +735,47 @@ export function createGrimoireApp(options = {}) {
    *
    * @param {CustomEvent} event Evento del bus con detail { lineage, retainedRoute }.
    */
+  /**
+   * Consulta el contador de veredictos sin leer (SPEC-10, Endpoint 5) y
+   * comanda al navbar el estado del distintivo «Tienes dictámenes a la
+   * espera» (RF-01.1). Best-effort: el corte de maná apaga el distintivo
+   * sin interrumpir la navegación (el rótulo jamás es un portero).
+   *
+   * @returns {Promise<void>}
+   */
+  async function refreshVestibuleBadge() {
+    if (isDestroyed) return;
+    if (store.getState().isAuthenticated !== true) {
+      setVestibuleBadgeCount(0);
+      return;
+    }
+    try {
+      const envelope = await vestibuleClient.fetchUnreadVerdictsCount();
+      if (isDestroyed) return;
+      // Éxito O dictamen controlado: el contador solo crece con un 200.
+      setVestibuleBadgeCount(
+        envelope?.success === true ? Number(envelope.data?.unreadVerdictsCount ?? 0) || 0 : 0,
+      );
+    } catch {
+      setVestibuleBadgeCount(0);
+    }
+  }
+
+  /**
+   * Fija el número de dictámenes sin leer y repinta el distintivo del
+   * acceso al Vestíbulo en la cabecera. El apagado tras el contemplado
+   * (RF-03.4) vuelve a pasar por aquí: la vista del Vestíbulo emitirá el
+   * evento `vestibule:verdicts-acknowledged` en el bus del shell.
+   *
+   * @param {number} count Veredictos terminales sin contemplar.
+   */
+  function setVestibuleBadgeCount(count) {
+    const nextCount = Number(count) || 0;
+    if (nextCount === vestibuleBadgeCount) return; // idempotente
+    vestibuleBadgeCount = nextCount;
+    navbar?.setVestibuleBadgeCount?.(nextCount);
+  }
+
   function handleOathSealed(event) {
     const detail = event?.detail ?? {};
     const lineage = typeof detail.lineage === 'string' && detail.lineage !== '' ? detail.lineage : null;
@@ -954,6 +1014,13 @@ export function createGrimoireApp(options = {}) {
     unsubscribeSessionWatch = store.subscribe((nextState) => {
       const sessionUser = nextState.currentUser;
       sessionBadge?.setUser(sessionUser);
+    });
+
+    // Rótulo de dictámenes (SPEC-10, Tarea 4.2 — RF-01.1): la mudanza de
+    // identidad (nace o muere el vínculo, linaje jurado) relanza la consulta
+    // del contador. Best-effort: su fallo jamás bloquea la navegación.
+    unsubscribeSessionWatch = store.subscribe(() => {
+      void refreshVestibuleBadge();
     });
 
     /** Resuelve la vista correspondiente a un hash de navegación (#/...). */

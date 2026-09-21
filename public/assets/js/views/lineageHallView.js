@@ -42,6 +42,8 @@ const WEEK_CLOSED_EVENT = 'dominion:week-closed';
  *        `currentView: 'clans'` al montar.
  * @param {(clanId: string) => void} [options.onClanSelect] Selección de una
  *        casa del podio o del histórico (la ficha llegará con la Tarea 6.4).
+ * @param {() => void} [options.onOpenVestibule] Llamamiento al Vestíbulo de
+ *        las Hermandades (SPEC-10, Tarea 4.2): CTA de la doble vía de acceso.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
  * @param {Document} [options.documentRef] Documento anfitrión de los sellos
@@ -57,6 +59,7 @@ export function createLineageHallView(mountRoot, options = {}) {
     dominionClient,
     store = null,
     onClanSelect,
+    onOpenVestibule,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
   } = options;
@@ -174,6 +177,8 @@ export function createLineageHallView(mountRoot, options = {}) {
         void retry();
       },
       onClanSelect: typeof onClanSelect === 'function' ? onClanSelect : undefined,
+      // Doble vía de acceso al Vestíbulo (SPEC-10, Tarea 4.2).
+      onOpenVestibule: typeof onOpenVestibule === 'function' ? onOpenVestibule : undefined,
       elementFactory,
       documentRef,
     });

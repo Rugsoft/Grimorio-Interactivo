@@ -156,6 +156,25 @@ body {
   background-color: var(--color-surface-raised);
 }
 
+/* Distintivo del rótulo de dictámenes (SPEC-10, RF-01.1): portador dentro
+   del enlace «Hermandades». Apagado (sin data-count) no ocupa ni se ve;
+   encendido luce la cifra en oro arcánimo como sello del santuario. */
+.site-nav__links a .nav-link__badge {
+  display: none;
+  margin-left: var(--space-ink-1);
+  padding: 0 0.45rem;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+
+  color: var(--color-gold-arcane);
+  font-size: var(--font-size-ink-small);
+  line-height: 1.4;
+}
+
+.site-nav__links a .nav-link__badge[data-count] {
+  display: inline-block;
+}
+
 /* Botón del menú arcano: oculto en escritorio, protagonista en móvil. */
 .site-nav__toggle {
   display: none;               /* Escritorio no lo necesita. */
