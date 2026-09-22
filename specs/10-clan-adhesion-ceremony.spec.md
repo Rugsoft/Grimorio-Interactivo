@@ -1,7 +1,8 @@
 # SPEC-10 — Ceremonia de Adhesión a Clanes del Propio Linaje
 
 > **Prioridad:** Fundamental (Pertenencia, Onboarding de Hermandades y Gobernanza de Clanes)
-> **Estado:** Borrador saneado tras QA rigurosa (23 hallazgos detectados: 17 decisiones ratificadas, 4 hallazgos mecánicos parcheados, resolución de las 4 dudas abiertas) — listo para plan técnico
+> **Estado:** RATIFICADA E IMPLEMENTADA — tríada SDD completa y FASES 1–9 cerradas. Cierre formal certificado por `scratch/test_spec10_closure.php` (RESULTADO: EXITO — 53 auditorías, 213 suites, 6.734 asertos en verde) y recorrido manual de verificación documentado en [`specs/10-clan-adhesion-ceremony.evidence-9.2.md`](10-clan-adhesion-ceremony.evidence-9.2.md).
+> **Plan Técnico:** [`specs/10-clan-adhesion-ceremony.plan.md`](10-clan-adhesion-ceremony.plan.md) | **Tareas:** [`specs/10-clan-adhesion-ceremony.tasks.md`](10-clan-adhesion-ceremony.tasks.md) (32/32 cerradas)
 > **Specs relacionadas:** SPEC-07 (Clanes, Linajes y Dominio — se acata y se sirve), SPEC-09 (Juramento de Linaje — se respeta como frontera y fuente del filtro), SPEC-02 (Sistema de Diseño — se acata), SPEC-03 (RBAC y Bitácora — se acata), SPEC-01 (Portal y Navegación — se extiende)
 
 ---

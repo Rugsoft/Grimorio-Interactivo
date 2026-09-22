@@ -1,7 +1,7 @@
 # SPEC-09 — Juramento de Linaje en el Primer Acceso
 
 > **Prioridad:** Fundamental (Identidad Arcana, Onboarding y Gobernanza de Linajes)
-> **Estado:** RATIFICADA — flujo SDD completo (spec revisada por QA, plan técnico y tareas). Lista para implementación según `specs/09-lineage-oath-first-access.tasks.md`.
+> **Estado:** RATIFICADA E IMPLEMENTADA — flujo SDD completo (spec revisada por QA, plan técnico y tareas) y FASES 1–5 cerradas: 19/19 tareas ejecutadas según `specs/09-lineage-oath-first-access.tasks.md`, con recorrido manual de verificación y batería de regresión en verde.
 > **Plan Técnico:** [`specs/09-lineage-oath-first-access.plan.md`](09-lineage-oath-first-access.plan.md) | **Tareas:** [`specs/09-lineage-oath-first-access.tasks.md`](09-lineage-oath-first-access.tasks.md)
 > **Specs relacionadas:** SPEC-03 (Consagración y RBAC — enmendada por esta spec), SPEC-07 (Linajes y Clanes — se respeta y sirve de frontera), SPEC-01 (Portal y Navegación — se extiende), SPEC-02 (Sistema de Diseño — se acata)
 
