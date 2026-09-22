@@ -121,7 +121,11 @@ final class AuthService
 
         // Anti-enumeración (RF-01.3): si el alias o el correo ya viven en
         // el grimorio, la respuesta es neutra (409) sin revelar cuál de
-        // los dos choca.
+        // los dos choca. La respuesta pública es uniforme; el aviso
+        // discreto al titular se produce como contenido puro aparte (ver
+        // buildDuplicateOwnerNotice): el transporte queda fuera del
+        // santuario, pero el texto del pergamino es función de este
+        // servicio y por tanto verificable por arnés.
         $duplicateStatement = $this->pdo->prepare(
             'SELECT id FROM users WHERE alias = :alias OR email = :email LIMIT 1'
         );
@@ -272,6 +276,58 @@ final class AuthService
         ]);
 
         return new RecoveryResult(tokenIssued: true, recoveryToken: $recoveryToken);
+    }
+
+    /**
+     * Contenido del aviso discreto destinado al titular de una identidad
+     * reclamada (RF-01.3, segunda pata del requisito).
+     *
+     * La respuesta pública de la consagración es neutra (409 sin pistas);
+     * este método produce el PERGAMINO DEL AVISO que el transporte fuera
+     * de banda remitiría al correo de la cuenta original, «si
+     * corresponde». Es una función PURA y determinista: la misma entrada
+     * produce el mismo texto, sin consulta a la base de datos ni reloj
+     * oculto (el instante viaja como argumento).
+     *
+     * Garantías que el arnés sella:
+     *   - Nombra al titular (su alias y su correo), jamás al pretendiente:
+     *     un observador del aviso no aprende quién intentó reclamar la
+     *     identidad ni cuándo exactamente.
+     *   - Difiere del mensaje público de rechazo: dos canales, dos tonos.
+     *
+     * Nota de Dogma (Artículo I): el santuario carece de servicio de
+     * correo (ninguna dependencia externa); el texto vive aquí como
+     * función pura para que el canal de notificación —cuando exista o en
+     * la operatoria de custodios— consuma un contenido único, probado y
+     * estable, sin improvisar leyendas en la capa de transporte.
+     *
+     * @param string                $ownerAlias  Alias del titular de la identidad.
+     * @param string                $ownerEmail  Correo del titular (destino del aviso).
+     * @param DateTimeImmutable|null $now        Instante de la colisión (inyectable en pruebas).
+     *
+     * @return string Texto noble del aviso discreto, en castellano (Art. V).
+     * @throws InvalidArgumentException Si faltan la identidad o el correo del titular.
+     */
+    public function buildDuplicateOwnerNotice(string $ownerAlias, string $ownerEmail, ?DateTimeImmutable $now = null): string
+    {
+        $ownerAlias = trim($ownerAlias);
+        $ownerEmail = trim($ownerEmail);
+        if ($ownerAlias === '' || $ownerEmail === '') {
+            throw new InvalidArgumentException('El aviso discreto exige la identidad y el correo del titular.');
+        }
+
+        $instant = $now ?? new DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $journey = $instant->format('Y-m-d \a \l\a\s H:i UTC');
+
+        // Sin datos del pretendiente, sin marcas de tiempo exactas al
+        // segundo y con la fecha en texto noble: el aviso informa sin
+        // exponer (Artículo IV/V).
+        return sprintf(
+            'Aviso discreto para %s (%s): alguien ha intentado consagrarse con una identidad que ya te pertenece. No has de hacer nada: tu identidad sigue bajo tu guardia y la solicitud ha sido desestimada. Aviso registrado el %s.',
+            $ownerAlias,
+            $ownerEmail,
+            $journey,
+        );
     }
 
     /**

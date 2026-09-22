@@ -177,7 +177,7 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 
 ## 8. Criterios de Finalización (Definition of Done)
 
-- [ ] La consagración exige alias único, credenciales seguras y selección obligatoria de clan, otorgando el rol `editor`.
+- [x] La consagración exige únicamente alias único, correo válido y frase de paso segura, otorgando el rol `editor`: la cuenta nace PEREGRINA (sin linaje ni clan), pues la identidad arcana se jura en la ceremonia bloqueante del primer acceso (enmienda de SPEC-09). *Evidencia: `scratch/test_auth_service.php`, `scratch/test_lineage_consecration.php`.*
 - [ ] La sesión tiene vigencia de 14 días renovables con actividad hasta un tope absoluto de 30 días, con soporte multidispositivo.
 - [ ] Existe la opción de «Disolver Vínculo» (dispositivo actual) y «Disolver todos los vínculos activos» (global).
 - [ ] Tras 5 intentos fallidos consecutivos de una procedencia/IP, el acceso se congela durante 15 minutos sin bloquear cuentas legítimas.
