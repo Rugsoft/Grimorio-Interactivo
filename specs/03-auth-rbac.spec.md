@@ -177,17 +177,19 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 
 ## 8. Criterios de Finalización (Definition of Done)
 
-- [x] La consagración exige únicamente alias único, correo válido y frase de paso segura, otorgando el rol `editor`: la cuenta nace PEREGRINA (sin linaje ni clan), pues la identidad arcana se jura en la ceremonia bloqueante del primer acceso (enmienda de SPEC-09). *Evidencia: `scratch/test_auth_service.php`, `scratch/test_lineage_consecration.php`.*
+- [x] La consagración exige únicamente alias único, correo válido y frase de paso segura, otorgando el rol `editor`: la cuenta nace PEREGRINA (sin linaje ni clan), pues la identidad arcana se jura en la ceremonia bloqueante del primer acceso (enmienda de SPEC-09). La respuesta ante identidad reclamada es neutra (409 anti-enumeración) y el titular de la identidad recibe un aviso discreto cuyo contenido nace de `AuthService::buildDuplicateOwnerNotice()` — función pura que nombra al titular, jamás al pretendiente, y queda tras la puerta anti-DoS. *Evidencia: `scratch/test_auth_service.php`, `scratch/test_lineage_consecration.php`, `scratch/test_discreet_duplicate_notice.php` (20/0).*
 - [ ] La sesión tiene vigencia de 14 días renovables con actividad hasta un tope absoluto de 30 días, con soporte multidispositivo.
 - [ ] Existe la opción de «Disolver Vínculo» (dispositivo actual) y «Disolver todos los vínculos activos» (global).
 - [ ] Tras 5 intentos fallidos consecutivos de una procedencia/IP, el acceso se congela durante 15 minutos sin bloquear cuentas legítimas.
 - [ ] Existe el flujo de «Pergamino de Restablecimiento» por correo (1 hora de vigencia de un solo uso).
 - [ ] La matriz RBAC aplica estrictamente los 4 roles técnicos (`reader`, `editor`, `master`, `supremeAdmin`) con rechazo temático.
-- [ ] El conflicto de intereses bloquea en interfaz y en autorización a Maestros del mismo clan o que hayan pertenecido a dicho clan en los últimos 30 días.
+- [x] El conflicto de intereses bloquea en interfaz y en autorización a Maestros del mismo clan o que hayan pertenecido a dicho clan en los últimos 30 días: las tres leyendas literales del validador (linaje actual, histórico de 30 días, propia pluma) viajan intactas del backend a la alerta viva de la Torre, el botón de firma nace inhabilitado (`disabled` + `aria-disabled`) y el gesto vetado jamás alcanza el bus. *Evidencia: `scratch/test_ethical_conflict_ui.mjs` (22/0), `scratch/test_clan_conflict.php`, `scratch/test_auth_rbac.php`.*
+- [x] El vínculo de sesión viaja como credencial que blinda las mutaciones (AGENTS.md 6.1, CSRF): la cookie porta íntegras sus cuatro banderas (HttpOnly, SameSite=Strict, Path=/, Max-Age de 14 días), las mutaciones sin credencial jamás mutan, un token falsificado no resuelve sesión y la contemplación pública no se degrada. *Evidencia: `scratch/test_csrf_cookie_shield.php` (19/0, sonda HTTP real), `scratch/test_auth_rbac.php`, `scratch/test_security_audit.php`.*
+- [x] Si la sesión expira durante la redacción de un conjuro (caso límite 3), el borrador se retiene en memoria local, el 401 jamás lo borra ni blanquea el formulario, y la reanudación del vínculo lo restaura íntegro para guardar sin pérdida de texto. *Evidencia: `scratch/test_draft_session_expiry.mjs` (22/0), `scratch/test_spell_creator_view.mjs`.*
 - [ ] Los cambios de clan se restringen a la ventana de tregua de 24 horas y los puntos históricos quedan adscritos al clan de origen.
 - [ ] La Bitácora de Auditoría es 100% pública, inmutable y auditable por cualquier persona.
 - [ ] Al eliminar una cuenta, los conjuros validados se preservan como legado anónimo del clan sin romper la biblioteca.
-- [ ] Se cumple estrictamente la dualidad lingüística y el velo arcano en castellano.
+- [x] Se cumple estrictamente la dualidad lingüística y el velo arcano en castellano: cero literales de UI en inglés y cero referencias técnicas (RF-xx, RNF-xx, Art., SPEC-xx) en los módulos de la superficie de autenticación; claves JSON en camelCase; roles técnicos rotulados en castellano solo en la capa de presentación. *Evidencia: `scratch/test_auth_language_sovereignty.php` (21/0), `scratch/test_audit_log_view.mjs`.*
 
 ---
 
