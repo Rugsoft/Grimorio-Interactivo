@@ -82,7 +82,8 @@ specs/
 ├── 07-clans-lineages.spec.md            # Linajes mágicos y cálculo de Dominio semanal
 ├── 08-moderation-two-step.spec.md       # Flujo de moderación (experimental -> 3 firmas -> validado)
 ├── 09-lineage-oath-first-access.spec.md # Juramento de linaje bloqueante en el primer acceso (enmienda SPEC-03; tríada SDD completa — implementada, 19/19 tareas cerradas)
-└── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes del propio linaje (enmienda SPEC-07; tríada SDD completa — implementada y formalmente cerrada por test_spec10_closure: EXITO)
+├── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes del propio linaje (enmienda SPEC-07; tríada SDD completa — implementada y formalmente cerrada por test_spec10_closure: EXITO)
+└── 11-adept-grimoire-collection.spec.md # Colección del Adepto: tomo personal y Elogio Popular (cierra la costura de SPEC-07 favorites/awardCommunityFavorite y el rótulo «Ver mi libro personal» de SPEC-09; tríada SDD completa — spec, plan y tasks listos para implementación)
 
 ---
 
