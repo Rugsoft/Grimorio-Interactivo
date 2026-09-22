@@ -20,17 +20,17 @@
 
 ## Fase 2 — Ritos Backend del Tomo
 
-- [ ] **Tarea 2.1 — Mapa único de estados a marcas del tomo**
+- [x] **Tarea 2.1 — Mapa único de estados a marcas del tomo**
   * **Qué:** método estático `tomeMarkForStatus()` en `GrimoireCollectionService`: `validated → living`, `draft|experimental → gestation`, `rejected|archived → withdrawn` (plan §3.1, hallazgos 12 y 21); cero lógica duplicada en el frontend.
   * **Cubre:** `RF-03.2` (marcas solemnes), caso límite 7.
   * **Hecho cuando:** los cinco estados del ciclo de vida producen exactamente las tres marcas canónicas y el método lanza ante un estado fuera del catálogo.
 
-- [ ] **Tarea 2.2 — Rito del sellado con guardias ordenadas**
+- [x] **Tarea 2.2 — Rito del sellado con guardias ordenadas**
   * **Qué:** `GrimoireCollectionService::collectSpell()`: sesión → linaje jurado (403 `LINEAGE_OATH_REQUIRED`, el linaje manda no el rol — hallazgo 16) → existencia (404) → idempotencia (200 «Ya está en tu tomo», RF-01.3, jamás gloria — hallazgos 2-3) → estado (leyenda UNIFORME ante cualquier no validado, RF-01.2 — hallazgo 4) → INSERT + asiento `TOME_SEAL`.
   * **Cubre:** `RF-01.1`, `RF-01.2`, `RF-01.3`, `RF-06.1`, caso límite 5 (doble pestaña).
   * **Hecho cuando:** cada guardia responde en su orden exacto, el sellado doble devuelve 200 sin segunda fila ni segundo asiento de Bitácora, y la leyenda de vedado es idéntica para `draft`, `experimental` y `rejected`.
 
-- [ ] **Tarea 2.3 — Retirada del tomo y paginación viva**
+- [x] **Tarea 2.3 — Retirada del tomo y paginación viva**
   * **Qué:** `discardSpell()` (fila propia, 409 `SPELL_NOT_IN_TOME` si no existe, jamás toca `favorites` — hallazgo 13) y `reanudarPagina()` según plan §3.5 (última página viva tras retirada, filtro conservado — hallazgo 17).
   * **Cubre:** `RF-02.4`, casos límite 9 y 10.
   * **Hecho cuando:** retirar una entrada existente devuelve el `total` actualizado; retirar una ausente responde 409; retirar la última de una página intermedia recalcula la página destino; `favorites` queda byte a byte intacta.

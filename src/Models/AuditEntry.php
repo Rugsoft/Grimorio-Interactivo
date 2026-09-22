@@ -86,6 +86,11 @@ final class AuditEntry
         'CLAN_APPLICATION_WITHDRAWN',         // Retirada voluntaria de una petición formal (SPEC-10)
         'CLAN_APPLICATION_VERDICT',           // Dictamen del Patriarca con su motivo (SPEC-10, Art. III.3)
         'CLAN_APPLICATION_RESIDUALS_ANNULLED', // Anulación de oficio de una petición huérfana (SPEC-10, RF-03.7)
+        // Actos del Tomo Personal (SPEC-11, RF-06, Tarea 2.2): los dos
+        // actos canónicos de la Colección del Adepto se inscriben por su
+        // propio actor. El eco idempotente y el recibo denegado del
+        // elogio JAMÁS se asientan (plan §2.3).
+        'TOME_SEAL',                  // Sellado de un hechizo en el tomo personal (SPEC-11, RF-06.1)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

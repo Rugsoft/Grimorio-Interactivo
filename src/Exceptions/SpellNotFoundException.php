@@ -31,6 +31,12 @@ final class SpellNotFoundException extends RuntimeException
     /** Código canónico de error del contrato (SPELL_NOT_FOUND). */
     public const ERROR_CODE = 'SPELL_NOT_FOUND';
 
+    /** Fábrica solemne para la guardia de existencia de los ritos del tomo (SPEC-11, Tarea 2.2). */
+    public static function forSpellId(string $spellId): self
+    {
+        return new self("El conjuro «{$spellId}» no habita el santuario: ningún tomo puede sellar lo que no existe.");
+    }
+
     public function getHttpStatusCode(): int
     {
         return self::HTTP_STATUS_CODE;

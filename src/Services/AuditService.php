@@ -36,7 +36,7 @@ use PDO;
 /**
  * Escritura y consulta de la bitácora de veredictos.
  */
-final class AuditService
+final class AuditService implements AuditRecorderInterface
 {
     /** Límite superior de entradas por página (blindaje anti-DoS de consulta). */
     private const MAX_PAGE_LIMIT = 100;
