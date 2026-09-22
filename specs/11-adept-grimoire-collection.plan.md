@@ -325,14 +325,17 @@ Accesibilidad (RNF-04): activables por teclado, foco visible, `aria-pressed` en 
 | Rótulo / leyenda | Dónde |
 |---|---|
 | «Mi Grimorio» | navbar (rótulo soberano, RF-02.1). |
-| «Tu tomo aguarda su primera obra» + «Explorar la Biblioteca» | estado vacío (RF-02.2). |
+| «Tu tomo aguarda su primera obra» + «Recorrer la Biblioteca» | estado vacío (RF-02.2). |
 | «Ya está en tu tomo» | conmutador de colección (RF-01.3). |
 | «Ya rendiste homenaje» | conmutador de elogio (RF-04.3). |
-| «Solo lo validado entra al tomo» | leyenda UNIFORME del vedado de sellado (RF-01.2). |
-| «Un hijo de la casa no hincha la gloria de su propio estandarte» | leyenda de militancia (RF-04.4). |
-| «Obra en gestación» / «Obra retirada del canon» | marcas solemnes del tomo (RF-03.2). |
-| «Tu tomo ha de conservar esta obra: retírala con juicio» | modal de retirada (RF-02.4). |
-| «La sesión se ha disuelto: tus gestos aguardan nueva consagración» | aviso 401 (RF-05.2). |
+| «Solo lo que el Tribunal ha sellado entra al tomo» | leyenda UNIFORME del vedado de sellado (RF-01.2). |
+| «Un adepto de la casa no granjea gloria para su propio estandarte» | leyenda de militancia (RF-04.4). |
+| «Obra en gestación» / «Obra apartada del canon» | marcas solemnes del tomo (RF-03.2). |
+| «Esta obra dejará tu tomo para siempre: medítalo antes de firmar.» | modal de retirada (RF-02.4). |
+| «Tu vínculo con el santuario ha expirado: renuévalo y tus gestos aguardarán donde los dejaste.» | aviso 401 (RF-05.2). |
+| «{hechizo} queda sellado en tu tomo.» | eco del sellado (RF-01.1). |
+| «Tu homenaje a {hechizo} ya resuena en su casa.» | eco del homenaje (RF-04.1). |
+| «La gloria solo nace de obra sellada por el Tribunal.» | mapeo del cliente ante el 409 forzado (RF-04.5). |
 
 Cero referencias técnicas visibles (RF-xx, códigos HTTP): el guard de soberanía lingüística de SPEC-03 extiende su auditoría a los módulos nuevos.
 
@@ -444,6 +447,25 @@ Cero referencias técnicas visibles (RF-xx, códigos HTTP): el guard de soberan�
 
 ---
 
-## Anexo A — Leyendas Solemnes Canónicas (pendiente de ratificación)
+## Anexo A — Leyendas Solemnes Canónicas (RATIFICADAS)
 
-Las nueve leyendas de §4.3 se proponen como canon de la superficie de colección. Toda variación de tono antes de las tareas debe ratificarse aquí primero, como se hizo en las specs 09 y 10.
+> Textos de los nuevos rótulos, leyendas y avisos de la superficie de
+> colección; voz solemne, sin anacronismos (Artículo IV). Cada leyenda
+> acompaña a su criterio. **Estado:** ratificado tras revisión tonal del
+> Arquitecto — alineado con la voz canónica en producción
+> (`vestibuleClient.js`, `lineageOathClient.js`, `clanClient.js`,
+> `grimoireSimulatorView.js`, `lineageOathView.js`); las tareas que las
+> inscriban (5.1, 5.3 y 4.2) deben copiar el texto LITERAL de este anexo.
+
+1. **Rótulo soberano (RF-02.1)** — «Mi Grimorio».
+2. **Estado vacío (RF-02.2)** — «Tu tomo aguarda su primera obra.» (invitación discreta: «Recorrer la Biblioteca».)
+3. **Conmutador de colección (RF-01.3)** — «Ya está en tu tomo».
+4. **Conmutador de elogio (RF-04.3)** — «Ya rendiste homenaje».
+5. **Vedado de sellado, UNIFORME ante cualquier no validado (RF-01.2)** — «Solo lo que el Tribunal ha sellado entra al tomo.»
+6. **Leyenda de militancia (RF-04.4)** — «Un adepto de la casa no granjea gloria para su propio estandarte.»
+7. **Marcas solemnes del tomo (RF-03.2)** — «Obra en gestación» (draft/experimental) · «Obra apartada del canon» (rejected/archived). "Apartada" y no "retirada": el verbo queda reservado al acto del adepto (RF-02.4) y al del autor (RF-05.5).
+8. **Modal de retirada (RF-02.4)** — «Esta obra dejará tu tomo para siempre: medítalo antes de firmar.»
+9. **Aviso 401 (RF-05.2)** — «Tu vínculo con el santuario ha expirado: renuévalo y tus gestos aguardarán donde los dejaste.»
+10. **Eco del sellado (RF-01.1)** — «{hechizo} queda sellado en tu tomo.»
+11. **Eco del homenaje (RF-04.1)** — «Tu homenaje a {hechizo} ya resuena en su casa.»
+12. **Vedado de gloria, mapeo del cliente ante el 409 forzado (RF-04.5)** — «La gloria solo nace de obra sellada por el Tribunal.» (jamás visible por la ocultación del gesto; contrato de cliente completo).
