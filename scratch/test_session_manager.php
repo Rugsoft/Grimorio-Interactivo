@@ -190,12 +190,35 @@ $serverCommand = 'php -S 127.0.0.1:' . $probePort
     . ' -t ' . escapeshellarg($projectRoot . '/scratch')
     . ' > ' . $nullDevice . ' 2>&1'
     . ($isWindows ? '' : ' &');
+/** PID del servidor de la sonda (Windows) para autolimpieza garantizada. */
+$probeServerPid = null;
 if ($isWindows) {
-    // start /B lanza el proceso desacoplado del arnés (cmd /c abre el shell).
-    pclose(popen('start /B cmd /C "' . $serverCommand . '"', 'r'));
+    // PowerShell Start-Process -PassThru devuelve el PID real del php -S:
+    // el patrón start /B puro deja el servidor huérfano si el arnés muere
+    // antes de llegar a la limpieza (hallazgo del arnés CSRF, corregido
+    // aquí también).
+    $launchOutput = shell_exec(
+        'powershell -NoProfile -Command "'
+        . "\$p = Start-Process -FilePath php -ArgumentList '-S','127.0.0.1:{$probePort}','-t','" . addslashes($projectRoot . '/scratch') . "' -WindowStyle Hidden -PassThru; \$p.Id"
+        . '"'
+    );
+    $probeServerPid = (int) trim((string) $launchOutput);
 } else {
     exec($serverCommand);
 }
+
+/** Autolimpieza del servidor de la sonda (corre también en fallo/abort). */
+function stopSessionProbeServer(?int $probeServerPid, bool $isWindows): void
+{
+    if ($probeServerPid !== null && $probeServerPid > 0) {
+        if ($isWindows) {
+            exec('taskkill /PID ' . $probeServerPid . ' /F 2>NUL');
+        } else {
+            exec('kill ' . $probeServerPid . ' 2>/dev/null');
+        }
+    }
+}
+register_shutdown_function(fn (): bool => stopSessionProbeServer($probeServerPid, $isWindows) ?? true);
 
 // Sondeo de arranque: hasta ~4 s esperando que el puerto responda.
 $probeUrl = 'http://127.0.0.1:' . $probePort . '/' . basename($probeFile);
@@ -351,6 +374,8 @@ if (isset($probeFile) && file_exists($probeFile)) {
     @unlink($probeFile);
 }
 // Apaga el servidor de la sonda (puerto dedicado 8099) por si quedó vivo.
+// Red de seguridad: el PID real ya lo mata register_shutdown_function;
+// esto apaga solo restos de ejecuciones anteriores del MISMO puerto.
 if ($isWindows) {
     exec('for /f "tokens=5" %a in (\'netstat -ano ^| findstr :8099\') do taskkill /F /PID %a > NUL 2>&1');
 } else {
