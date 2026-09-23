@@ -66,6 +66,9 @@ require __DIR__ . '/../src/Dto/DominionAwardDto.php';
 require __DIR__ . '/../src/Dto/WeeklyCycleDto.php';
 require __DIR__ . '/../src/Services/WeeklyDominionService.php';
 require __DIR__ . '/../src/Services/GrimoireCollectionService.php';
+require __DIR__ . '/../src/Dto/CollectionEntryDto.php';
+require __DIR__ . '/../src/Dto/CollectionPageDto.php';
+require __DIR__ . '/../src/Services/GrimoireQueryService.php';
 require __DIR__ . '/../src/Exceptions/LineageOathException.php';
 require __DIR__ . '/../src/Exceptions/SpellNotFoundException.php';
 require __DIR__ . '/../src/Exceptions/SpellNotInTomeException.php';
@@ -79,6 +82,7 @@ use Grimorio\Core\Router;
 use Grimorio\Models\User;
 use Grimorio\Repositories\GrimoireCollectionRepository;
 use Grimorio\Services\GrimoireCollectionService;
+use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\WeeklyDominionService;
 
 $assertsPassed = 0;
@@ -255,7 +259,7 @@ $service = new GrimoireCollectionService(
     $auditService,
     $connection,
 );
-$controller = new GrimoireCollectionController($service, $weeklyDominion, $auditService);
+$controller = new GrimoireCollectionController($service, new GrimoireQueryService($connection), $weeklyDominion, $auditService);
 
 $router = new Router();
 $router->addRoute('POST', '/api/v1/grimoire/praise', fn (Request $request): object => $controller->praiseSpell($request));

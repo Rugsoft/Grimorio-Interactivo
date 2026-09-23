@@ -76,6 +76,9 @@ use Grimorio\Services\ConstitutionalEthicsValidator;
 use Grimorio\Services\LineageCatalogService;
 use Grimorio\Services\LineageOathService;
 use Grimorio\Services\GrimoireQueryService;
+use Grimorio\Services\GrimoireCollectionService;
+use Grimorio\Repositories\GrimoireCollectionRepository;
+use Grimorio\Controllers\GrimoireCollectionController;
 use Grimorio\Services\MasterDeliberationService;
 use Grimorio\Services\ModerationWorkflowService;
 use Grimorio\Services\SovereignAdminService;
@@ -232,6 +235,31 @@ function buildRouter(): Router
     // --- Rutas del Simulador de Grimorio (SPEC-05, plan Endpoints 1-2) ---
     $router->addRoute('GET', '/api/v1/grimoire/spells', fn (Request $request): Response => $grimoireController->listSpells($request));
     $router->addRoute('GET', '/api/v1/grimoire/spells/{id}', fn (Request $request, array $routeParams): Response => $grimoireController->showSpell($request, $routeParams));
+
+    // --- Rutas del Tomo Personal (SPEC-11, plan §2.2, Tarea 4.1) ---
+    // La lectura, el sellado y la retirada viven en el controlador de
+    // colección; la puerta del elogio (SPEC-07 intacto) en /praise. La
+    // Bitácora y el Dominio comparten canal con el resto del santuario.
+    $grimoireAuditService = new AuditService($connection->getPdo());
+    $grimoireDominionService = new WeeklyDominionService(
+        $connection->getPdo(),
+        $grimoireAuditService,
+        new LineageSynergyService(),
+    );
+    $grimoireCollectionController = new GrimoireCollectionController(
+        new GrimoireCollectionService(
+            new GrimoireCollectionRepository($connection->getPdo()),
+            $grimoireAuditService,
+            $connection->getPdo()
+        ),
+        new GrimoireQueryService($connection->getPdo()),
+        $grimoireDominionService,
+        $grimoireAuditService
+    );
+    $router->addRoute('GET', '/api/v1/grimoire/collection', fn (Request $request): Response => $grimoireCollectionController->listCollection($request));
+    $router->addRoute('POST', '/api/v1/grimoire/collection', fn (Request $request): Response => $grimoireCollectionController->collectSpell($request));
+    $router->addRoute('DELETE', '/api/v1/grimoire/collection/{spellId}', fn (Request $request, array $routeParams): Response => $grimoireCollectionController->discardSpell($request, $routeParams));
+    $router->addRoute('POST', '/api/v1/grimoire/praise', fn (Request $request): Response => $grimoireCollectionController->praiseSpell($request));
 
     // --- Rutas de la Matriz Elemental (SPEC-06, plan Endpoints 1-3) ---
     $router->addRoute('GET', '/api/v1/elements/matrix', fn (Request $request): Response => $elementalMatrixController->getMatrix($request));

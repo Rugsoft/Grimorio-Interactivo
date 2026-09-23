@@ -61,6 +61,9 @@ require __DIR__ . '/../src/Services/AuditService.php';
 require __DIR__ . '/../src/Services/LineageSynergyService.php';
 require __DIR__ . '/../src/Services/WeeklyDominionService.php';
 require __DIR__ . '/../src/Services/GrimoireCollectionService.php';
+require __DIR__ . '/../src/Dto/CollectionEntryDto.php';
+require __DIR__ . '/../src/Dto/CollectionPageDto.php';
+require __DIR__ . '/../src/Services/GrimoireQueryService.php';
 require __DIR__ . '/../src/Controllers/GrimoireCollectionController.php';
 
 use Grimorio\Controllers\GrimoireCollectionController;
@@ -70,6 +73,7 @@ use Grimorio\Models\User;
 use Grimorio\Repositories\GrimoireCollectionRepository;
 use Grimorio\Services\AuditService;
 use Grimorio\Services\GrimoireCollectionService;
+use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\WeeklyDominionService;
 
 $assertsPassed = 0;
@@ -264,7 +268,7 @@ $service = new GrimoireCollectionService(
     $auditService,
     $connection,
 );
-$controller = new GrimoireCollectionController($service, $weeklyDominion, $auditService);
+$controller = new GrimoireCollectionController($service, new GrimoireQueryService($connection), $weeklyDominion, $auditService);
 
 $router = new Router();
 $router->addRoute('POST', '/api/v1/grimoire/praise', fn (Request $request): object => $controller->praiseSpell($request));

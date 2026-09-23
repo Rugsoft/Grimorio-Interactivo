@@ -54,12 +54,12 @@
 
 ## Fase 4 — Controlador REST y Cliente Frontend
 
-- [ ] **Tarea 4.1 — Endpoints REST completos del tomo**
+- [x] **Tarea 4.1 — Endpoints REST completos del tomo**
   * **Qué:** `GrimoireCollectionController` con `listCollection` (GET), `collectSpell` (POST → 201/200), `discardSpell` (DELETE → 200/409), registro de las cuatro rutas en `public/index.php` y patrones de error del santuario (401/403/404/409) con cuerpo `{ success, error: { code, message } }` — claves JSON en camelCase (hallazgos 8/19, Artículo V).
   * **Cubre:** `RF-05.1`, `RF-05.3`.
   * **Hecho cuando:** las cuatro rutas responden en el arnés con los códigos exactos del plan §2.2, el peregrino recibe 403 `LINEAGE_OATH_REQUIRED` y ninguna clave JSON del contrato va en snake_case.
 
-- [ ] **Tarea 4.2 — `grimoireCollectionClient.js`**
+- [x] **Tarea 4.2 — `grimoireCollectionClient.js`**
   * **Qué:** cliente fetch nativo de los cuatro endpoints (`credentials: 'same-origin'`), con mapeo de códigos y razones a veredictos de la vista (`AWARDED`, `ALREADY_PRAISED`, `OWN_CLAN_FAVORITE`, `LINEAGE_OATH_REQUIRED`…) — sin librerías, comentarios en castellano.
   * **Cubre:** `RF-05.1`, `RNF-02`.
   * **Hecho cuando:** el doble de fetch del arnés recibe cada código/razón y el cliente lo traduce al veredicto canónico sin lanzar excepciones en los estados solemnes.

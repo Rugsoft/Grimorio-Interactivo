@@ -35,13 +35,16 @@ namespace Grimorio\Controllers;
 
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
+use Grimorio\Dto\CollectionPageDto;
 use Grimorio\Dto\DominionAwardDto;
 use Grimorio\Exceptions\LineageOathException;
 use Grimorio\Exceptions\SpellNotFoundException;
+use Grimorio\Exceptions\SpellNotInTomeException;
 use Grimorio\Exceptions\SpellNotValidatedException;
 use Grimorio\Models\User;
 use Grimorio\Services\AuditRecorderInterface;
 use Grimorio\Services\GrimoireCollectionService;
+use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\WeeklyDominionService;
 
 /**
@@ -49,8 +52,16 @@ use Grimorio\Services\WeeklyDominionService;
  */
 final class GrimoireCollectionController
 {
+    /** Afinidades elementales canónicas del santuario (SPEC-06, matriz). */
+    private const CANONICAL_ELEMENTS = [
+        'fire', 'water', 'lightning', 'earth', 'wind', 'light', 'darkness', 'pureArcane', 'none',
+    ];
+
     /** Servicio del tomo: guardias de linaje y lectura viva de estados. */
     private GrimoireCollectionService $collectionService;
+
+    /** Consulta del catálogo: la hoja enriquecida del tomo (Tarea 3.3). */
+    private GrimoireQueryService $queryService;
 
     /** Servicio del Dominio (SPEC-07): la autoridad de la gloria, sin tocar. */
     private WeeklyDominionService $dominionService;
@@ -60,12 +71,193 @@ final class GrimoireCollectionController
 
     public function __construct(
         GrimoireCollectionService $collectionService,
+        GrimoireQueryService $queryService,
         WeeklyDominionService $dominionService,
         AuditRecorderInterface $auditService,
     ) {
         $this->collectionService = $collectionService;
+        $this->queryService = $queryService;
         $this->dominionService = $dominionService;
         $this->auditService = $auditService;
+    }
+
+    // -----------------------------------------------------------------
+    // La lectura del tomo (RF-02.1, plan §2.2) — Tarea 4.1
+    // -----------------------------------------------------------------
+
+    /**
+     * GET /api/v1/grimoire/collection?element={afinidad}&page={n}.
+     *
+     * El tomo íntimo del adepto autenticado con linaje jurado: hoja de
+     * 50 entradas enriquecidas (ficha litúrgica + instante de sellado +
+     * marca solemne del mapa único + estado del homenaje), ordenadas
+     * por adición (la más reciente primero) y con los metadatos de
+     * paginación del contrato (total, page, limit, totalPages).
+     *
+     * Respuestas: 200 con el sobre CollectionPageDto; 401
+     * UNAUTHENTICATED; 403 LINEAGE_OATH_REQUIRED (hallazgo 16: el
+     * linaje manda, no el rol); 400 ante parámetros fuera del canon.
+     */
+    public function listCollection(Request $request): Response
+    {
+        // ---- Guardia 1: sesión (401) ---------------------------------
+        $adepto = $this->requireAuthenticatedUser($request);
+        if ($adepto === null) {
+            return $this->unauthenticatedResponse();
+        }
+
+        // ---- Guardia 2: el linaje manda, no el rol (hallazgo 16) -----
+        if ($adepto->getLineage() === null) {
+            return $this->oathRejection();
+        }
+
+        // ---- Saneado de parámetros (400 ante basura) -----------------
+        $element = null;
+        $rawElement = $request->getQueryParam('element');
+        if ($rawElement !== null && $rawElement !== '') {
+            if (!in_array($rawElement, self::CANONICAL_ELEMENTS, true)) {
+                return Response::json([
+                    'success' => false,
+                    'error'   => [
+                        'code'    => 'INVALID_ELEMENT',
+                        'message' => 'Esa afinidad elemental no pertenece al canon del santuario.',
+                    ],
+                ], 400);
+            }
+            $element = $rawElement;
+        }
+
+        $page = 1;
+        $rawPage = $request->getQueryParam('page');
+        if ($rawPage !== null && $rawPage !== '') {
+            if (!ctype_digit($rawPage)) {
+                return Response::json([
+                    'success' => false,
+                    'error'   => [
+                        'code'    => 'INVALID_PAGE',
+                        'message' => 'La hoja del tomo debe ser un número entero positivo.',
+                    ],
+                ], 400);
+            }
+            $page = max(1, (int) $rawPage);
+        }
+
+        return Response::json([
+            'success' => true,
+            'data'    => $this->queryService->getCollection($adepto, $element, $page),
+        ], 200);
+    }
+
+    // -----------------------------------------------------------------
+    // El rito del sellado vía REST (RF-01.1, plan §3.2) — Tarea 4.1
+    // -----------------------------------------------------------------
+
+    /**
+     * POST /api/v1/grimoire/collection — cuerpo `{ spellId: "…" }`.
+     *
+     * Guardias en orden de contrato (plan §3.2): sesión (401) → linaje
+     * jurado (403, hallazgo 16) → existencia (404; el peregrino ante un
+     * fantasma recibe EL JURAMENTO, jamás el 404: nadie descubre
+     * existencia) → idempotencia (200 ALREADY_IN_TOME sin segunda fila
+     * ni segundo asiento, RF-01.3) → leyenda UNIFORME ante no validado
+     * (403 TOME_SEAL_VETO, hallazgo 4). El sellado nuevo responde 201
+     * con el eco del acto (alreadyCollected/addedAt, camelCase).
+     */
+    public function collectSpell(Request $request): Response
+    {
+        // ---- Guardia 1: sesión (401) ---------------------------------
+        $adepto = $this->requireAuthenticatedUser($request);
+        if ($adepto === null) {
+            return $this->unauthenticatedResponse();
+        }
+
+        // ---- Guardia 2: el linaje manda, no el rol (hallazgo 16) -----
+        if ($adepto->getLineage() === null) {
+            return $this->oathRejection();
+        }
+
+        // ---- Guardias 3-6 del rito: el servicio juzga (plan §3.2) ----
+        // La leyenda UNIFORME, el 404 del fantasma y la idempotencia
+        // son VOZ del servicio (Tarea 2.2); aquí solo se traducen los
+        // desenlaces a los códigos exactos del contrato.
+        try {
+            $spellId = $this->readSpellId($request);
+            $spellStatus = $this->collectionService->spellStatusFor($spellId);
+            $sealEcho = $this->collectionService->collectSpell($adepto, $spellId, $spellStatus);
+        } catch (SpellNotFoundException $vanished) {
+            return Response::json($vanished->toPayload(), $vanished->getHttpStatusCode());
+        } catch (\Grimorio\Exceptions\UniformSealVetoException $veto) {
+            return Response::json($veto->toPayload(), $veto->getHttpStatusCode());
+        }
+
+        return Response::json([
+            'success' => true,
+            'data'    => $sealEcho,
+        ], ($sealEcho['alreadyCollected'] ?? false) ? 200 : 201);
+    }
+
+    // -----------------------------------------------------------------
+    // La retirada del tomo vía REST (RF-02.4, plan §2.2) — Tarea 4.1
+    // -----------------------------------------------------------------
+
+    /**
+     * DELETE /api/v1/grimoire/collection/{spellId}?element={afinidad}.
+     *
+     * La muralla de intimidad vive en el repositorio (fila propia);
+     * aquí se traduce el veredicto: retirada consumada → 200 con el
+     * total ACTUALIZADO bajo el filtro vigente (la vista refresca el
+     * rótulo sin segunda petición); fila ausente → 409
+     * SPELL_NOT_IN_TOME (el hechizo puede vivir en el catálogo: lo que
+     * no existe es su entrada en ESTE tomo). Frontera sagrada del
+     * hallazgo 13: la retirada JAMÁS toca `favorites`.
+     *
+     * Nota de guardias (hallazgo 16): la retirada es un acto íntimo
+     * sobre la PROPIA fila — la muralla del repositorio es física — y
+     * no juzga el estado del hechizo: se retira lo que se selló, viva
+     * u apartada la obra. El anónimo recibe 401 y el peregrino, su
+     * juramento.
+     */
+    public function discardSpell(Request $request, array $routeParams): Response
+    {
+        // ---- Guardia 1: sesión (401) ---------------------------------
+        $adepto = $this->requireAuthenticatedUser($request);
+        if ($adepto === null) {
+            return $this->unauthenticatedResponse();
+        }
+
+        // ---- Guardia 2: el linaje manda, no el rol (hallazgo 16) -----
+        if ($adepto->getLineage() === null) {
+            return $this->oathRejection();
+        }
+
+        $spellId = (string) ($routeParams['spellId'] ?? '');
+        if ($spellId === '') {
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'SPELL_NOT_IN_TOME',
+                    'message' => 'Solo se retira lo que se selló: ese hechizo no habita tu tomo.',
+                ],
+            ], 409);
+        }
+
+        // El filtro vigente de la vista viaja en la query: el total de
+        // la respuesta debe describir el conjunto que se exhibe.
+        $rawElement = $request->getQueryParam('element');
+        $element = is_string($rawElement) && in_array($rawElement, self::CANONICAL_ELEMENTS, true)
+            ? $rawElement
+            : null;
+
+        try {
+            $discardEcho = $this->collectionService->discardSpell($adepto, $spellId, $element);
+        } catch (SpellNotInTomeException $absent) {
+            return Response::json($absent->toPayload(), $absent->getHttpStatusCode());
+        }
+
+        return Response::json([
+            'success' => true,
+            'data'    => $discardEcho,
+        ], 200);
     }
 
     // -----------------------------------------------------------------
@@ -243,8 +435,12 @@ final class GrimoireCollectionController
     }
 
     /** Traduce la retención del peregrino (defensa en profundidad, hallazgo 16). */
-    private function oathRejection(LineageOathException $oath): Response
+    private function oathRejection(?LineageOathException $oath = null): Response
     {
+        $oath ??= LineageOathException::lineageOathRequired(
+            'El santuario aguarda tu juramento: nadie pisa sus salas sin linaje jurado.'
+        );
+
         return Response::json([
             'success' => false,
             'error'   => [
