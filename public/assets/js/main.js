@@ -43,6 +43,7 @@ import { createLibraryView } from './views/libraryView.js';
 import { createLineageHallView } from './views/lineageHallView.js';
 import { createLineageOathView } from './views/lineageOathView.js';
 import { createVestibuleView } from './views/vestibuleView.js';
+import { createGrimoireCollectionView } from './views/grimoireCollectionView.js';
 import { createClanView } from './views/clanView.js';
 import { createClanClient } from './api/clanClient.js';
 import { createErrorView } from './views/errorView.js';
@@ -72,6 +73,7 @@ import {
   fetchOathCatalog as apiFetchOathCatalog,
   sealOath as apiSealOath,} from './api/lineageOathClient.js';
 import { createVestibuleClient } from './api/vestibuleClient.js';
+import { createGrimoireCollectionClient } from './api/grimoireCollectionClient.js';
 import { createCodexView } from './views/elementalCodexView.js';
 import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
 import { createExperimentalHallView } from './views/experimentalHallView.js';
@@ -101,6 +103,10 @@ export const HASH_TO_VIEW_MAP = Object.freeze({
   // El Vestíbulo de las Hermandades (SPEC-10, Tarea 4.2): ruta propia,
   // deep-linkable; el peregrino sin linaje queda retenido por el interceptor.
   '#/vestibulo': 'vestibule',
+  // Mi Grimorio (SPEC-11, Tarea 5.3): el tomo personal del adepto, ruta
+  // propia y deep-linkable; el peregrino sin linaje queda retenido por
+  // el interceptor (SPEC-09) y el backend refuerza con 403.
+  '#/grimorio': 'collection',
 });
 
 /** Mapeo canónico de vista a hash de URL. */
@@ -116,6 +122,7 @@ export const VIEW_TO_HASH_MAP = Object.freeze({
   auditLog: '#/bitacora',
   juramento: '#/juramento',
   vestibule: '#/vestibulo',
+  collection: '#/grimorio',
 });
 
 /**
@@ -211,6 +218,8 @@ export function createGrimoireApp(options = {}) {
    * navegación: su fallo es inocuo (best-effort).
    */
   const vestibuleClient = createVestibuleClient();
+  // Mi Grimorio (SPEC-11, Tarea 5.3): el cliente del tomo personal.
+  const grimoireCollectionClient = createGrimoireCollectionClient();
   let vestibuleBadgeCount = 0;
   let errorView = null;
   let isDestroyed = false;
@@ -421,6 +430,11 @@ export function createGrimoireApp(options = {}) {
         elementFactory,
         document: documentRef,
         initialMode: requestsEssays && hasSession ? 'essays' : 'canonical',
+        // CONVOCATORIA DESDE EL TOMO (SPEC-11, RF-03.1): la vista ilumina
+        // la página del hechizo convocado tras cargar su catálogo. El motor
+        // de partículas y la pronunciación de SPEC-05 quedan INTACTOS —
+        // sin variantes nuevas (frontera del plan §1.1).
+        initialSpellSlug: typeof navigateOptions.spellSlug === 'string' ? navigateOptions.spellSlug : null,
         // Gloria de hermandad de cada reacción detonada (SPEC-07, RF-03.2):
         // el orquestador aporta la sesión y el cliente; la Cámara solo narra.
         awardSimulatorPractice: (comboElement) => awardSimulatorPractice(comboElement),
@@ -542,6 +556,30 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: 'vestibule', instance: vestibuleView };
       await vestibuleView.render();
+      return;
+    }
+
+    if (viewName === 'collection') {
+      // Mi Grimorio (SPEC-11, Tarea 5.3): el tomo personal del adepto.
+      // El peregrino sin linaje jamás llega aquí: el interceptor de
+      // retención lo desvía a «juramento» y el backend refuerza con 403.
+      const collectionView = createGrimoireCollectionView(appRoot, {
+        collectionClient: grimoireCollectionClient,
+        // La invitación del tomo vacío conduce a la Biblioteca (RF-02.2).
+        onNavigateToLibrary: (hash) => {
+          void navigate('library');
+        },
+        // CONVOCATORIA DESDE EL TOMO (SPEC-11, RF-03.1, Tarea 5.4): una
+        // entrada viva abre el Simulador con su página ya iluminada. La
+        // vista del tomo solo emite este gesto con `tomeMark` 'living'.
+        onSummonSpell: (slug) => {
+          void navigate('simulator', { spellSlug: slug });
+        },
+        elementFactory,
+        documentRef,
+      });
+      currentView = { name: 'collection', instance: collectionView };
+      await collectionView.render();
       return;
     }
 

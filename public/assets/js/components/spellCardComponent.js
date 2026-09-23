@@ -22,6 +22,46 @@
  */
 export const REGENT_RIBBON_CLASS = 'spell-card-regent-border';
 
+// =====================================================================
+// EL GESTO COMPARTIDO DEL TOMO (SPEC-11, Tarea 5.1, plan §4.2)
+// ---------------------------------------------------------------------
+// Una sola lógica de gestos para Biblioteca, Simulador y Tomo (RF-04.0):
+// la tarjeta NACE sabiendo su estado —viaja en el DTO del backend— y
+// decide el gesto UNA sola vez, jamás consultando al servidor por fila.
+//
+//   collected: false y estado validated → botón «Añadir al tomo».
+//   collected: true                     → conmutador «Ya está en tu tomo»
+//                                         (informativo, aria-pressed).
+//   praised: true                       → conmutador «Ya rendiste homenaje».
+//   militancia en la casa del hechizo   → gesto «Elogiar» ausente +
+//                                         leyenda sobria (RF-04.4).
+//   estado ≠ validated                  → ni «Añadir» ni «Elogiar»
+//                                         (RF-04.5).
+// =====================================================================
+
+/** Eventos del bus del shell (plan §4.1): la tarjeta los EMITE; las
+ *  vistas (libraryView, grimoireSimulatorView) delegan al cliente. */
+export const TOME_CARD_EVENTS = Object.freeze({
+  /** El adepto activa «Añadir al tomo» (RF-01.1). */
+  tomeSeal: 'tome:seal',
+  /** El adepto activa «Elogiar» (RF-04.1). */
+  tomePraise: 'tome:praise',
+});
+
+/** Rótulos canónicos del gesto compartido (plan §4.3, Textos LITERALES). */
+export const TOME_CARD_LABELS = Object.freeze({
+  /** Botón de sellado (RF-01.1). */
+  addToTome: 'Añadir al tomo',
+  /** Conmutador informativo de colección (RF-01.3). */
+  alreadyInTome: 'Ya está en tu tomo',
+  /** Conmutador informativo de homenaje (RF-04.3). */
+  alreadyPraised: 'Ya rendiste homenaje',
+  /** Botón de elogio (RF-04.1). */
+  praise: 'Elogiar',
+  /** Leyenda sobria de militancia (RF-04.4, plan §4.3). */
+  ownClanLegend: 'Un adepto de la casa no granjea gloria para su propio estandarte',
+});
+
 /** Clases de los sellos de estado (components.css, Tarea 2.4). */
 export const SPELL_BADGE_KINDS = Object.freeze({
   genesis: 'spell-card__badge--genesis',
@@ -43,6 +83,7 @@ export const SPELL_BADGE_KINDS = Object.freeze({
 export function createSpellCardComponent(spellSummaryDto, componentOptions = {}) {
   const {
     onSpellSelect,
+    onTomeGesture,
     isRegent = false,
     elementFactory = (tagName) => document.createElement(tagName),
   } = componentOptions;
@@ -173,9 +214,108 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
     createTextElement('p', 'spell-card__clan', spellSummaryDto.clanName)
   );
 
+  // --- El gesto compartido del tomo (SPEC-11, Tarea 5.1, plan §4.2) ---
+  // La lógica vive UNA sola vez (RF-04.0): derivada ÍNTEGRAMENTE del DTO.
+  // Sin `adeptState` (anónimo, DTO legado) la tarjeta no pinta gesto: la
+  // contemplación pública queda intocada (RF-05.1 de SPEC-03).
+  const tomeStatusArea = createTomeStatusArea();
+  if (tomeStatusArea !== null) {
+    cardElement.appendChild(tomeStatusArea);
+  }
+
   // --- Activación por click y teclado (criterio) ---
   cardElement.addEventListener('click', handleCardActivation);
   cardElement.addEventListener('keydown', handleCardActivation);
+
+  /**
+   * Forja la zona del gesto compartido (plan §4.2): UN botón de gesto
+   * activo, O conmutadores informativos con aria-pressed, O leyenda de
+   * vedación — según el DTO. null cuando nada debe pintarse (anónimo).
+   *
+   * Los gestos vedados JAMÁS llegan al bus: solo los botones activos
+   * emiten `tome:seal` / `tome:praise` (criterio de la tarea).
+   *
+   * @returns {HTMLElement|null} La zona lista para anexar, o null.
+   */
+  function createTomeStatusArea() {
+    const adeptState = spellSummaryDto.adeptState;
+    if (adeptState === null || adeptState === undefined || typeof adeptState !== 'object') {
+      return null; // Anónimo o DTO legado: contemplación sin gestos.
+    }
+
+    const status = String(spellSummaryDto.status ?? '');
+    const collected = adeptState.collected === true;
+    const praised = adeptState.praised === true;
+    // Militancia veda el elogio (RF-04.4); el backend la deriva del
+    // instante (la casa del hechizo es la del clan del DTO).
+    const allowedToPraise = adeptState.praiseAllowed !== false;
+    const isValidated = status === 'validated';
+
+    const tomeArea = elementFactory('div');
+    tomeArea.className = 'spell-card__tome';
+
+    /** Emite el evento del bus con el DTO y el nodo origen (plan §4.1). */
+    function emitTomeEvent(eventType) {
+      if (typeof onTomeGesture === 'function') {
+        onTomeGesture(eventType, {
+          spellId: spellSummaryDto.id ?? null,
+          slug: spellSummaryDto.slug,
+          originElement: cardElement,
+        });
+      }
+    }
+
+    /** Botón activo de un gesto operativo (RNF-04: teclado y foco). */
+    function createGestureButton(kind, label, eventType) {
+      const button = elementFactory('button');
+      button.type = 'button';
+      button.className = `spell-card__tome-gesture spell-card__tome-gesture--${kind}`;
+      button.textContent = label;
+      button.addEventListener('click', () => emitTomeEvent(eventType));
+      return button;
+    }
+
+    /** Conmutador informativo de un estado ya consumado (aria-pressed). */
+    function createStatusToggle(kind, label) {
+      const toggle = elementFactory('span');
+      toggle.className = `spell-card__tome-toggle spell-card__tome-toggle--${kind}`;
+      toggle.setAttribute('role', 'switch');
+      toggle.setAttribute('aria-pressed', 'true');
+      toggle.setAttribute('aria-label', label);
+      toggle.textContent = label;
+      return toggle;
+    }
+
+    // --- Conmutador de colección: siempre visible con sesión (RF-01.3) --
+    if (collected) {
+      tomeArea.appendChild(createStatusToggle('collected', TOME_CARD_LABELS.alreadyInTome));
+    }
+
+    // --- Conmutador de homenaje: el voto ya vive (RF-04.3) --------------
+    if (praised) {
+      tomeArea.appendChild(createStatusToggle('praised', TOME_CARD_LABELS.alreadyPraised));
+    }
+
+    // --- Gestos operativos: solo lo vedado queda ausente (RF-04.4/04.5) -
+    if (!collected && isValidated) {
+      tomeArea.appendChild(createGestureButton('seal', TOME_CARD_LABELS.addToTome, TOME_CARD_EVENTS.tomeSeal));
+    }
+
+    if (isValidated && !praised && allowedToPraise) {
+      tomeArea.appendChild(createGestureButton('praise', TOME_CARD_LABELS.praise, TOME_CARD_EVENTS.tomePraise));
+    }
+
+    // --- Leyenda sobria de militancia (RF-04.4): el gesto AUSENTE -------
+    // se comunica con su voz canónica — ni error ni silencio.
+    if (isValidated && !praised && !allowedToPraise) {
+      const ownClanLegend = elementFactory('p');
+      ownClanLegend.className = 'spell-card__tome-vedado';
+      ownClanLegend.textContent = TOME_CARD_LABELS.ownClanLegend;
+      tomeArea.appendChild(ownClanLegend);
+    }
+
+    return tomeArea;
+  }
 
   /** Retira los listeners (baja limpia al re-renderizar la rejilla). */
   function destroy() {

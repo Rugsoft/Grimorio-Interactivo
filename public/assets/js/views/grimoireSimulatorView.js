@@ -144,6 +144,10 @@ const FALLBACK_CANVAS = Object.freeze({ width: 800, height: 400 });
  * @param {Object|null} [options.speechSynthesis] Doble de síntesis (RF-06.3).
  * @param {'canonical'|'essays'} [options.initialMode] Tomo que abre la vista;
  *   el orquestador lo decide tras la guardia del libro personal (RF-01.2).
+ * @param {string|null} [options.initialSpellSlug] Slug del hechizo convocado
+ *   desde el tomo personal (SPEC-11, RF-03.1, Tarea 5.4): tras cargar el
+ *   catálogo, la vista ilumina su página. Solo ORQUESTA la navegación del
+ *   tomo de SPEC-05 — el motor de partículas y la voz quedan intactos.
  * @param {(comboElement: string) => Promise<object|null>} [options.awardSimulatorPractice]
  *   Acredita al clan del adepto la gloria de la reacción recién detonada
  *   (SPEC-07, RF-03.2). Devolverá el sobre del santuario o null si no hay
@@ -189,6 +193,11 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   const initialMode = options.initialMode === CATALOG_MODES.essays
     ? CATALOG_MODES.essays
     : CATALOG_MODES.canonical;
+
+  /** Página a iluminar tras la carga (SPEC-11, RF-03.1): slug convocado. */
+  const initialSpellSlug = typeof options.initialSpellSlug === 'string' && options.initialSpellSlug !== ''
+    ? options.initialSpellSlug
+    : null;
 
   /** Estado de orquestación de la vista. */
   const state = {
@@ -472,16 +481,23 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     state.mode = mode;
     state.spells = spells;
     state.pageNumber = 1;
-    state.currentSpell = spells[0] ?? null;
+    // CONVOCATORIA DESDE EL TOMO (SPEC-11, RF-03.1): el slug convocado
+    // ilumina su página tras la carga (caso «modal de casta ya desplegado»);
+    // sin convocatoria, el tomo abre en su primera página como siempre.
+    if (initialSpellSlug !== null) {
+      const summonedIndex = spells.findIndex((spell) => spell?.slug === initialSpellSlug);
+      if (summonedIndex >= 0) state.pageNumber = summonedIndex + 1;
+    }
+    state.currentSpell = spells[state.pageNumber - 1] ?? null;
     state.totalPages = Math.max(1, spells.length);
     mountTome(spells);
     syncCatalogSwitch();
     announce(mode === CATALOG_MODES.essays
       ? `El tomo se abre en tus Ensayos Arcanos: ${spells.length} conjuro(s) en prueba.`
       : `El tomo se abre en el Catálogo Canónico: ${spells.length} conjuro(s) ratificado(s).`);
-    // La primera página debe anunciarse como cualquier otra transición.
+    // La primera página (o la convocada) debe anunciarse como cualquier otra transición.
     if (state.currentSpell) {
-      handlePageChange({ spell: state.currentSpell, pageNumber: 1, totalPages: state.totalPages });
+      handlePageChange({ spell: state.currentSpell, pageNumber: state.pageNumber, totalPages: state.totalPages });
     }
     return true;
   }

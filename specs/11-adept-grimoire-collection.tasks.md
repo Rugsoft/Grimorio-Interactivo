@@ -66,22 +66,22 @@
 
 ## Fase 5 — Componentes y Vista del Tomo
 
-- [ ] **Tarea 5.1 — Gesto compartido en `spellCardComponent`**
+- [x] **Tarea 5.1 — Gesto compartido en `spellCardComponent`**
   * **Qué:** ampliación de la tarjeta con los estados del DTO: «Añadir al tomo» / «Ya está en tu tomo» / «Ya rendiste homenaje» (conmutadores con `aria-pressed`), gesto «Elogiar» ausente + leyenda de militancia («Un adepto de la casa no granjea gloria para su propio estandarte»), gestos ausentes sobre no validados — una sola lógica para Biblioteca, Simulador y Tomo (RF-04.0); eventos `tome:seal` / `tome:praise` en el bus. Textos LITERALES del Anexo A del plan.
   * **Cubre:** `RF-04.0`, `RF-01.1`, `RF-04.3`, `RF-04.4`, `RF-04.5`, `RNF-04`.
   * **Hecho cuando:** la misma tarjeta pinta los seis estados posibles solo desde su DTO, los conmutadores llevan `aria-pressed`, la activación por teclado funciona y los gestos vedados jamás llegan al bus.
 
-- [ ] **Tarea 5.2 — Modal solemne de retirada**
+- [x] **Tarea 5.2 — Modal solemne de retirada**
   * **Qué:** `discardTomeEntryModalComponent.js` con la leyenda canónica del Anexo A, foco atrapado y devuelto, Escape, descarte sin mutación — patrón de foco de SPEC-02.
   * **Cubre:** `RF-02.4`, `RNF-04`, caso límite 10 (reanudación tras confirmar).
   * **Hecho cuando:** confirmar retira la entrada y actualiza el conteo sin recargar la página; Escape y descarte no mutan; el foco vuelve al gesto de origen.
 
-- [ ] **Tarea 5.3 — Vista «Mi Grimorio» con ruta propia**
+- [x] **Tarea 5.3 — Vista «Mi Grimorio» con ruta propia**
   * **Qué:** `grimoireCollectionView.js` (`#/grimorio`), rótulo soberano en la navbar, carga única paginada, filtro por afinidad con conteo, estado vacío con invitación a la Biblioteca («Tu tomo aguarda su primera obra» + «Recorrer la Biblioteca»), paginación viva (plan §3.5) y degradación tras 401 con la leyenda del Anexo A (aviso solemne + gestos apagados + lectura y filtro conservados — hallazgo 7).
   * **Cubre:** `RF-02.1`, `RF-02.2`, `RF-02.3`, `RF-03.1`, `RF-05.2`, casos límite 4, 6 y 10.
   * **Hecho cuando:** la vista monta con una sola carga del sobre paginado, el filtro filtra con conteo, el tomo vacío invita a la Biblioteca sin lenguaje de error y el 401 apaga los gestos sin vaciar lo leído.
 
-- [ ] **Tarea 5.4 — Marcas solemnes y convocatoria desde el tomo**
+- [x] **Tarea 5.4 — Marcas solemnes y convocatoria desde el tomo**
   * **Qué:** pintado de `tomeMark` («Obra en gestación» / «Obra apartada del canon») en las entradas del tomo con convocatoria vedada, y enrutado de la convocatoria de una entrada viva hacia el Simulador con el modal de casta ya desplegado (SPEC-05 sin variantes nuevas). Textos LITERALES del Anexo A del plan.
   * **Cubre:** `RF-03.1`, `RF-03.2`, casos límite 2 y 7.
   * **Hecho cuando:** cada entrada no viva muestra su marca exacta sin gesto de convocatoria, y la convocatoria de una entrada viva abre el Simulador con el modal desplegado usando el motor de partículas intacto.

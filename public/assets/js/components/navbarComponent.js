@@ -37,6 +37,8 @@
 export const NAV_LINKS = Object.freeze([
   { view: 'landing', hash: '#/', label: 'Inicio' },
   { view: 'library', hash: '#/biblioteca', label: 'Biblioteca de Hechizos' },
+  // Mi Grimorio (SPEC-11, Tarea 5.3): el rótulo SOBERANO del tomo personal.
+  { view: 'collection', hash: '#/grimorio', label: 'Mi Grimorio' },
   { view: 'codex', hash: '#/codex', label: 'Códice de Afinidades' },
   { view: 'clans', hash: '#/linajes', label: 'Salón de Linajes' },
   // El Vestíbulo (SPEC-10): la gestión de hermandades del propio linaje.
