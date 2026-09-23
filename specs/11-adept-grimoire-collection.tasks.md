@@ -117,17 +117,17 @@
 
 ## Fase 8 — Arneses Frontend
 
-- [ ] **Tarea 8.1 — Arnés de la vista del tomo y el modal**
+- [x] **Tarea 8.1 — Arnés de la vista del tomo y el modal**
   * **Qué:** `scratch/test_grimoire_collection_view.mjs` + `scratch/test_discard_tome_modal.mjs`: carga única, filtro con conteo, estado vacío, paginación viva, 401 solemne con gestos apagados, foco del modal — según plan §6.2 filas 1 y 3.
   * **Cubre:** `RF-02.1`–`RF-02.4`, `RF-05.2`, casos límite 6 y 10.
   * **Hecho cuando:** los dos arneses concluyen en verde sobre los dobles de DOM del patrón consolidado (Vestíbulo/Simulador).
 
-- [ ] **Tarea 8.2 — Arnés de gestos, cliente e intents**
+- [x] **Tarea 8.2 — Arnés de gestos, cliente e intents**
   * **Qué:** `scratch/test_spell_card_tome_gestures.mjs` + `scratch/test_grimoire_collection_client.mjs` + `scratch/test_intent_give_praise.mjs`: los seis estados de la tarjeta, accesibilidad (`aria-pressed`, teclado, `prefers-reduced-motion`), mapeo del cliente, retención y reanudación del acto con regresión de los intents de SPEC-09 — según plan §6.2 filas 2, 4 y 5.
   * **Cubre:** `RF-01.4`, `RF-04.0`, `RF-04.4`, `RNF-04`, `RNF-05`, caso límite 1.
   * **Hecho cuando:** los tres arneses concluyen en verde y la batería de intents de SPEC-09 permanece en verde (compatibilidad de forma verificada).
 
-- [ ] **Tarea 8.3 — Arnés de latencia RNF-01**
+- [x] **Tarea 8.3 — Arnés de latencia RNF-01**
   * **Qué:** medición del lapso petición → primera respuesta de `mode=collection` sobre la pila real (sonda HTTP con autolimpieza `PowerShell -PassThru` + `register_shutdown_function`, patrón consolidado), presupuesto < 100 ms de backend.
   * **Cubre:** `RNF-01`.
   * **Hecho cuando:** el arnés certifica el presupuesto en cinco ejecuciones consecutivas y no deja procesos en el puerto de la sonda.
