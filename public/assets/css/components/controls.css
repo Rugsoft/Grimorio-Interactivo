@@ -61,6 +61,18 @@
   color: var(--color-gold-arcane);
 }
 
+/* Variante de peligro solemne: brasas del destierro (retiradas y vetos
+   definitivos — SPEC-11, modal de retirada del tomo). */
+.button--danger {
+  background-color: var(--color-ember-red);
+  border-color: var(--color-ember-red-deep);
+  color: var(--color-text-light);
+}
+
+.button--danger:hover {
+  background-color: var(--color-ember-red-deep);
+}
+
 .button:hover,
 .button:focus-visible {
   border-color: var(--color-gold-arcane);

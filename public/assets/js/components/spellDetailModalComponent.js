@@ -133,13 +133,16 @@ export function createSpellDetailModalComponent(dialogElement, componentOptions 
     detailBody.appendChild(componentsSection);
 
     // Acción reservada: «Añadir a mi Grimorio» (RF-05.2, plan 7.2).
+    // SPEC-11 (Tarea 6.1, plan §3.4): el hechizo concreto viaja en el
+    // tercer argumento para que la reanudación tras el juramento COMPLETE
+    // el sellado sobre la obra retenida (RF-01.4).
     const reserveButton = documentRef.createElement('button');
     reserveButton.type = 'button';
     reserveButton.className = 'rescue-button spell-detail__reserve';
     reserveButton.textContent = 'Añadir a mi Grimorio';
     reserveButton.addEventListener('click', () => {
       // La ficha NO se cierra: el acceso se apila encima (RF-05.2).
-      onReservedAction?.('addToGrimoire', displayedSlug);
+      onReservedAction?.('addToGrimoire', displayedSlug, spellDetailDto.id ?? null);
     });
     detailBody.appendChild(reserveButton);
 

@@ -173,6 +173,9 @@ export function createGrimoireApp(options = {}) {
     },
     oathDialog = globalThis.document?.getElementById?.('oathModal'),
     grimoireClient = createGrimoireClient(),
+    // Mi Grimorio (SPEC-11, Tarea 6.1): el cliente del tomo es inyectable
+    // para los arneses (retención y reanudación del acto, plan §3.4).
+    grimoireCollectionClient = createGrimoireCollectionClient(),
     dominionClient = createDominionClient(),
     clanClient = createClanClient(),
     elementalMatrixClient = createElementalMatrixClient(),
@@ -218,8 +221,6 @@ export function createGrimoireApp(options = {}) {
    * navegación: su fallo es inocuo (best-effort).
    */
   const vestibuleClient = createVestibuleClient();
-  // Mi Grimorio (SPEC-11, Tarea 5.3): el cliente del tomo personal.
-  const grimoireCollectionClient = createGrimoireCollectionClient();
   let vestibuleBadgeCount = 0;
   let errorView = null;
   let isDestroyed = false;
@@ -738,16 +739,61 @@ export function createGrimoireApp(options = {}) {
   }
 
   /**
+   * Narra el desenlace del acto reanudado (SPEC-11, plan §3.4): la
+   * reanudación es best-effort — un fallo NO bloquea el retorno del
+   * juramento, solo se narra con dignidad (Artículo IV, sin códigos).
+   * El eco viaja por la franja solemne del shell (aria-live del slot).
+   * @param {object} result Sobre del cliente del tomo.
+   * @param {string} actName Nombre castellano del acto («sellado», «homenaje»).
+   */
+  function announceIntentResumption(result, actName) {
+    const status = Number(result?.status ?? 0);
+    let legend;
+    if (result?.success === true && status >= 200 && status < 300) {
+      legend = `Tu ${actName} aguardado queda consumado: el tomo lo recuerda.`;
+    } else if (status === 401) {
+      legend = 'Tu vínculo con el santuario ha expirado: renuévalo y tus gestos aguardarán donde los dejaste.';
+    } else {
+      legend = 'El acto aguardado no pudo completarse: inténtalo de nuevo cuando quieras.';
+    }
+    announceShellLegend(legend);
+  }
+
+  /**
+   * Franja solemne del shell (aria-live): narra el eco del acto reanudado
+   * sin bloquear la navegación. El slot vive en el shell (index.html);
+   * sin él (arneses), la narración es inocua y el flujo sigue.
+   * @param {string} legend Leyenda castellana a anunciar.
+   */
+  function announceShellLegend(legend) {
+    if (arcaneNoticeRoot === null || arcaneNoticeRoot === undefined) return;
+    let echo = arcaneNoticeRoot.querySelector?.('.arcane-echo') ?? null;
+    if (echo === null) {
+      echo = elementFactory('p');
+      echo.className = 'arcane-echo';
+      echo.setAttribute('role', 'status');
+      echo.setAttribute('aria-live', 'polite');
+      arcaneNoticeRoot.appendChild(echo);
+    }
+    echo.textContent = String(legend);
+  }
+
+  /**
    * Interceptación de acciones reservadas (RF-02.3, RF-01.4, RF-05.2):
    * retiene la intención en el store y despliega «Cruzar el Umbral».
    * SPEC-09: el registro ya no puebla selector de linaje alguno —
    * el juramento sucede en la ceremonia del primer acceso (RF-01.1).
-   * @param {string} action 'openCreator' | 'joinClan' | 'addToGrimoire' | ...
+   * SPEC-11 (Tarea 6.1, plan §3.4): los gestos del tomo portan el
+   * hechizo concreto en `targetSpellId` para que el retorno tras el
+   * juramento COMPLETE el acto sin repetir el gesto (RF-01.4, hallazgo 6).
+   * @param {string} action 'openCreator' | 'joinClan' | 'addToGrimoire' | 'givePraise' | ...
    * @param {string|null} [targetSlug=null] Slug implicado, si lo hay.
+   * @param {string|null} [targetSpellId=null] Identificador del hechizo
+   *        implicado (solo intents del tomo de SPEC-11).
    */
-  function handleReservedAction(action, targetSlug = null) {
+  function handleReservedAction(action, targetSlug = null, targetSpellId = null) {
     if (isDestroyed) return;
-    store.setState({ pendingIntent: { action, targetSlug } });
+    store.setState({ pendingIntent: { action, targetSlug, targetSpellId } });
     accessModal.open({ action, targetSlug });
   }
 
@@ -758,7 +804,7 @@ export function createGrimoireApp(options = {}) {
    *
    * @param {Object|null} user Sobre data.user del authClient (null = fallo).
    */
-  function handleAuthenticated(user = null) {
+  async function handleAuthenticated(user = null) {
     if (user !== null && typeof user === 'object') {
       store.setSession(user);
       sessionBadge?.setUser(user);
@@ -777,10 +823,23 @@ export function createGrimoireApp(options = {}) {
       // «Ver mi libro personal» retenido en el umbral: ahora con vínculo,
       // el Simulador abre directamente el tomo privado (RF-01.2).
       void navigate('simulator', { catalogMode: 'essays' });
-    } else if (retainedIntent?.action === 'joinClan' && typeof retainedIntent.targetSlug === 'string' && retainedIntent.targetSlug !== '') {
+    } else    if (retainedIntent?.action === 'joinClan' && typeof retainedIntent.targetSlug === 'string' && retainedIntent.targetSlug !== '') {
       // Postulación retenida en el umbral (RF-01.5): ya con vínculo, la ficha
       // de la casa vuelve a montarse con su gesto de ingreso disponible.
       void navigate('clan', { clanId: retainedIntent.targetSlug });
+    } else if (retainedIntent?.action === 'addToGrimoire' && typeof retainedIntent.targetSpellId === 'string' && retainedIntent.targetSpellId !== '') {
+      // REANUDACIÓN DEL ACTO (SPEC-11, Tarea 6.1, plan §3.4 — RF-01.4,
+      // hallazgo 6): el sellado retenido se COMPLETA solo sobre el hechizo
+      // retenido, sin repetir el gesto. El eco solemne lo narra.
+      const spellId = retainedIntent.targetSpellId;
+      const result = await grimoireCollectionClient.collectSpell(spellId);
+      announceIntentResumption(result, 'sellado');
+    } else if (retainedIntent?.action === 'givePraise' && typeof retainedIntent.targetSpellId === 'string' && retainedIntent.targetSpellId !== '') {
+      // REANUDACIÓN DEL ELOGIO (SPEC-11, hallazgo 9): la enmienda menor
+      // a SPEC-09 completa el homenaje retenido sobre la obra concreta.
+      const spellId = retainedIntent.targetSpellId;
+      const result = await grimoireCollectionClient.praiseSpell(spellId);
+      announceIntentResumption(result, 'homenaje');
     } else if (store.getState().userLineage === null) {
       // Peregrino sin intención retenida (registro nuevo o vínculo legado
       // renovado): aterriza en la ceremonia (RF-01.2, DoD de SPEC-09).
@@ -839,7 +898,7 @@ export function createGrimoireApp(options = {}) {
     navbar?.setVestibuleBadgeCount?.(nextCount);
   }
 
-  function handleOathSealed(event) {
+  async function handleOathSealed(event) {
     const detail = event?.detail ?? {};
     const lineage = typeof detail.lineage === 'string' && detail.lineage !== '' ? detail.lineage : null;
 
@@ -850,6 +909,22 @@ export function createGrimoireApp(options = {}) {
     if (sessionUser !== null && lineage !== null) {
       store.setSession({ ...sessionUser, lineage });
       sessionBadge?.setUser({ ...sessionUser, lineage });
+    }
+
+    // REANUDACIÓN DEL ACTO (SPEC-11, Tarea 6.1, plan §3.4 — RF-01.4,
+    // hallazgo 6): el sellado o el homenaje retenido por el peregrino se
+    // COMPLETA solo sobre el hechizo retenido, sin repetir el gesto. La
+    // reanudación es best-effort: un fallo no bloquea el retorno.
+    const retainedIntent = store.getState().pendingIntent;
+    const retainedSpellId = typeof retainedIntent?.targetSpellId === 'string' ? retainedIntent.targetSpellId : '';
+    if (retainedIntent?.action === 'addToGrimoire' && retainedSpellId !== '') {
+      store.clearPendingIntent();
+      const result = await grimoireCollectionClient.collectSpell(retainedSpellId);
+      announceIntentResumption(result, 'sellado');
+    } else if (retainedIntent?.action === 'givePraise' && retainedSpellId !== '') {
+      store.clearPendingIntent();
+      const result = await grimoireCollectionClient.praiseSpell(retainedSpellId);
+      announceIntentResumption(result, 'homenaje');
     }
 
     // Retorno: ruta retenida saneada, o el portal de inicio (RF-03.1).

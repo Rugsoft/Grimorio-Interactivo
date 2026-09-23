@@ -59,10 +59,15 @@ function createInitialState() {
       data: null,
     },
 
-    /** Intención interceptada por el diálogo de acceso (RF-05.2). */
+    /** Intención interceptada por el diálogo de acceso (RF-05.2).
+     *  SPEC-11 (Tarea 6.1, plan §3.4): `targetSpellId` amplía la forma
+     *  SIN romper los intents previos (campos extra se ignoran) — porta
+     *  el hechizo concreto de los gestos `addToGrimoire` / `givePraise`
+     *  para que el retorno tras el juramento COMPLETE el acto (RF-01.4). */
     pendingIntent: {
       action: null,
       targetSlug: null,
+      targetSpellId: null,
     },
 
     /** Estado de sesión del cliente (Tarea 4.2, SPEC-03).
@@ -156,10 +161,11 @@ export function createStore() {
 
   /**
    * Restablece la intención pendiente tras completar la acción (RF-05.3).
+   * SPEC-11: la forma ampliada incluye `targetSpellId` (Tarea 6.1).
    */
   function clearPendingIntent() {
     setState({
-      pendingIntent: { action: null, targetSlug: null },
+      pendingIntent: { action: null, targetSlug: null, targetSpellId: null },
     });
   }
 

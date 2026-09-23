@@ -88,12 +88,12 @@
 
 ## Fase 6 — Intents, Retención y Vestimenta CSS
 
-- [ ] **Tarea 6.1 — Retención y reanudación del acto (`addToGrimoire` / `givePraise`)**
+- [x] **Tarea 6.1 — Retención y reanudación del acto (`addToGrimoire` / `givePraise`)**
   * **Qué:** `givePraise` añadida al catálogo de intents (enmienda menor y explícita a SPEC-09 — hallazgo 9), `targetSpellId` en `pendingIntent` (forma compatible), reanudación del acto concreto tras `oath:sealed` según plan §3.4 (el retorno COMPLETA el sellado o el elogio sin repetir el gesto — hallazgo 6).
   * **Cubre:** `RF-01.4`, caso límite 1.
   * **Hecho cuando:** el peregrino que intenta sellar o elogiar aterriza en el juramento y, tras sellarlo, el acto se completa solo sobre el hechizo retenido; los tres intents previos de SPEC-09 siguen despachando igual.
 
-- [ ] **Tarea 6.2 — `grimoire-collection.css`**
+- [x] **Tarea 6.2 — `grimoire-collection.css`**
   * **Qué:** vestimenta de la vista y los gestos con los tokens de SPEC-02 (cero literales de color fuera de `tokens.css`, cobertura del guard de huérfanos CSS), `prefers-reduced-motion` para sellado y eco de elogio (RNF-05), responsive hasta móvil.
   * **Cubre:** `RNF-03` (rotulación castellana), `RNF-04`, `RNF-05`.
   * **Hecho cuando:** el arnés de cobertura CSS no registra huérfanos, el guard de soberanía lingüística no encuentra literales técnicos en los módulos nuevos y la vista no desborda a 360 px de ancho.

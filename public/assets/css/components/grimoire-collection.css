@@ -1,0 +1,452 @@
+/* =====================================================================
+   grimoire-collection.css — Mi Grimorio: el Tomo Personal (SPEC-11, 6.2)
+   =====================================================================
+   Viste la vista «Mi Grimorio» (collection-view), las marcas solemnes
+   del tomo, el gesto compartido de sellado/elogio en la tarjeta
+   (spell-card__tome-*) y el modal solemne de retirada
+   (discard-tome-modal), siguiendo los tokens de SPEC-02.
+
+   Constitución:
+     - Artículo I (Dogma Vanilla): CSS3 puro, sin frameworks.
+     - SPEC-02 (RF-08): cero literales de color fuera de tokens.css —
+       todo color, sombra, radio o transición viaja como Custom Property.
+     - RNF-03: los rótulos que aquí se estilizan son castellanos.
+     - RNF-05: prefers-reduced-motion aquienta las transiciones propias
+       (el kit .button ya se aquienta por sí mismo en controls.css).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   Vista «Mi Grimorio»: encabezado, filtro y conteo (RF-02.1, RF-02.3)
+   --------------------------------------------------------------------- */
+
+.collection-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-4);
+  max-width: var(--measure-parchment);
+  margin: 0 auto;
+  padding: var(--space-ink-4);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.collection-view__title {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-title-spell);
+  color: var(--color-gold-arcane);
+  letter-spacing: var(--letter-spacing-seal);
+  text-shadow: var(--shadow-gold-glow);
+}
+
+/* Región viva: anuncia ecos solemnes sin perturbar el layout (RNF-03). */
+.collection-view__live {
+  margin: 0;
+  min-height: 1.4em;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-burnished);
+  font-style: italic;
+}
+
+/* Aviso solemne de sesión expirada (RF-05.2): la sala íntima a oscuras. */
+.collection-view__session-expired {
+  border: var(--border-ink-strong);
+  border-left: 3px solid var(--color-ember-red);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  padding: var(--space-ink-3) var(--space-ink-4);
+}
+
+.collection-view__expired-legend {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-burnished);
+}
+
+/* Barra de filtro con conteo del conjunto filtrado (RF-02.3). */
+.collection-view__filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-ink-3);
+}
+
+.collection-view__filter {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-3);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-arcane);
+  background-color: var(--color-bg-obsidian-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+}
+
+.collection-view__filter:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+.collection-view__filter:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.collection-view__count {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-ink-soft);
+}
+
+/* Rejilla de entradas del tomo: una tarjeta por obra sellada. */
+.collection-view__entries {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-ink-4);
+}
+
+/* Paginación viva del plan §3.5. */
+.collection-view__pagination {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-ink-3);
+}
+
+.collection-view__page {
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-gold-arcane);
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  cursor: pointer;
+  transition: border-color var(--transition-arcane), color var(--transition-arcane);
+}
+
+.collection-view__page:hover:not(:disabled) {
+  border-color: var(--color-gold-arcane);
+}
+
+.collection-view__page:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+.collection-view__page:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Estado vacío (RF-02.2): invitación discreta, jamás lenguaje de error. */
+.collection-view__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: var(--space-ink-6) var(--space-ink-4);
+  border: 1px dashed var(--color-gold-arcane-dim);
+  border-radius: var(--radius-seal);
+}
+
+.collection-view__empty-legend {
+  margin: 0 0 var(--space-ink-3);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  color: var(--color-gold-burnished);
+}
+
+.collection-view__empty-cta {
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  background-color: transparent;
+  color: var(--color-gold-arcane);
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-4);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane), color var(--transition-arcane);
+}
+
+.collection-view__empty-cta:hover {
+  background-color: var(--color-gold-arcane);
+  color: var(--color-ink);
+}
+
+.collection-view__empty-cta:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   Zona del gesto del tomo en la tarjeta compartida (Tarea 5.1, RF-04.0)
+   --------------------------------------------------------------------- */
+
+.spell-card__tome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-ink-2);
+  margin-top: var(--space-ink-3);
+  padding-top: var(--space-ink-3);
+  border-top: 1px solid var(--color-gold-arcane-dim);
+}
+
+/* Botón de gesto activo: «Añadir al tomo» / «Elogiar» (RNF-04). */
+.spell-card__tome-gesture {
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-3);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  background-color: transparent;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  cursor: pointer;
+  transition: background-color var(--transition-arcane), color var(--transition-arcane), border-color var(--transition-arcane);
+}
+
+.spell-card__tome-gesture--seal:hover {
+  background-color: var(--color-gold-arcane);
+  color: var(--color-ink);
+  border-color: var(--color-gold-arcane);
+}
+
+.spell-card__tome-gesture--praise:hover {
+  background-color: var(--color-gold-burnished);
+  color: var(--color-ink);
+  border-color: var(--color-gold-burnished);
+}
+
+.spell-card__tome-gesture:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+/* Conmutadores informativos: «Ya está en tu tomo» / «Ya rendiste homenaje». */
+.spell-card__tome-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-ink-2);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-burnished);
+}
+
+/* Leyenda de vedación solemne (RF-04.4): estado, jamás error. */
+.spell-card__tome-vedado {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  font-style: italic;
+  color: var(--color-ink-soft);
+}
+
+/* Marcas solemnes del tomo (RF-03.2): rotuladas desde el DTO. */
+.spell-card__tome-mark {
+  margin: var(--space-ink-2) 0 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+.spell-card__tome-mark--living {
+  color: var(--color-gold-arcane);
+}
+
+.spell-card__tome-mark--gestation {
+  color: var(--color-gold-burnished);
+  font-style: italic;
+}
+
+.spell-card__tome-mark--withdrawn {
+  color: var(--color-ink-soft);
+  font-style: italic;
+}
+
+/* Gesto propio del tomo: la retirada solemne por entrada (RF-02.4). */
+.spell-card__discard {
+  margin-top: var(--space-ink-2);
+  border: none;
+  background: none;
+  color: var(--color-ember-red);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  cursor: pointer;
+  text-decoration: underline dotted;
+  transition: color var(--transition-arcane);
+}
+
+.spell-card__discard:hover {
+  color: var(--color-ember-red-deep);
+}
+
+.spell-card__discard:focus-visible {
+  outline: 2px solid var(--color-ember-red);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   Modal solemne de retirada (Tarea 5.2, RF-02.4)
+   --------------------------------------------------------------------- */
+
+.discard-tome-modal {
+  /* Hereda la capa solemne del kit .modal de components.css. */
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-light);
+  padding: 0;
+  max-width: min(92vw, 480px);
+}
+
+.discard-tome-modal::backdrop {
+  /* Velo arcano: oscurece el fondo tras el diálogo. */
+  background: rgba(10, 7, 15, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+.discard-tome-modal__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-ink-3);
+  padding: var(--space-ink-5);
+}
+
+.discard-tome-modal__title {
+  margin: 0;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-title-spell);
+  color: var(--color-gold-arcane);
+  letter-spacing: var(--letter-spacing-seal);
+}
+
+.discard-tome-modal__announce {
+  margin: 0;
+  min-height: 1.2em;
+  font-size: var(--font-size-ink-small);
+  color: var(--color-ink-soft);
+}
+
+.discard-tome-modal__intro {
+  margin: 0;
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  color: var(--color-gold-burnished);
+}
+
+/* La leyenda canónica del Anexo A: VISIBLE, jamás letra menuda (RF-02.4). */
+.discard-tome-modal__legend {
+  margin: 0;
+  padding: var(--space-ink-3);
+  border-left: 3px solid var(--color-ember-red);
+  background-color: var(--color-bg-obsidian-surface);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  color: var(--color-gold-burnished);
+}
+
+.discard-tome-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-ink-3);
+}
+
+.discard-tome-modal__close {
+  position: absolute;
+  top: var(--space-ink-2);
+  right: var(--space-ink-2);
+  border: none;
+  background: none;
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-title-spell);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-arcane);
+}
+
+.discard-tome-modal__close:hover {
+  color: var(--color-gold-arcane);
+}
+
+.discard-tome-modal__close:focus-visible {
+  outline: 2px solid var(--color-gold-arcane);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------
+   Franja solemne del shell: eco del acto reanudado (Tarea 6.1)
+   --------------------------------------------------------------------- */
+
+.arcane-echo {
+  margin: 0;
+  padding: var(--space-ink-2) var(--space-ink-4);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-gold-burnished);
+  animation: arcane-echo-breathe var(--transition-arcane-slow) ease-out;
+}
+
+@keyframes arcane-echo-breathe {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---------------------------------------------------------------------
+   Responsive: sin desbordes a 360 px (criterio del «Hecho cuando»).
+   --------------------------------------------------------------------- */
+
+@media (max-width: 480px) {
+  .collection-view {
+    padding: var(--space-ink-3);
+  }
+
+  .collection-view__entries {
+    grid-template-columns: 1fr;
+  }
+
+  .collection-view__filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .collection-view__filter {
+    width: 100%;
+  }
+
+  .discard-tome-modal__panel {
+    padding: var(--space-ink-4);
+  }
+
+  .discard-tome-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .discard-tome-modal__actions .button {
+    width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   RNF-05: preferencias de movimiento reducido — solo las clases propias
+   (el kit .button ya se aquienta en controls.css, SPEC-02 RF-08.5).
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .spell-card__tome-gesture,
+  .spell-card__discard,
+  .collection-view__page,
+  .collection-view__empty-cta,
+  .discard-tome-modal__close,
+  .arcane-echo {
+    transition: none;
+    animation: none;
+  }
+}
