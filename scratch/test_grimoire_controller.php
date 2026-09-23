@@ -35,6 +35,10 @@ require __DIR__ . '/../src/Core/Response.php';
 require __DIR__ . '/../src/Core/Request.php';
 require __DIR__ . '/../src/Core/Router.php';
 require __DIR__ . '/../src/Services/GrimoireQueryService.php';
+require __DIR__ . '/../src/Repositories/GrimoireCollectionRepository.php';
+require __DIR__ . '/../src/Services/GrimoireCollectionService.php';
+require __DIR__ . '/../src/Dto/CollectionEntryDto.php';
+require __DIR__ . '/../src/Dto/CollectionPageDto.php';
 require __DIR__ . '/../src/Controllers/GrimoireController.php';
 
 use Grimorio\Controllers\GrimoireController;

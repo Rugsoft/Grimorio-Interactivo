@@ -24,6 +24,12 @@
  * rangeType, areaType, durationType, effects, description, authorAlias,
  * clanName, status — json_encode($dto) genera esa estructura sin
  * transformación adicional y sin campos nulos.
+ *
+ * ENRIQUECIMIENTO EMBEBIDO (SPEC-11, RF-04.0, Tarea 3.3): cuando la
+ * consulta nace de un adepto autenticado, `GrimoireQueryService` porta
+ * el objeto `adeptState` (`collected`/`praised`, camelCase, Artículo V)
+ * junto al resto de claves. Para anónimos la clave NO viaja — jamás se
+ * serializa un estado vacío que mentiría sobre la lectura.
  */
 
 declare(strict_types=1);
@@ -63,6 +69,14 @@ final readonly class GrimoirePageDto implements JsonSerializable
         public string $authorAlias = '',
         public string $clanName = '',
         public string $status = 'draft',
+        /**
+         * Estado embebido del adepto autenticado (RF-04.0): null para
+         * anónimos (la clave jamás viaja) o el mapa camelCase
+         * `collected`/`praised` para la sesión viva.
+         *
+         * @var array{collected: bool, praised: bool}|null
+         */
+        public ?array $adeptState = null,
     ) {
     }
 
@@ -113,6 +127,43 @@ final readonly class GrimoirePageDto implements JsonSerializable
             authorAlias: $readString('author_alias'),
             clanName: $readString('clan_name'),
             status: $readString('status') !== '' ? $readString('status') : 'draft',
+            // El estado del adepto jamás nace de la base: lo porta la
+            // enriquecedora `withAdeptState()` tras la lectura (RF-04.0).
+            adeptState: null,
+        );
+    }
+
+    /**
+     * Añade el estado embebido del adepto (RF-04.0, Tarea 3.3).
+     *
+     * El DTO es inmutable: la enriquecedora devuelve una copia nueva con
+     * el mismo contenido litúrgico y el `adeptState` resuelto — la única
+     * vía de llevar el estado a la serialización sin mutar la carga base.
+     */
+    public function withAdeptState(bool $collected, bool $praised): self
+    {
+        return new self(
+            id: $this->id,
+            slug: $this->slug,
+            name: $this->name,
+            magicSchool: $this->magicSchool,
+            elementalAffinity: $this->elementalAffinity,
+            circle: $this->circle,
+            manaCost: $this->manaCost,
+            castingTime: $this->castingTime,
+            incantationFormula: $this->incantationFormula,
+            hasVerbal: $this->hasVerbal,
+            hasSomatic: $this->hasSomatic,
+            hasMaterial: $this->hasMaterial,
+            rangeType: $this->rangeType,
+            areaType: $this->areaType,
+            durationType: $this->durationType,
+            effects: $this->effects,
+            description: $this->description,
+            authorAlias: $this->authorAlias,
+            clanName: $this->clanName,
+            status: $this->status,
+            adeptState: ['collected' => $collected, 'praised' => $praised],
         );
     }
 
@@ -126,7 +177,7 @@ final readonly class GrimoirePageDto implements JsonSerializable
      */
     public function jsonSerialize(): array
     {
-        return [
+        $payload = [
             'id'                 => $this->id,
             'slug'               => $this->slug,
             'name'               => $this->name,
@@ -148,5 +199,13 @@ final readonly class GrimoirePageDto implements JsonSerializable
             'clanName'           => $this->clanName,
             'status'             => $this->status,
         ];
+
+        // El estado del adepto solo viaja cuando existe (RF-04.0): el
+        // anónimo jamás recibe un `adeptState` vacío que mentiría.
+        if ($this->adeptState !== null) {
+            $payload['adeptState'] = $this->adeptState;
+        }
+
+        return $payload;
     }
 }

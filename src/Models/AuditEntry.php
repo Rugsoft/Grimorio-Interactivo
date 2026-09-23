@@ -91,6 +91,7 @@ final class AuditEntry
         // propio actor. El eco idempotente y el recibo denegado del
         // elogio JAMÁS se asientan (plan §2.3).
         'TOME_SEAL',                  // Sellado de un hechizo en el tomo personal (SPEC-11, RF-06.1)
+        'TOME_PRAISE',                // Elogio con gloria acreditada al clan del hechizo (SPEC-11, RF-06.2)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

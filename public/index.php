@@ -124,6 +124,9 @@ function buildRouter(): Router
 
     // Simulador de Grimorio (SPEC-05): catálogo del Tomo Arcano con
     // segmentación canónica/ensayos (el modo essays exige sesión, Tarea 1.3).
+    // SPEC-11 (Tarea 3.3): el servicio de consulta ya porta la tercera vía
+    // mode=collection (tomo personal enriquecido) y el estado embebido del
+    // adepto (adeptState) — ambos canales viven en el mismo listado canónico.
     $grimoireController = new GrimoireController(new GrimoireQueryService($connection->getPdo()));
     $elementalMatrixController = new ElementalMatrixController(new ElementalMatrixService());
 

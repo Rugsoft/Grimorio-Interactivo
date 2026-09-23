@@ -37,17 +37,17 @@
 
 ## Fase 3 — Puerta del Elogio y Bitácora
 
-- [ ] **Tarea 3.1 — La puerta REST del Elogio Popular**
+- [x] **Tarea 3.1 — La puerta REST del Elogio Popular**
   * **Qué:** `GrimoireCollectionController::praiseSpell()`: guardias propios (sesión → linaje → existencia → 409 `PRAISE_SPELL_NOT_VALIDATED` sobre no validado, RF-04.5) y orquestación de `WeeklyDominionService::awardCommunityFavorite()` SIN modificarla (plan §3.3): traducción del recibo vivo — `AWARDED`, `DUPLICATE_FAVORITE → ALREADY_PRAISED`, `OWN_CLAN_FAVORITE` como estado 200 con leyenda, jamás error HTTP (hallazgos 10-11).
   * **Cubre:** `RF-04.1`, `RF-04.2`, `RF-04.3`, `RF-04.4`, `RF-04.5`, caso límite 8.
   * **Hecho cuando:** gloria nueva devuelve 5 PDA + sinergia; el segundo elogio devuelve `ALREADY_PRAISED` sin segunda gloria; el militante recibe 200 con `OWN_CLAN_FAVORITE` y `favorites` sin fila nueva; el no validado forzado responde 409; el cierre de ciclo asigna la gloria al ciclo correcto.
 
-- [ ] **Tarea 3.2 — Asientos de Bitácora `TOME_SEAL` y `TOME_PRAISE`**
+- [x] **Tarea 3.2 — Asientos de Bitácora `TOME_SEAL` y `TOME_PRAISE`**
   * **Qué:** dos actos canónicos nuevos en `AuditEntry::CANONICAL_ACTION_TYPES` con justificaciones del plan §2.3; `TOME_PRAISE` SOLO cuando hay gloria acreditada (`reason: AWARDED`); el eco idempotente y el recibo denegado jamás se asientan.
   * **Cubre:** `RF-06.1`, `RF-06.2` (hallazgo 20, Artículo III.3).
   * **Hecho cuando:** un sellado produce un `TOME_SEAL` con estampa temporal; un elogio con gloria produce un `TOME_PRAISE` que nombra clan y adepto; el segundo elogio y el recibo denegado no añaden filas a la Bitácora.
 
-- [ ] **Tarea 3.3 — Enriquecimiento embebido del catálogo y el tomo**
+- [x] **Tarea 3.3 — Enriquecimiento embebido del catálogo y el tomo**
   * **Qué:** `adeptState` (camelCase, `collected`/`praised`) embebido en los listados de `GrimoireQueryService` SOLO con sesión autenticada (RF-04.0, hallazgo 5); tercera vía `mode=collection` en `GrimoireController::listSpells()` con `CollectionPageDto` paginado y `tomeMark` por entrada (RF-02.1).
   * **Cubre:** `RF-04.0`, `RF-02.1`, `RF-02.3`, `RNF-01`.
   * **Hecho cuando:** el listado canónico del adepto porta `collected`/`praised` reales sin peticiones extra; anónimo recibe el listado sin `adeptState`; `mode=collection` entrega solo su tomo ordenado por adición con `total`, `page` y `totalPages`.

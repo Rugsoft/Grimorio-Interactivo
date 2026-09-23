@@ -338,6 +338,46 @@ final class GrimoireCollectionService
         return min($safePage, $totalPages);
     }
 
+    /**
+     * Estado VIVO del hechizo para las guardias del controlador (plan §3.3,
+     * puerta del elogio): existencia (404) y juicio de `validated` (409).
+     *
+     * @throws SpellNotFoundException Si el hechizo no existe (guardia 3).
+     */
+    public function spellStatusFor(string $spellId): string
+    {
+        return (string) $this->requireSpellRow($spellId)['status'];
+    }
+
+    /**
+     * Heráldica de un hechizo para el asiento de Bitácora (plan §2.3,
+     * RF-06.2): el TOME_PRAISE debe NOMBRAR obra y casa destinataria de la
+     * gloria (hallazgo 20). Solo se llama tras la guardia de existencia,
+     * de modo que la fila siempre está.
+     *
+     * @return array{spellName: string, clanName: string}
+     */
+    public function spellHeraldryFor(string $spellId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT s.name AS spellName, c.name AS clanName
+               FROM spells s
+               JOIN clans c ON c.id = s.clan_id
+              WHERE s.id = :spellId'
+        );
+        $statement->execute([':spellId' => $spellId]);
+        $row = $statement->fetch(\PDO::FETCH_ASSOC);
+
+        if ($row === false) {
+            throw \Grimorio\Exceptions\SpellNotFoundException::forSpellId($spellId);
+        }
+
+        return [
+            'spellName' => (string) $row['spellName'],
+            'clanName'  => (string) $row['clanName'],
+        ];
+    }
+
     /** El instante original de un sellado ya presente (eco idempotente). */
     private function addedAtOf(string $userId, string $spellId): string
     {

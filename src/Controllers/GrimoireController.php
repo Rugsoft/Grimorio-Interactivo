@@ -6,10 +6,15 @@
  * Tarea 1.3 (TASKS-05): sirve el catálogo de páginas del Tomo Arcano
  * (SPEC-05, RF-01) sobre GrimoireQueryService (Tarea 1.2).
  *
- * Contrato (plan 2.1):
- *   - GET /api/v1/grimoire/spells          → 200 (tomo canónico o ensayos).
- *     Parámetros query: circle (1-5), element, mode (canonical|essays),
- *     page (≥1), limit (1-50). mode=essays exige sesión; anónimo → 401.
+ * Contrato (plan 2.1, ampliado por SPEC-11 Tarea 3.3):
+ *   - GET /api/v1/grimoire/spells          → 200 (tomo canónico, ensayos
+ *     o COLECCIÓN). Parámetros query: circle (1-5), element, mode
+ *     (canonical|essays|collection), page (≥1), limit (1-50).
+ *     mode=essays exige sesión; anónimo → 401. mode=collection exige
+ *     sesión (401) y LINAJE jurado (403 LINEAGE_OATH_REQUIRED, SPEC-09:
+ *     el linaje manda, no el rol); entrega el tomo personal paginado
+ *     de 50 (CollectionPageDto) y enriquece canonical/essays con el
+ *     `adeptState` del adepto autenticado (RF-04.0).
  *   - GET /api/v1/grimoire/spells/{id}     → 200 (ficha litúrgica) | 404.
  *
  * Constitución:
@@ -26,6 +31,7 @@ namespace Grimorio\Controllers;
 
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
+use Grimorio\Exceptions\LineageOathException;
 use Grimorio\Models\User;
 use Grimorio\Services\GrimoireQueryService;
 use RuntimeException;
@@ -53,10 +59,18 @@ final class GrimoireController
      *
      * mode=canonical (por defecto): tomo público de validados.
      * mode=essays: ensayos del autor autenticado (401 si es anónimo).
+     * mode=collection (SPEC-11, RF-02.1): el tomo personal del adepto
+     *   autenticado con linaje jurado, paginado de 50, con marca
+     *   solemne y estado del homenaje por entrada (plan §2.2).
      *
-     * Respuestas: 200 OK (sobre de paginación con GrimoirePageDto),
-     * 400 Bad Request (parámetros fuera del canon) y 401 Unauthorized
-     * (essays sin sesión).
+     * Enriquecimiento embebido (RF-04.0): con sesión viva, los listados
+     * canonical y essays portan el `adeptState` (collected/praised) de
+     * cada página; anónimo recibe el listado SIN la clave.
+     *
+     * Respuestas: 200 OK (sobre de paginación), 400 Bad Request
+     * (parámetros fuera del canon), 401 Unauthorized (essays/collection
+     * sin sesión) y 403 LINEAGE_OATH_REQUIRED (collection sin juramento,
+     * hallazgo 16: el linaje manda, no el rol).
      */
     public function listSpells(Request $request): Response
     {
@@ -101,8 +115,27 @@ final class GrimoireController
             $limit = max(1, min(50, (int) $rawLimit));
         }
 
-        // --- Segmentación por modo y sesión (RF-01.2 / RF-01.4) ---
+        // --- Segmentación por modo y sesión (RF-01.2 / RF-01.4 / RF-02.1) ---
         $mode = $request->getQueryParam('mode') ?? 'canonical';
+
+        if ($mode === 'collection') {
+            // La tercera vía (SPEC-11): el tomo íntimo del adepto. La
+            // hoja es de 50 fija (CollectionPageDto::PAGE_LIMIT), el
+            // `limit` de canonical no aplica aquí.
+            $adepto = $request->getUser();
+            if ($adepto === null || $adepto->getId() === '') {
+                return $this->unauthenticatedResponse();
+            }
+            if ($adepto->getLineage() === null) {
+                return $this->oathRejection();
+            }
+
+            return Response::json([
+                'success' => true,
+                'data'    => $this->queryService->getCollection($adepto, $element, $page),
+            ], 200);
+        }
+
         if ($mode === 'essays') {
             $author = $request->getUser();
             if ($author === null || $author->getId() === '') {
@@ -110,9 +143,17 @@ final class GrimoireController
             }
             $pageData = $this->queryService->getAuthorEssays($author, $circle, $element, $page, $limit);
         } else {
-            // Cualquier mode distinto de essays degrada al tomo canónico
-            // público (jamás filtra borradores por accidente).
+            // Cualquier mode distinto de essays/collection degrada al
+            // tomo canónico público (jamás filtra borradores por accidente).
             $pageData = $this->queryService->getCanonicalSpells($circle, $element, $page, $limit);
+        }
+
+        // Enriquecimiento embebido del adepto (RF-04.0, hallazgo 5): con
+        // sesión viva, cada página porta su collected/praised real sin
+        // peticiones extra; anónimo recibe el listado SIN la clave.
+        $reader = $request->getUser();
+        if ($reader !== null && $reader->getId() !== '') {
+            $pageData['spells'] = $this->queryService->embedAdeptState($reader, $pageData['spells']);
         }
 
         return Response::json([
@@ -179,6 +220,25 @@ final class GrimoireController
                 'message' => 'El vínculo arcano no está activo: conságrate o vincula tu identidad para hojear tus ensayos.',
             ],
         ], 401);
+    }
+
+    /**
+     * Sobre 403 del peregrino sin juramento (SPEC-09 retención, hallazgo 16):
+     * el linaje manda, no el rol — una sola voz para todos los roles.
+     */
+    private function oathRejection(): Response
+    {
+        $oath = LineageOathException::lineageOathRequired(
+            'El santuario aguarda tu juramento: nadie pisa sus salas sin linaje jurado.'
+        );
+
+        return Response::json([
+            'success' => false,
+            'error'   => [
+                'code'    => $oath->errorCode,
+                'message' => $oath->getMessage(),
+            ],
+        ], $oath->httpStatus);
     }
 
     /**
