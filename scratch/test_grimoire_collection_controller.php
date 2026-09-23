@@ -355,6 +355,31 @@ foreach (['POST /api/v1/grimoire/collection', 'DELETE /api/v1/grimoire/collectio
     );
 }
 
+echo "\n[FASE 8] Caso límite 9: la retirada del tomo con elogio previo no toca la mesa del Dominio (RF-04.4, RF-05.5).\n";
+// El adepta ya elogió spl-ctrl-water en la FASE 5 (fila viva en favorites
+// y gloria acreditada). Lo sella ahora al tomo y lo retira después: el
+// elogio es un acto de gloria para el clan del autor, NO una pata de la
+// colección — la fila de favorites sobrevive y la retirada jamás la menciona.
+$favoriteRowsBefore = (int) $connection->query('SELECT COUNT(*) FROM favorites')->fetchColumn();
+assertCondition($favoriteRowsBefore >= 1, 'Precondición: el elogio de la FASE 5 dejó su fila en favorites (mesa del Dominio).');
+$response = dispatchRoute($router, 'POST', '/api/v1/grimoire/collection', $adept, '{"spellId":"spl-ctrl-water"}');
+assertCondition($response->getStatusCode() === 201, 'Precondición: el sellado del hechizo elogiado al tomo responde 201.');
+$response = dispatchRoute($router, 'DELETE', '/api/v1/grimoire/collection/spl-ctrl-water', $adept, null);
+assertCondition($response->getStatusCode() === 200, 'La retirada del hechizo elogiado responde 200 (rito normal, sin ceremonias).');
+$favoriteRowsAfter = (int) $connection->query('SELECT COUNT(*) FROM favorites')->fetchColumn();
+assertCondition($favoriteRowsAfter === $favoriteRowsBefore, 'La fila de favorites SOBREVIVE a la retirada del tomo: cada rito vive su vida (caso límite 9).');
+$controllerSource = (string) file_get_contents(__DIR__ . '/../src/Controllers/GrimoireCollectionController.php');
+$serviceSource = (string) file_get_contents(__DIR__ . '/../src/Services/GrimoireCollectionService.php');
+$discardSource = $controllerSource . $serviceSource;
+assertCondition(
+    !preg_match('/DELETE\s+FROM\s+favorites/i', $discardSource),
+    'Ninguna consulta del controlador o del servicio borra de favorites: la frontera sagrada es de código, no solo de comportamiento.',
+);
+// El estado de homenaje (RF-04.0) es DERIVADO en lectura desde favorites:
+// tras la retirada el catálogo sigue mostrando «Ya rendiste homenaje».
+$response = dispatchRoute($router, 'GET', '/api/v1/grimoire/collection', $adept, null);
+assertCondition($response->getStatusCode() === 200, 'El catálogo sigue consultable tras la retirada (el tomo queda vacío, no roto).');
+
 // Limpieza de sondas desechables.
 @unlink($probePath);
 @unlink(str_replace('.sqlite', '-wal', $probePath));

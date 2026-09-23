@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 /**
  * test_grimoire_collection_repository.php — Verificación de la Tarea 1.2
- * de TASKS-11.
+ * y de la Tarea 7.1 de TASKS-11.
  *
- * Valida `GrimoireCollectionRepository` contra el «Hecho cuando» de la
- * tarea, sobre el esquema canónico REAL (`database/schema.sql`):
+ * Valida `GrimoireCollectionRepository` y los invariantes físicos de la
+ * mesa del tomo contra el «Hecho cuando» de ambas tareas, sobre el esquema
+ * canónico REAL (`database/schema.sql`):
  *
  *   1. Las seis consultas responden contra una base sembrada.
  *   2. `add()` dos veces devuelve una sola fila (RF-01.3: el primer
  *      sellado `true`, el segundo `false`, la base con UNA fila).
  *   3. `pageForUser()` respeta filtro, orden y paginación de 50
  *      (RF-02.1, RF-02.3, caso límite 4).
+ *   4. [Tarea 7.1] Invariantes físicos del DDL: idempotencia del DDL,
+ *      UNIQUE física, índice de latencia `(user_id, added_at)` y cascada
+ *      de purga REAL por clave foránea (RF-05.3, RNF-01).
  *
  * Fases:
  *   [0] Superficie: el repositorio existe y declara sus seis métodos.
@@ -24,6 +28,7 @@ declare(strict_types=1);
  *   [5] `countForUser()`: total íntegro y filtrado, con y sin filtro.
  *   [6] `remove()`: retirada propia, ajena imposible, idempotencia.
  *   [7] Regresión de la Tarea 1.1: la muralla física sigue viva.
+ *   [8] [Tarea 7.1] Invariantes físicos del DDL canónico.
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): PDO nativo, sin librerías externas.
@@ -249,14 +254,71 @@ try {
     $murallaError = $failure->getMessage();
 }
 assertCondition($murallaError !== null && str_contains($murallaError, 'UNIQUE'), 'El INSERT crudo duplicado sigue cayendo ante la UNIQUE de la base.');
-// La purga del adepto b arrastra su tomo (RF-05.3). Sus hechizos y su casa
-// sobreviven — la cascada corre SOLO hacia el tomo, como manda la Tarea 1.1.
-$connection->prepare('DELETE FROM grimoire_collections WHERE user_id = :id')->execute([':id' => $otherAdeptId]);
-$connection->prepare('DELETE FROM spells WHERE author_id = :id')->execute([':id' => $otherAdeptId]);
-$connection->prepare('DELETE FROM clans WHERE id = :id')->execute([':id' => 'cln-b']);
+
+// --- FASE 8: invariantes físicos del DDL canónico (Tarea 7.1) ----------------
+// El «Hecho cuando» de la Tarea 7.1 pide asertos sobre CADA invariante
+// físico de la tabla, no solo sobre el comportamiento del repositorio:
+// DDL idempotente, UNIQUE física (ya probada arriba), índice de latencia
+// y cascada de purga REAL por clave foránea (RF-05.3).
+echo "\n[FASE 8] Invariantes físicos del DDL: idempotencia, índice y cascada real (Tarea 7.1).\n";
+
+// [8.1] Idempotencia del DDL: re-ejecutar schema.sql + migración sobre una
+// base ya migrada no falla ni duplica estructuras (contrato de la Tarea 1.1).
+$migrationSource = (string) file_get_contents(__DIR__ . '/../sql/11_grimoire_collections.sql');
+$migrationIdempotent = null;
+try {
+    $connection->exec($schemaSource);
+    $connection->exec($migrationSource);
+    $migrationIdempotent = true;
+} catch (PDOException $failure) {
+    $migrationIdempotent = false;
+}
+assertCondition($migrationIdempotent === true, 'Re-ejecutar schema.sql + migración sobre base migrada no falla (CREATE IF NOT EXISTS).');
+$ddlCount = (int) $connection->query(
+    "SELECT COUNT(*) FROM sqlite_master WHERE name = 'grimoire_collections'"
+)->fetchColumn();
+assertCondition($ddlCount === 1, 'Re-ejecutar el DDL deja UNA sola definición de la mesa (sin duplicación de estructuras).');
+$indexCount = (int) $connection->query(
+    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_grimoire_collections_user_added'"
+)->fetchColumn();
+assertCondition($indexCount === 1, 'El índice de latencia existe con UNA sola definición tras re-ejecutar el DDL.');
+
+// [8.2] El índice de latencia (RNF-01) es el índice EXACTO del contrato:
+// (user_id, added_at DESC). Un índice distinto no serviría el presupuesto
+// de la apertura del tomo.
+$indexRow = $connection->query(
+    "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_grimoire_collections_user_added'"
+)->fetch(PDO::FETCH_ASSOC);
+$indexSql = (string) ($indexRow['sql'] ?? '');
+assertCondition(str_contains($indexSql, 'user_id') && str_contains($indexSql, 'added_at'), 'El índice de latencia cubre (user_id, added_at): el plan del tomo puede resolver orden y filtro sin escaneo.');
+
+// [8.3] La cascada de purga es REAL: borrar al adepto ARRASTRA su tomo por
+// la clave foránea (RF-05.3), sin limpiezas manuales. Para no chocar con la
+// FK de `spells.author_id` (sin ON DELETE), los hechizos del purgado se
+// re-attribuyen a un autor superviviente — el tomo sigue apuntando a ellos.
+$connection->prepare('UPDATE spells SET author_id = :survivor WHERE author_id = :purged')
+    ->execute([':survivor' => $adeptId, ':purged' => $otherAdeptId]);
 $connection->prepare('DELETE FROM users WHERE id = :id')->execute([':id' => $otherAdeptId]);
-$otherAdeptRows = $repository->countForUser($otherAdeptId);
-assertCondition($otherAdeptRows === 0, 'La purga del adepto arrastra su tomo por cascada (RF-05.3).');
+$orphanRows = (int) $connection->query(
+    "SELECT COUNT(*) FROM grimoire_collections WHERE user_id = 'usr-b'"
+)->fetchColumn();
+assertCondition($orphanRows === 0, 'La purga del adepto (DELETE crudo de users) arrastra su tomo por cascada FK real (RF-05.3).');
+assertCondition($repository->countForUser($otherAdeptId) === 0, 'El tomo del purgado queda vacío sin limpieza manual: la cascada es física, no de aplicación.');
+// Los hechizos re-attribuidos sobreviven: la cascada corre SOLO hacia el tomo.
+$survivorSpellsStatement = $connection->prepare('SELECT COUNT(*) FROM spells WHERE author_id = :id');
+$survivorSpellsStatement->execute([':id' => $adeptId]);
+$survivorSpells = (int) ($survivorSpellsStatement->fetchColumn() ?: 0);
+assertCondition($survivorSpells >= 1, 'Los hechizos del purgado sobreviven a la purga: la cascada jamás alcanza el catálogo (RF-05.5).');
+// La UNIQUE sigue viva tras la avalancha: la muralla no se afloja.
+$uniqueStillAlive = null;
+try {
+    $connection->prepare('INSERT INTO grimoire_collections (id, user_id, spell_id, added_at) VALUES (:id, :u, :s, :t)')
+        ->execute([':id' => 'gc-regression-2', ':u' => $adeptId, ':s' => 'spl-a-1', ':t' => '2026-09-22T23:00:00Z']);
+    $uniqueStillAlive = false;
+} catch (PDOException $failure) {
+    $uniqueStillAlive = str_contains($failure->getMessage(), 'UNIQUE');
+}
+assertCondition($uniqueStillAlive === true, 'La muralla UNIQUE sigue viva tras la purga: la cascada jamás afloja los invariantes.');
 
 // --- Limpieza ----------------------------------------------------------------
 $connection = null;

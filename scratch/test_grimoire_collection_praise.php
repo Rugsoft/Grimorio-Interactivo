@@ -374,10 +374,41 @@ assertCondition(
 $gloryAfter = houseGlory($connection, 'cln-flame');
 assertCondition($gloryAfter['weekly'] === 0 && $gloryAfter['historical'] === 6, 'Ninguna gloria retroactiva tras el corte (la gloria es asiento histórico — hallazgo 18).');
 
-echo "\n[FASE 7] Frontera sagrada: elogio y colección viven aparte (RF-05.4).\n";
+echo "\n[FASE 8] Caso límite 11: la gloria es asiento histórico — cero revisión retroactiva (hallazgo 18).\n";
+// El visitante de Mareas elogió la obra de la Llama en la FASE 2 con su
+// instante. Si emigrara a la casa elogiada, la gloria acreditada NO se
+// revisa: el asiento es patrimonio del instante en que nació (SPEC-07).
+// La frontera es declarada: el controlador no expone mutación de gloria.
+$controllerSource = (string) file_get_contents(__DIR__ . '/../src/Controllers/GrimoireCollectionController.php');
+$serviceSource = (string) file_get_contents(__DIR__ . '/../src/Services/GrimoireCollectionService.php');
 assertCondition(
-    (int) $connection->query('SELECT COUNT(*) FROM grimoire_collections')->fetchColumn() === 0,
-    'La puerta del elogio no tocó el tomo: cero filas en grimoire_collections.',
+    !preg_match('/(UPDATE|DELETE)\s+(clans|favorites|weekly)/i', $controllerSource . $serviceSource),
+    'La puerta del elogio jamás muta gloria acumulada: cero UPDATE/DELETE de marcadores (revisión retroactiva fuera de alcance).',
+);
+$leaderboardBefore = houseGlory($connection, 'cln-flame');
+$response = dispatchPost($router, '/api/v1/grimoire/praise', $visitor, '{"spellId":"spl-praise-fire"}');
+assertCondition(
+    $response->getStatusCode() === 200 && (bodyOf($response)['data']['reason'] ?? '') === 'ALREADY_PRAISED',
+    'El re-elogio tras el instante sigue respondiendo el recibo vivo (200 ALREADY_PRAISED, sin nueva gloria).',
+);
+$leaderboardAfter = houseGlory($connection, 'cln-flame');
+assertCondition($leaderboardAfter === $leaderboardBefore, 'El marcador del clan elogiado queda INTACTO: la gloria ya acreditada no se re-credita ni se revoca.');
+
+echo "\n[FASE 9] Caso límite 3, defensa de profundidad: pluma propia forzada por REST (RF-04.4).\n";
+// La UI oculta el gesto con leyenda sobria (Tarea 5.1, arnés de tarjeta);
+// el backend es la segunda muralla: aunque se fuerce la llamada, el
+// servicio vivo de SPEC-07 deniega ANTES de insertar fila en favorites.
+// Se ejercita el mismo acto de la FASE 4 desde la PUERTA REST completa
+// (el rol de la UI oculta queda atestiguado por el arnés de tarjeta).
+$favoriteRowsBeforeSelf = (int) $connection->query('SELECT COUNT(*) FROM favorites')->fetchColumn();
+$response = dispatchPost($router, '/api/v1/grimoire/praise', $memberFlame, '{"spellId":"spl-praise-fire"}');
+assertCondition(
+    $response->getStatusCode() === 200 && (bodyOf($response)['data']['reason'] ?? '') === 'OWN_CLAN_FAVORITE',
+    'El elogio forzado de pluma propia responde el recibo denegado (200 OWN_CLAN_FAVORITE).',
+);
+assertCondition(
+    (int) $connection->query('SELECT COUNT(*) FROM favorites')->fetchColumn() === $favoriteRowsBeforeSelf,
+    'La muralla sostiene: el voto de pluma propia jamás llega a insertarse en favorites.',
 );
 
 // Limpieza de sondas desechables.

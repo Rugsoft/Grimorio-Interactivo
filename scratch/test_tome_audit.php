@@ -237,6 +237,28 @@ $controllerSource = (string) file_get_contents(__DIR__ . '/../src/Controllers/Gr
 assertCondition(str_contains($controllerSource, 'TOME_PRAISE'), 'La puerta del elogio asienta TOME_PRAISE con gloria (plan §2.3).');
 assertCondition(str_contains($controllerSource, 'wasAwarded()'), 'La puerta juzga el recibo con wasAwarded() (solo gloria nueva asienta).');
 
+// El catálogo canónico permanece CERRADO: los dos actos del tomo entran
+// por su puerta y ningún otro tipo se cuela (guard de soberanía de
+// SPEC-03 extendido a SPEC-11 — Tarea 7.3).
+if (preg_match('/CANONICAL_ACTION_TYPES\s*=\s*\[(.*?)];/s', $auditSource, $catalogMatch) === 1) {
+    $catalogTypes = [];
+    if (preg_match_all("/'([A-Z_]+)'/", $catalogMatch[1], $typeMatches) >= 1) {
+        $catalogTypes = $typeMatches[1];
+    }
+    assertCondition(
+        in_array('TOME_SEAL', $catalogTypes, true) && in_array('TOME_PRAISE', $catalogTypes, true),
+        'Los dos actos del tomo viven dentro del catálogo canónico (catálogo cerrado, no strings sueltos).',
+    );
+    $strayTypes = array_values(array_filter(
+        $catalogTypes,
+        static fn (string $type): bool => (bool) preg_match('/^(GRIMOIRE|COLLECTION|TOME_(?!SEAL$|PRAISE$))/', $type)
+    ));
+    assertCondition(
+        $strayTypes === ['TOME_SEAL', 'TOME_PRAISE'] || $strayTypes === [],
+        'Ningún tipo de SPEC-11 colateral se cuela en el catálogo: solo los dos actos canónicos.',
+    );
+}
+
 // ---------------------------------------------------------------------
 // Base canónica real + Router con las dos rutas del tomo.
 // ---------------------------------------------------------------------

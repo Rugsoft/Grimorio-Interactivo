@@ -113,13 +113,18 @@ assertCondition(!str_contains($repositorySource, 'living') && !str_contains($rep
 // (solo la traducción del mapa las necesita a las tres): coincidencias
 // sueltas con una sola palabra —un aviso de retirada, un evento de
 // petición— no son el mapa.
-$frontendTomeMarkFiles = array_filter(
+// La vigilancia del mapa único se RATIFICA con la vista ya erigida (Tarea
+// 5.3, Tarea 5.4): lo vedado es la TRADUCCIÓN — derivar `tomeMark` desde el
+// estado del ciclo de vida (`draft`/`experimental`/`validated`/`rejected`/
+// `archived`) en el frontend. Rotular la marca que ya viaja en el DTO es
+// legítimo y necesario (la vista castellaniza, jamás computa). Un módulo
+// que menciona `tomeMark` Y porta un estado del ciclo lo estaría derivando.
+$frontendTomeMarkFiles = array_values(array_filter(
     glob(__DIR__ . '/../public/assets/js/**/*.js') ?: [],
-    static fn (string $path): bool => (bool) (preg_match('/living/', (string) file_get_contents($path))
-        && preg_match('/gestation/', (string) file_get_contents($path))
-        && preg_match('/withdrawn/', (string) file_get_contents($path)))
-);
-assertCondition($frontendTomeMarkFiles === [], 'Cero lógica del mapa duplicada en el frontend: ninguna superficie porta el trío de marcas (aún no existe la vista; la vigilancia queda instalada).');
+    static fn (string $path): bool => (bool) (str_contains((string) file_get_contents($path), 'tomeMark')
+        && (bool) preg_match("/'(draft|experimental|validated|rejected|archived)'/", (string) file_get_contents($path)))
+));
+assertCondition($frontendTomeMarkFiles === [], 'Cero traducción del mapa en el frontend: ningún módulo deriva `tomeMark` desde estados del ciclo de vida (la vista solo rotula la marca del DTO).');
 
 echo "\n[FASE 4] Guardia de sellabilidad: solo lo consagrado entra (RF-01.1, RF-04.5).\n";
 assertCondition(GrimoireCollectionService::isSellableStatus('validated') === true, "Solo 'validated' es sellable.");

@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * test_grimoire_collection_seal_rite.php — Verificación de la Tarea 2.2
+ * test_grimoire_collection_service.php — Verificación de la Tarea 2.2
+ * y de la Tarea 7.2 de TASKS-11.
  * de TASKS-11.
  *
  * Valida EL RITO DEL SELLADO (`GrimoireCollectionService::collectSpell()`)
@@ -42,7 +43,7 @@ declare(strict_types=1);
  *   - Artículo V (Dualidad): identificadores en inglés; narrativa en
  *     noble castellano.
  *
- * Uso: php scratch/test_grimoire_collection_seal_rite.php
+ * Uso: php scratch/test_grimoire_collection_service.php
  * Salida: código 0 si todos los asertos pasan; código 1 en caso contrario.
  */
 
@@ -166,7 +167,7 @@ function runRite(Grimorio\Services\GrimoireCollectionService $service, Grimorio\
     }
 }
 
-echo "=== Rito del sellado — Tarea 2.2 de TASKS-11 ===\n";
+echo "=== Rito del sellado — Tareas 2.2 y 7.2 de TASKS-11 ===\n";
 
 echo "\n[FASE 0] Superficie: el servicio, sus excepciones y el acto canónico.\n";
 require_once __DIR__ . '/../src/Repositories/GrimoireCollectionRepository.php';
@@ -306,4 +307,4 @@ echo "\n=== RESULTADO: {$assertsPassed} asertos en verde, {$assertsFailed} en ro
 if ($assertsFailed > 0) {
     exit(1);
 }
-echo "Tarea 2.2 verificada: el rito del sellado juzga en orden y la Bitácora habla una sola vez.\n";
+echo "Tareas 2.2 y 7.2 verificadas: el rito del sellado juzga en orden y la Bitácora habla una sola vez.\n";

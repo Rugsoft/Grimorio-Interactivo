@@ -100,17 +100,17 @@
 
 ## Fase 7 — Arneses Backend
 
-- [ ] **Tarea 7.1 — Arnés del repositorio y la migración**
+- [x] **Tarea 7.1 — Arnés del repositorio y la migración**
   * **Qué:** `scratch/test_grimoire_collection_repository.php`: DDL idempotente, UNIQUE física, índice de latencia, cascada de purga, orden y paginación — según plan §6.1 fila 1.
   * **Cubre:** `RF-05.3`, `RF-05.4`, `RNF-01`, `RNF-02`.
   * **Hecho cuando:** el arnés concluye en verde con asertos sobre cada invariante físico de la tabla.
 
-- [ ] **Tarea 7.2 — Arnés del rito del tomo y del controlador**
+- [x] **Tarea 7.2 — Arnés del rito del tomo y del controlador**
   * **Qué:** `scratch/test_grimoire_collection_service.php` + `scratch/test_grimoire_collection_controller.php`: guardias ordenadas, idempotencia por carrera, leyenda UNIFORME, mapa de marcas completo, REST íntegro (201/200/403/404/409), camelCase, retirada sin tocar `favorites` — según plan §6.1 filas 2-3.
   * **Cubre:** `RF-01.1`–`RF-01.3`, `RF-02.4`, `RF-03.2`, `RF-05.1`, `RF-05.5`, casos límite 2, 5 y 9.
   * **Hecho cuando:** ambos arneses concluyen en verde reproduciendo cada caso del plan, incluida la carrera de doble INSERT resuelta por la UNIQUE física.
 
-- [ ] **Tarea 7.3 — Arnés de la puerta del elogio y la Bitácora**
+- [x] **Tarea 7.3 — Arnés de la puerta del elogio y la Bitácora**
   * **Qué:** `scratch/test_praise_gateway.php` + `scratch/test_tome_audit.php`: las tres denegaciones/eos del recibo vivo de SPEC-07 sin modificarla, 409 del no validado, asientos `TOME_SEAL`/`TOME_PRAISE` solo donde procede, catálogo cerrado y rótulos castellanos — según plan §6.1 filas 4-5.
   * **Cubre:** `RF-04.1`–`RF-04.5`, `RF-06.1`, `RF-06.2`, casos límite 3, 8 y 11.
   * **Hecho cuando:** cada uno de los cinco comportamientos del elogio responde exactamente como el plan §3.3 dicta y la Bitácora registra solo los dos actos canónicos con su estampa.
