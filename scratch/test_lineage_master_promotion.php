@@ -80,6 +80,9 @@ $projectRoot = dirname(__DIR__);
 require_once $projectRoot . '/src/Models/User.php';
 require_once $projectRoot . '/src/Models/AuditEntry.php';
 require_once $projectRoot . '/src/Repositories/LineageOathRepository.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Exceptions/LineageOathException.php';
 // SovereignAdminService carga sus dependencias propias vía autoload del
@@ -152,5 +155,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

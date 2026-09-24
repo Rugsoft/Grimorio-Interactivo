@@ -73,17 +73,47 @@ function forgeAdept(PDO $pdo, string $id, string $alias, string $email, ?string 
     $statement->execute([':id' => $id, ':alias' => $alias, ':email' => $email, ':role' => $role, ':lineage' => $lineage, ':now' => $NOW]);
 }
 
-/** Forja un Request con usuario, método, ruta y cabecera de vista. */
-function forgeRequest(?Grimorio\Models\User $user, string $method, string $path, ?string $requestedRoute = null): Grimorio\Core\Request
-{
+/**
+ * Forja un Request con usuario, método, ruta, cabecera de vista y VÍNCULO.
+ *
+ * El quinto argumento (SPEC-09, enmienda de la Tarea 9.2 de SPEC-11) es el
+ * id de `user_sessions`: la ruta retenida se persiste en la fila del
+ * vínculo, no en `$_SESSION` — aquel array moría con cada petición porque
+ * el santuario jamás invoca `session_start()`.
+ */
+function forgeRequest(
+    ?Grimorio\Models\User $user,
+    string $method,
+    string $path,
+    ?string $requestedRoute = null,
+    ?string $sessionId = null
+): Grimorio\Core\Request {
     $headers = $requestedRoute !== null ? ['X-Requested-Route' => $requestedRoute] : [];
     $request = new Grimorio\Core\Request($method, $path, [], $headers);
+    if ($sessionId !== null) {
+        $request->setActiveSessionId($sessionId);
+    }
     if ($user !== null) {
         $request->setUser($user);
     }
 
     return $request;
 }
+
+/** Lee la columna de retención de un vínculo (sin consumirla). */
+function retainedRouteOf(PDO $pdo, string $sessionId): ?string
+{
+    $statement = $pdo->prepare('SELECT retained_route FROM user_sessions WHERE id = :id');
+    $statement->execute([':id' => $sessionId]);
+    $retained = $statement->fetchColumn();
+
+    return is_string($retained) && $retained !== '' ? $retained : null;
+}
+
+// El arnés forja VÍNCULOS reales (SessionManager::createSession emite la
+// cookie de sesión): el búfer retiene la salida para que las cabeceras no
+// se hayan enviado todavía y la emisión sea silenciosa.
+ob_start();
 
 echo "== VERIFICACION TAREA 2.3: La guardia de sustancia ==\n\n";
 
@@ -94,7 +124,7 @@ $middlewarePath = $projectRoot . '/src/Middleware/LineageOathMiddleware.php';
 echo "FASE 0: Superficie del middleware\n";
 assertCondition(file_exists($middlewarePath), 'Existe src/Middleware/LineageOathMiddleware.php');
 if (!file_exists($middlewarePath)) {
-    echo "\nRESULTADO: FALLO — falta el middleware de la Tarea 2.3.\n";
+    echo "\nRESULTADO: DENEGADO — falta el middleware de la Tarea 2.3.\n";
     exit(1);
 }
 $middlewareSource = (string) file_get_contents($middlewarePath);
@@ -107,14 +137,22 @@ require_once $projectRoot . '/src/Models/User.php';
 require_once $projectRoot . '/src/Core/Request.php';
 require_once $projectRoot . '/src/Core/Response.php';
 require_once $projectRoot . '/src/Repositories/LineageOathRepository.php';
+require_once $projectRoot . '/src/Core/SessionManager.php';
+require_once $projectRoot . '/src/Core/ActiveSession.php';
 require_once $middlewarePath;
 
 $pdo = forgeSanctuary();
-$middleware = new Grimorio\Middleware\LineageOathMiddleware(new Grimorio\Repositories\LineageOathRepository($pdo));
 forgeAdept($pdo, 'usr_peregrino', 'Peregrino del Velo', 'peregrino@arcano.arc', null);
-// El arnés ejercita la sesión nativa sin sesiones reales: $_SESSION se
-// simula como array global, igual que hará el middleware en producción.
-$_SESSION = [];
+
+// La retención vive en el VÍNCULO real (Tarea 9.2 de SPEC-11): se forja
+// una sesión de verdad y el middleware escribe en su fila.
+$sessionManager = new Grimorio\Core\SessionManager($pdo);
+$activeSession = $sessionManager->createSession('usr_peregrino');
+$sessionId = $activeSession->getId();
+$middleware = new Grimorio\Middleware\LineageOathMiddleware(
+    new Grimorio\Repositories\LineageOathRepository($pdo),
+    $sessionManager,
+);
 
 $peregrino = new Grimorio\Models\User(
     id: 'usr_peregrino',
@@ -129,7 +167,7 @@ $peregrino = new Grimorio\Models\User(
 
 // La cabecera de vista viaja por el constructor del Request, como la
 // SPA la porta en la petición real.
-$request = forgeRequest($peregrino, 'POST', '/api/v1/spells/drafts', '#/creador');
+$request = forgeRequest($peregrino, 'POST', '/api/v1/spells/drafts', '#/creador', $sessionId);
 $response = $middleware->guard($request);
 assertCondition($response instanceof Grimorio\Core\Response && $response->getStatusCode() === 403, 'El peregrino recibe 403 en una ruta de gestión (RF-05.1)');
 $payload = $response !== null ? json_decode($response->getBody(), true) : [];
@@ -142,19 +180,24 @@ assertCondition(
     ($payload['error']['details']['oathView'] ?? '') === '#/juramento',
     'El sobre señala la vista de la ceremonia (`oathView: #/juramento`)'
 );
-assertCondition(($_SESSION['retainedRoute'] ?? null) === '#/creador', 'La ruta solicitada INTERNA queda retenida en la sesión (RF-05.3, criterio 2)');
+assertCondition(retainedRouteOf($pdo, $sessionId) === '#/creador', 'La ruta solicitada INTERNA queda retenida en el VÍNCULO (RF-05.3, criterio 2)');
 
 // Otra denegación sin cabecera de ruta: no borra una retención previa ni
 // la inventa.
-$middleware->guard(forgeRequest($peregrino, 'DELETE', '/api/v1/spells/drafts/xyz'));
-assertCondition(($_SESSION['retainedRoute'] ?? null) === '#/creador', 'Una denegación sin ruta no toca la retención existente');
+$middleware->guard(forgeRequest($peregrino, 'DELETE', '/api/v1/spells/drafts/xyz', null, $sessionId));
+assertCondition(retainedRouteOf($pdo, $sessionId) === '#/creador', 'Una denegación sin ruta no toca la retención existente');
 
 // La URL externa se descarta en silencio (criterio 3).
-$response = $middleware->guard(forgeRequest($peregrino, 'POST', '/api/v1/clans', 'https://malvado.example.com/robar-mana'));
+$response = $middleware->guard(forgeRequest($peregrino, 'POST', '/api/v1/clans', 'https://malvado.example.com/robar-mana', $sessionId));
 assertCondition($response !== null && $response->getStatusCode() === 403, 'Una segunda ruta de gestión también es denegada');
-assertCondition(!isset($_SESSION['retainedRoute']) || $_SESSION['retainedRoute'] === '#/creador', 'La URL EXTERNA se descarta: jamás entra en la sesión');
-$middleware->guard(forgeRequest($peregrino, 'POST', '/api/v1/clans', '#/clave-inexistente'));
-assertCondition(!isset($_SESSION['retainedRoute']) || $_SESSION['retainedRoute'] === '#/creador', 'Un hash de vista desconocido también se descarta');
+assertCondition(retainedRouteOf($pdo, $sessionId) === '#/creador', 'La URL EXTERNA se descarta: jamás entra en el vínculo');
+$middleware->guard(forgeRequest($peregrino, 'POST', '/api/v1/clans', '#/clave-inexistente', $sessionId));
+assertCondition(retainedRouteOf($pdo, $sessionId) === '#/creador', 'Un hash de vista desconocido también se descarta');
+
+// Sin vínculo no hay a dónde retener: la retención es inocua, no un error.
+$sinVinculo = forgeRequest($peregrino, 'POST', '/api/v1/clans', '#/torre');
+assertCondition($middleware->guard($sinVinculo)?->getStatusCode() === 403, 'Sin vínculo la denegación sigue siendo 403');
+assertCondition(retainedRouteOf($pdo, $sessionId) === '#/creador', 'Sin vínculo la retención no toca la de otro vínculo');
 
 // --- FASE 2: Las rutas permitidas del peregrino ---
 echo "\nFASE 2: Las rutas permitidas del peregrino (RF-01.4, criterio)\n";
@@ -247,5 +290,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

@@ -11,20 +11,23 @@
  * Constitución:
  *   - Artículo I (Dogma Vanilla): PHP nativo y PDO puro, sin framework.
  *   - Artículo IV: el rechazo viaja con leyenda solemne en castellano.
- *   - Artículo V: identificadores en inglés camelCase, claves de sesión
- *     en snake_case (convención de $_SESSION), documentación en castellano.
+ *   - Artículo V: identificadores en inglés camelCase, claves y columnas
+ *     en snake_case (convención de la base), documentación en castellano.
  *
  * DISEÑO (plan §1.1, §2.2 y §3.2):
  *   - La guardia se consulta estilo RbacMiddleware: devuelve null si el
  *     acceso queda CONCEDIDO; en caso contrario, la Response 403 lista
  *     para enviar, con el sobre `LINEAGE_OATH_REQUIRED` del contrato.
- *   - Antes de responder, retiene la ruta solicitada en la sesión del
- *     servidor (`$_SESSION['retainedRoute']`), SANEADA contra la lista de
- *     vistas internas de la SPA (HASH_TO_VIEW_MAP de main.js): jamás una
- *     URL externa ni una cadena hostil. La ruta viaja en la cabecera
+ *   - Antes de responder, retiene la ruta solicitada en la FILA del vínculo
+ *     (`user_sessions.retained_route`), SANEADA contra la lista de vistas
+ *     internas de la SPA (HASH_TO_VIEW_MAP de main.js): jamás una URL
+ *     externa ni una cadena hostil. La ruta viaja en la cabecera
  *     `X-Requested-Route` que el interceptor añade al navegar; las
  *     llamadas API puras retienen la ruta de la vista que las originó.
- *   - La retención solo se escribe cuando hay sesión activa: sin sesión
+ *     Enmienda de la Tarea 9.2 de SPEC-11: la retención vivía en
+ *     `$_SESSION`, que el santuario jamás inicia — moría con cada petición
+ *     y el retorno tras jurar aterrizaba siempre en el portal (RF-03.1).
+ *   - La retención solo se escribe cuando hay vínculo activo: sin sesión
  *     no hay a dónde retener (y el flujo de login ya conduce a la
  *     ceremonia, RF-01.3).
  *   - Los peregrinos CON SERCIOS públicos (GET de lectura) pasan: la
@@ -52,7 +55,12 @@ final class LineageOathMiddleware
     public const OATH_REQUIRED_MESSAGE =
         'El santuario aguarda tu juramento: nadie pisa sus salas sin linaje jurado.';
 
-    /** Clave de sesión de la ruta retenida (plan §2.1; caduca con la sesión). */
+    /**
+     * Nombre canónico de la pieza de retención (documental): la ruta vive
+     * en la COLUMNA `user_sessions.retained_route` (enmienda de la Tarea
+     * 9.2 de SPEC-11), no en `$_SESSION` — el santuario jamás invoca
+     * `session_start()` y aquel array moría con cada petición.
+     */
     public const SESSION_KEY_RETAINED_ROUTE = 'retainedRoute';
 
     /**
@@ -66,6 +74,9 @@ final class LineageOathMiddleware
         'experimentalHall', 'tower', 'auditLog', 'clan',
         // SPEC-10 (Tarea 4.2): el Vestíbulo de las Hermandades.
         'vestibule',
+        // SPEC-11 (Tarea 9.2): «Mi Grimorio», el tomo personal del adepto —
+        // el peregrino que pide su tomo retorna a él tras jurar (RF-02.1).
+        'collection',
     ];
 
     /**
@@ -106,9 +117,15 @@ final class LineageOathMiddleware
     /** El vínculo a la verdad de la cuenta (peregrino o linajado). */
     private \Grimorio\Repositories\LineageOathRepository $repository;
 
-    public function __construct(\Grimorio\Repositories\LineageOathRepository $repository)
-    {
+    /** El gestor de sesiones: la ruta retenida vive en la fila del vínculo. */
+    private ?\Grimorio\Core\SessionManager $sessionManager;
+
+    public function __construct(
+        \Grimorio\Repositories\LineageOathRepository $repository,
+        ?\Grimorio\Core\SessionManager $sessionManager = null
+    ) {
         $this->repository = $repository;
+        $this->sessionManager = $sessionManager;
     }
 
     /**
@@ -153,8 +170,10 @@ final class LineageOathMiddleware
 
         // RF-05.3: retener la ruta solicitada ANTES de responder. Solo
         // rutas internas de la SPA; jamás URLs externas ni cadenas hostiles.
+        // La retención se persiste en el VÍNCULO (enmienda de la Tarea 9.2
+        // de SPEC-11): sobrevive al salto entre peticiones.
         $requestedRoute = (string) ($request->getHeader('X-Requested-Route') ?? '');
-        self::retainRouteIfInternal($requestedRoute);
+        $this->retainRouteFor($request->getActiveSessionId(), $requestedRoute);
 
         return Response::json(
             [
@@ -178,11 +197,26 @@ final class LineageOathMiddleware
      * saneamiento de rutas del juramento: lo comparten la guardia y el
      * endpoint de retención del controlador (Tarea 2.6).
      */
-    public static function retainRouteIfInternal(string $requestedRoute): void
+    public function retainRouteFor(?string $sessionId, string $requestedRoute): void
+    {
+        $candidate = self::sanitizeRetainableRoute($requestedRoute);
+        if ($candidate === null || $sessionId === null || $sessionId === '') {
+            return; // Ruta descartada, o sin vínculo donde retener.
+        }
+
+        $this->sessionManager?->retainRoute($sessionId, $candidate);
+    }
+
+    /**
+     * Saneamiento ÚNICO de la ruta retenida (RF-05.3): devuelve el hash
+     * canónico si nombra una vista interna retenible, o null. Las URLs
+     * externas y las cadenas hostiles se descartan en silencio.
+     */
+    public static function sanitizeRetainableRoute(string $requestedRoute): ?string
     {
         $candidate = trim($requestedRoute);
         if ($candidate === '' || !str_starts_with($candidate, '#/')) {
-            return; // Sin ruta o URL externa: se descarta en silencio.
+            return null; // Sin ruta o URL externa: se descarta en silencio.
         }
 
         // El mapa canónico de hashes a vistas vive en la SPA (main.js);
@@ -201,12 +235,15 @@ final class LineageOathMiddleware
             // SPEC-10 (Tarea 4.2): el Vestíbulo es vista de gestión; su hash
             // es retenible para que el peregrino retorne tras jurar.
             '#/vestibulo'         => 'vestibule',
+            // SPEC-11 (Tarea 9.2): «Mi Grimorio» (RF-02.1), ruta propia y
+            // retenible — el arnés del cruce de mapas exige la paridad.
+            '#/grimorio'          => 'collection',
         ];
         $viewName = $hashToView[$candidate] ?? null;
         if (!is_string($viewName) || !in_array($viewName, self::RETAINABLE_VIEWS, true)) {
-            return; // Hash desconocido o vista no retenible: descartado.
+            return null; // Hash desconocido o vista no retenible: descartado.
         }
 
-        $_SESSION[self::SESSION_KEY_RETAINED_ROUTE] = $candidate;
+        return $candidate;
     }
 }

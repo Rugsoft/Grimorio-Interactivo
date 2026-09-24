@@ -1,0 +1,40 @@
+-- =====================================================================
+-- 12_lineage_retained_route.sql — La ruta retenida del juramento
+-- (SPEC-09, enmienda de la Tarea 9.2 de SPEC-11).
+--
+-- DEFECTO QUE ESTA MIGRACIÓN CIERRA (hallazgo del recorrido manual):
+-- la retención de ruta de SPEC-09 (RF-03.1, RF-05.3) escribía y leía
+-- `$_SESSION` — pero el santuario NO usa sesiones nativas de PHP: su
+-- vínculo vive en `user_sessions` (SPEC-03) y jamás se invoca
+-- `session_start()`. `$_SESSION` era, por tanto, un array POR PETICIÓN:
+-- la guardia escribía la ruta en una petición y el sello la leía en
+-- otra, así que el veredicto viajaba SIEMPRE con `retainedRoute: null`
+-- y el adepto aterrizaba en el portal en vez de en su ruta retenida.
+-- Los arneses no podían verlo: escribían y leían `$_SESSION` dentro
+-- del MISMO proceso.
+--
+-- La columna hace la ruta parte del VÍNCULO: se persiste donde ya vive
+-- la sesión, caduca con ella (la purga de sesiones la arrastra) y
+-- sobrevive al salto entre peticiones. `NULL` = nada retenido.
+--
+-- Cubre: RF-03.1 (retorno a la ruta retenida), RF-05.3 (retención
+--        saneada y caducante), RNF-05 (PDO/SQL nativo).
+--
+-- =====================================================================
+-- CONTRATO DE APLICACIÓN IDEMPOTENTE
+-- =====================================================================
+-- SQLite no admite `ADD COLUMN IF NOT EXISTS`. Igual que
+-- sql/09_lineage_oath.sql y sql/10_clan_vestibule.sql, el aplicador
+-- ejecuta el guion sentencia a sentencia: un fallo de «duplicate column
+-- name: retained_route» NO es error, es la señal de que la base ya
+-- porta la pieza. Cualquier otro fallo sí lo es.
+--
+-- ORDEN DE APLICACIÓN:
+--   1) database/schema.sql  → las bases nuevas nacen con la columna.
+--   2) database/seeds.sql   → linajes, clanes y custodio fundacional.
+--   3) ESTE script          → solo sobre bases legadas a SPEC-09.
+--
+-- Verificación: php scratch/test_lineage_retained_route_persistence.php
+-- =====================================================================
+
+ALTER TABLE user_sessions ADD COLUMN retained_route TEXT NULL;

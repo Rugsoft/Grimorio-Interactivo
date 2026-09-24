@@ -98,7 +98,10 @@ final class AuthMiddleware
         }
 
         // Entidad User real e inmutable: el RbacMiddleware (Tarea 3.2)
-        // consultará su rol y su clan desde aquí.
+        // consultará su rol y su clan desde aquí. El id del VÍNCULO viaja
+        // con ella: la ruta retenida del juramento se persiste en su fila
+        // (SPEC-09, enmienda de la Tarea 9.2 de SPEC-11).
+        $request->setActiveSessionId($activeSession->getId());
         $request->setUser(User::fromDatabaseRow($userRow));
     }
 

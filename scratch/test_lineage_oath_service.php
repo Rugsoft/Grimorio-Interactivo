@@ -105,7 +105,7 @@ echo "FASE 0: Superficie del servicio\n";
 $missing = array_filter([$servicePath, $exceptionPath, $resultDtoPath], static fn (string $path): bool => !file_exists($path));
 assertCondition($missing === [], 'Existen el servicio, su excepción de dominio y el DTO del veredicto');
 if ($missing !== []) {
-    echo "\nRESULTADO: FALLO — faltan ficheros de la Tarea 2.2: " . implode(', ', $missing) . "\n";
+    echo "\nRESULTADO: DENEGADO — faltan ficheros de la Tarea 2.2: " . implode(', ', $missing) . "\n";
     exit(1);
 }
 foreach ([$servicePath, $exceptionPath, $resultDtoPath] as $path) {
@@ -121,6 +121,9 @@ assertCondition(
 echo "\nFASE 1: La vía feliz — sellado y asiento en la Bitácora (criterio 5)\n";
 require_once $projectRoot . '/src/Repositories/LineageOathRepository.php';
 require_once $projectRoot . '/src/Models/AuditEntry.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $exceptionPath;
 require_once $resultDtoPath;
@@ -272,5 +275,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

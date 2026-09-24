@@ -457,7 +457,8 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     created_at          TEXT NOT NULL,                       -- Nacimiento del vínculo (ISO 8601 UTC)
     last_activity_at    TEXT NOT NULL,                       -- Renovado en cada acción (RF-02.2)
     expires_at          TEXT NOT NULL,                       -- Ventana renovable de 14 días
-    absolute_expires_at TEXT NOT NULL                        -- Límite absoluto inmutable de 30 días
+    absolute_expires_at TEXT NOT NULL,                       -- Límite absoluto inmutable de 30 días
+    retained_route      TEXT NULL                            -- Ruta retenida por el juramento (SPEC-09, RF-03.1); NULL = nada retenido
 );
 
 -- Depuración de sesiones caducadas y revocación global por usuario.

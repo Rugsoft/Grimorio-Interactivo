@@ -33,6 +33,7 @@ namespace Grimorio\Controllers;
 
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
+use Grimorio\Core\SessionManager;
 use Grimorio\Exceptions\LineageOathException;
 use Grimorio\Middleware\LineageOathMiddleware;
 use Grimorio\Repositories\LineageOathRepository;
@@ -50,10 +51,21 @@ final class LineageOathController
     /** El oficiante del juramento (validación, serialización, Bitácora). */
     private LineageOathService $oathService;
 
-    public function __construct(LineageCatalogService $catalogService, LineageOathService $oathService)
-    {
+    /**
+     * El gestor de sesiones: la ruta retenida vive en la fila del vínculo
+     * (enmienda de la Tarea 9.2 de SPEC-11). Sin él, la retención es
+     * inocua — la ceremonia sigue respondiendo con `retainedRoute: null`.
+     */
+    private ?SessionManager $sessionManager;
+
+    public function __construct(
+        LineageCatalogService $catalogService,
+        LineageOathService $oathService,
+        ?SessionManager $sessionManager = null
+    ) {
         $this->catalogService = $catalogService;
         $this->oathService = $oathService;
+        $this->sessionManager = $sessionManager;
     }
 
     // -----------------------------------------------------------------
@@ -130,13 +142,13 @@ final class LineageOathController
             ], $solemnRejection->httpStatus);
         }
 
-        // RF-03.1: la ruta que la retención guardó en la sesión conduce el
+        // RF-03.1: la ruta que la retención guardó en el VÍNCULO conduce el
         // retorno. Se consume aquí: una sola ceremonia, un solo retorno.
-        $retainedRoute = null;
-        if (isset($_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE])) {
-            $retainedRoute = (string) $_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE];
-            unset($_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE]);
-        }
+        // (Persistencia en `user_sessions.retained_route`: enmienda de la
+        // Tarea 9.2 de SPEC-11 — antes vivía en `$_SESSION`, que moría con
+        // cada petición porque el santuario no usa sesiones nativas.)
+        $sessionId = $request->getActiveSessionId();
+        $retainedRoute = $sessionId !== null ? $this->sessionManager?->pullRetainedRoute($sessionId) : null;
 
         return Response::json([
             'success' => true,
@@ -174,8 +186,13 @@ final class LineageOathController
         $requestedRoute = is_array($payload) ? (string) ($payload['route'] ?? '') : '';
 
         // Saneamiento ÚNICO, compartido con la guardia (RF-05.3): solo
-        // hashes internos del mapa canónico; lo demás, silencio.
-        LineageOathMiddleware::retainRouteIfInternal($requestedRoute);
+        // hashes internos del mapa canónico; lo demás, silencio. La ruta se
+        // persiste en el vínculo del solicitante (enmienda de la Tarea 9.2).
+        $retained = LineageOathMiddleware::sanitizeRetainableRoute($requestedRoute);
+        $sessionId = $request->getActiveSessionId();
+        if ($retained !== null && $sessionId !== null) {
+            $this->sessionManager?->retainRoute($sessionId, $retained);
+        }
 
         // 204 No Content: retenida o descartada, sin cuerpo que negociar.
         return Response::json(null, 204);

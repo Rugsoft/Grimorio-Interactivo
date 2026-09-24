@@ -62,20 +62,48 @@ function assertCondition(bool $condition, string $description): void
     }
 }
 
-/** Despacha una petición contra el router real, con usuario inyectado. */
-function dispatch(string $method, string $uri, ?User $actor = null, ?string $rawBody = null, array $headers = [], array $sessionSeed = []): object
-{
-    $_SESSION = [];
-    foreach ($sessionSeed as $clave => $valor) {
-        $_SESSION[$clave] = $valor;
-    }
+/**
+ * Despacha una petición contra el router real, con usuario inyectado.
+ *
+ * El sexto argumento es el ID DEL VÍNCULO (`user_sessions`): la ruta
+ * retenida del juramento se persiste en su fila, no en `$_SESSION`
+ * (enmienda de la Tarea 9.2 de SPEC-11 — el santuario jamás invoca
+ * `session_start()`, así que `$_SESSION` moría con cada petición).
+ */
+function dispatch(
+    string $method,
+    string $uri,
+    ?User $actor = null,
+    ?string $rawBody = null,
+    array $headers = [],
+    ?string $sessionId = null
+): object {
     $router = buildRouter();
     $request = new Request($method, $uri, [], $headers, $rawBody);
+    if ($sessionId !== null) {
+        $request->setActiveSessionId($sessionId);
+    }
     if ($actor !== null) {
         $request->setUser($actor);
     }
 
     return $router->dispatch($request);
+}
+
+/** Forja un vínculo REAL sobre la base del santuario y devuelve su id. */
+function forgeSession(PDO $pdo, string $userId): string
+{
+    return (new SessionManager($pdo))->createSession($userId)->getId();
+}
+
+/** Lee la columna de retención de un vínculo (sin consumirla). */
+function retainedRouteOf(PDO $pdo, string $sessionId): ?string
+{
+    $statement = $pdo->prepare('SELECT retained_route FROM user_sessions WHERE id = :id');
+    $statement->execute([':id' => $sessionId]);
+    $retained = $statement->fetchColumn();
+
+    return is_string($retained) && $retained !== '' ? $retained : null;
 }
 
 /** Forja una cuenta peregrina o linajada sobre el PDO real. */
@@ -95,10 +123,15 @@ function forgeAdept(PDO $pdo, string $id, string $alias, string $email, ?string 
     ]);
 }
 
+// El arnés forja VÍNCULOS reales (SessionManager::createSession emite la
+// cookie de sesión): el búfer retiene la salida para que las cabeceras no
+// se hayan enviado todavía y la emisión sea silenciosa.
+ob_start();
+
 echo "== VERIFICACION TAREA 2.6: El portal REST de la ceremonia ==\n\n";
 
 $pdo = Connection::getInstance()->getPdo();
-$_SESSION = [];
+$sessionManager = new SessionManager($pdo);
 
 $peregrina = forgeAdept($pdo, 'usr_peregrina', 'Peregrina del Velo', 'peregrina@arcano.arc', null);
 $linajada = forgeAdept($pdo, 'usr_linajada', 'Jurada de la Marea', 'jurada@arcano.arc', 'celestialTides');
@@ -119,9 +152,11 @@ assertCondition($anonimo->getStatusCode() === 401, 'Sin sesión: 401 controlado'
 
 // --- FASE 2: El sellado del juramento ---
 echo "\nFASE 2: POST /api/v1/lineage/oath (RF-03.1/03.3)\n";
-$sellado = dispatch('POST', '/api/v1/lineage/oath', $peregrina, (string) json_encode(['lineageId' => 'primordialFlame']), [], [
-    LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE => '#/creador',
-]);
+// La ruta retenida se persiste en el VÍNCULO de la peregrina antes de
+// sellar (enmienda de la Tarea 9.2): el retorno conduce de vuelta al tomo.
+$sesionPeregrina = forgeSession($pdo, 'usr_peregrina');
+$sessionManager->retainRoute($sesionPeregrina, '#/creador');
+$sellado = dispatch('POST', '/api/v1/lineage/oath', $peregrina, (string) json_encode(['lineageId' => 'primordialFlame']), [], $sesionPeregrina);
 $cuerpoSellado = json_decode($sellado->getBody(), true);
 assertCondition($sellado->getStatusCode() === 200, 'El sellado feliz responde 200');
 assertCondition(
@@ -130,7 +165,7 @@ assertCondition(
     && ($cuerpoSellado['data']['retainedRoute'] ?? 'x') === '#/creador',
     'El veredicto porta lineage, sealedNow=true y la ruta retenida consumida (RF-03.1)'
 );
-assertCondition(!isset($_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE]), 'La ruta retenida se CONSUME al sellar: una ceremonia, un retorno');
+assertCondition(retainedRouteOf($pdo, $sesionPeregrina) === null, 'La ruta retenida se CONSUME al sellar: una ceremonia, un retorno');
 
 // Idempotencia: mismo linaje reenviado → 200 sin mutación.
 $reenvio = dispatch('POST', '/api/v1/lineage/oath', $peregrina, (string) json_encode(['lineageId' => 'primordialFlame']));
@@ -175,12 +210,16 @@ assertCondition(
 
 // --- FASE 3: La ruta retenida del interceptor ---
 echo "\nFASE 3: POST /api/v1/lineage/retained-route (RF-05.3)\n";
-$retencion = dispatch('POST', '/api/v1/lineage/retained-route', forgeAdept($pdo, 'usr_retengo', 'Retengo Mi Ruta', 'retengo@arcano.arc', null), (string) json_encode(['route' => '#/simulador']));
+$retengo = forgeAdept($pdo, 'usr_retengo', 'Retengo Mi Ruta', 'retengo@arcano.arc', null);
+$sesionRetengo = forgeSession($pdo, 'usr_retengo');
+$retencion = dispatch('POST', '/api/v1/lineage/retained-route', $retengo, (string) json_encode(['route' => '#/simulador']), [], $sesionRetengo);
 assertCondition($retencion->getStatusCode() === 204, 'La ruta interna retenida responde 204');
-assertCondition(($_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE] ?? null) === '#/simulador', 'La ruta interna queda en la sesión');
+assertCondition(retainedRouteOf($pdo, $sesionRetengo) === '#/simulador', 'La ruta interna queda en el VÍNCULO (sobrevive a la petición)');
 
-$externa = dispatch('POST', '/api/v1/lineage/retained-route', forgeAdept($pdo, 'usr_retengo2', 'Retengo Dos', 'retengo2@arcano.arc', null), (string) json_encode(['route' => 'https://malvado.example.com']));
-assertCondition($externa->getStatusCode() === 204 && !isset($_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE]), 'La URL externa responde 204 y se DESCARTA en silencio');
+$retengo2 = forgeAdept($pdo, 'usr_retengo2', 'Retengo Dos', 'retengo2@arcano.arc', null);
+$sesionRetengo2 = forgeSession($pdo, 'usr_retengo2');
+$externa = dispatch('POST', '/api/v1/lineage/retained-route', $retengo2, (string) json_encode(['route' => 'https://malvado.example.com']), [], $sesionRetengo2);
+assertCondition($externa->getStatusCode() === 204 && retainedRouteOf($pdo, $sesionRetengo2) === null, 'La URL externa responde 204 y se DESCARTA en silencio');
 $sesionAnonima = dispatch('POST', '/api/v1/lineage/retained-route', null, (string) json_encode(['route' => '#/creador']));
 assertCondition($sesionAnonima->getStatusCode() === 401, 'Sin sesión: 401 controlado');
 
@@ -190,25 +229,29 @@ echo "\nFASE 4: La cadena AuthMiddleware → LineageOathMiddleware (RF-05.1)\n";
 // despacho (public/index.php); aquí se ejercita como pieza con la misma
 // Request que despacharía el front controller, comprobando la denegación
 // de rutas de gestión y el paso de las permitidas.
-$middleware = new LineageOathMiddleware(new LineageOathRepository($pdo));
+$middleware = new LineageOathMiddleware(new LineageOathRepository($pdo), $sessionManager);
 $peregrinaDos = forgeAdept($pdo, 'usr_peregrina2', 'Segunda Sin Umbral', 'segunda@arcano.arc', null);
+$sesionPeregrinaDos = forgeSession($pdo, 'usr_peregrina2');
 
-$gestionDenegada = $middleware->guard(self_forgeRequest('POST', '/api/v1/spells/drafts', '#/creador', $peregrinaDos));
+$gestionDenegada = $middleware->guard(self_forgeRequest('POST', '/api/v1/spells/drafts', '#/creador', $peregrinaDos, $sesionPeregrinaDos));
 assertCondition($gestionDenegada !== null && $gestionDenegada->getStatusCode() === 403, 'El peregrino es denegado en rutas de gestión (403 LINEAGE_OATH_REQUIRED)');
 assertCondition(
-    ($_SESSION[LineageOathMiddleware::SESSION_KEY_RETAINED_ROUTE] ?? null) === '#/creador',
-    'La ruta solicitada queda retenida en la sesión antes de responder'
+    retainedRouteOf($pdo, $sesionPeregrinaDos) === '#/creador',
+    'La ruta solicitada queda retenida en el VÍNCULO antes de responder'
 );
-$lecturaPermitida = $middleware->guard(self_forgeRequest('GET', '/api/v1/spells', null, $peregrinaDos));
+$lecturaPermitida = $middleware->guard(self_forgeRequest('GET', '/api/v1/spells', null, $peregrinaDos, $sesionPeregrinaDos));
 assertCondition($lecturaPermitida === null, 'La lectura pública pasa sin retención');
-$canonPermitido = $middleware->guard(self_forgeRequest('GET', '/api/v1/lineage/oath-catalog', null, $peregrinaDos));
+$canonPermitido = $middleware->guard(self_forgeRequest('GET', '/api/v1/lineage/oath-catalog', null, $peregrinaDos, $sesionPeregrinaDos));
 assertCondition($canonPermitido === null, 'El canon ceremonial pasa: la ceremonia nunca es retenida (RF-05.1)');
 
-/** Forja una Request con usuario y cabecera de vista (helper de Fase 4). */
-function self_forgeRequest(string $method, string $uri, ?string $route, User $actor): Request
+/** Forja una Request con usuario, cabecera de vista y vínculo (Fase 4). */
+function self_forgeRequest(string $method, string $uri, ?string $route, User $actor, ?string $sessionId = null): Request
 {
     $headers = $route !== null ? ['X-Requested-Route' => $route] : [];
     $request = new Request($method, $uri, [], $headers);
+    if ($sessionId !== null) {
+        $request->setActiveSessionId($sessionId);
+    }
     $request->setUser($actor);
 
     return $request;
@@ -231,5 +274,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

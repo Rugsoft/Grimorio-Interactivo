@@ -205,6 +205,51 @@ final class SessionManager
     }
 
     /**
+     * Retiene la ruta pedida por el peregrino en el VÍNCULO activo
+     * (SPEC-09, RF-05.3; enmienda de la Tarea 9.2 de SPEC-11).
+     *
+     * La ruta vive en `user_sessions.retained_route`, no en `$_SESSION`:
+     * el santuario jamás invoca `session_start()`, así que `$_SESSION` era
+     * un array por petición y la ruta moría al terminar la petición que la
+     * escribía. Aquí sobrevive al salto entre peticiones y caduca con el
+     * vínculo (la purga de sesiones la arrastra con la fila).
+     *
+     * @param string $sessionId Identificador del vínculo activo.
+     * @param string $route     Ruta interna ya saneada por la guardia.
+     */
+    public function retainRoute(string $sessionId, string $route): void
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE user_sessions SET retained_route = :route WHERE id = :id'
+        );
+        $statement->execute([':route' => $route, ':id' => $sessionId]);
+    }
+
+    /**
+     * Consume la ruta retenida del vínculo (una sola ceremonia, un solo
+     * retorno): la devuelve y la deja en NULL en el mismo acto.
+     *
+     * @param string $sessionId Identificador del vínculo activo.
+     * @return string|null La ruta retenida, o null si no había ninguna.
+     */
+    public function pullRetainedRoute(string $sessionId): ?string
+    {
+        $reading = $this->pdo->prepare('SELECT retained_route FROM user_sessions WHERE id = :id');
+        $reading->execute([':id' => $sessionId]);
+        $retained = $reading->fetchColumn();
+        if (!is_string($retained) || $retained === '') {
+            return null;
+        }
+
+        $consuming = $this->pdo->prepare(
+            'UPDATE user_sessions SET retained_route = NULL WHERE id = :id'
+        );
+        $consuming->execute([':id' => $sessionId]);
+
+        return $retained;
+    }
+
+    /**
      * Elimina físicamente una sesión por su identificador.
      */
     private function purgeSessionById(string $sessionId): void

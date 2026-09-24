@@ -42,6 +42,10 @@ final class Request
      *  Null = visitante anónimo; el RbacMiddleware lo trata como reader. */
     private ?User $user = null;
 
+    /** Vínculo activo (id de `user_sessions`) inyectado por el AuthMiddleware.
+     *  Null = sin sesión: no hay dónde retener la ruta del juramento (SPEC-09). */
+    private ?string $activeSessionId = null;
+
     /** Cuerpo crudo de la petición (null = leer de php://input al vuelo).
      *  La SAPI CLI no admite escritura en php://input, de modo que los
      *  arneses de verificación inyectan aquí el cuerpo simulado; bajo
@@ -110,6 +114,22 @@ final class Request
     public function getUser(): ?User
     {
         return $this->user;
+    }
+
+    /**
+     * Inyecta el vínculo activo resuelto por el AuthMiddleware: la ruta
+     * retenida del juramento vive en la FILA de la sesión (SPEC-09,
+     * enmienda de la Tarea 9.2 de SPEC-11).
+     */
+    public function setActiveSessionId(string $sessionId): void
+    {
+        $this->activeSessionId = $sessionId;
+    }
+
+    /** Vínculo activo de la petición (null = visitante anónimo). */
+    public function getActiveSessionId(): ?string
+    {
+        return $this->activeSessionId;
     }
 
     /** Retorna el verbo HTTP en mayúsculas. */

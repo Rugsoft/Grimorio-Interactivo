@@ -47,6 +47,8 @@ $filesRequired = [
     $projectRoot . '/src/Exceptions/ClanConflictOfInterestException.php',
     $projectRoot . '/src/Repositories/ClanMemberRepository.php',
     $projectRoot . '/src/Services/AuditLogPage.php',
+    // La pluma exige su contrato desde SPEC-11 (Fase 2).
+    $projectRoot . '/src/Services/AuditRecorderInterface.php',
     $projectRoot . '/src/Services/AuditService.php',
     $projectRoot . '/src/Services/BindResult.php',
     $projectRoot . '/src/Services/ConsecrationResult.php',
@@ -481,7 +483,7 @@ echo "\n" . str_repeat('─', 72) . "\n";
 echo "Asertos superados: {$assertsPassed}, fallidos: {$assertsFailed}\n";
 
 if ($assertsFailed > 0) {
-    echo "RESULTADO: FALLO — la reconciliación de la afiliación no está completa.\n";
+    echo "RESULTADO: DENEGADO — la reconciliación de la afiliación no está completa.\n";
     exit(1);
 }
 
