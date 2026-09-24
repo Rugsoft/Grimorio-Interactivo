@@ -5,8 +5,9 @@
  * entorno (hosting compartido, p. ej. InfinityFree).
  *
  * Mecanismo: PHP ejecuta este fichero ANTES del front controller mediante
- * `auto_prepend_file` (directiva declarada en deploy/infinityfree/user-ini,
- * instalada como public/.user.ini). Es PHP nativo puro (Artículo I).
+ * `auto_prepend_file`. La directiva viaja en DOS canales equivalentes
+ * (installados como public/.htaccess y public/.user.ini, según la SAPI
+ * del hosting — mod_php o CGI/FastCGI). Es PHP nativo puro (Artículo I).
  *
  * Constitución:
  *   - Artículo I: PDO nativo; el DSN apunta a un SQLite PERSISTENTE en
@@ -14,10 +15,9 @@
  *     datos y sesiones en cada petición, inviable en producción).
  *   - Artículo V: identificadores en inglés, documentación en castellano.
  *
- * Seguridad (AGENTS.md 6.1): este fichero vive FUERA del escaparate
- * (no está en public/ si se respetó el funnel del .htaccess raíz) y el
- * guard de abort garantiza que jamás responda nada si alguien lo pide
- * por URL directo.
+ * Seguridad (AGENTS.md 6.1): se instala dentro de public/ pero el guard
+ * de abort garantiza que jamás responda nada si alguien lo pide por URL
+ * directo.
  *
  * Ajuste de instalación: la ruta absoluta de la base debe apuntar al
  * directorio protegido storage/ de TU cuenta. Tras subir el repositorio,
@@ -44,4 +44,11 @@ if (!is_dir($storageDir)) {
 // DSN SQLite persistente: datos y sesiones sobreviven entre peticiones.
 // Connection.php auto-bootstrap ejecutará schema.sql + seeds.sql en la
 // primera petición (la mesa raíz `spells` aún no existirá).
-putenv('GRIMORIO_DB_DSN=sqlite:' . $storageDir . '/grimorio_live.sqlite');
+//
+// VÍA `define` (no `putenv`): el sandbox de InfinityFree tiene `putenv`
+// en disable_functions y la llamada muere en silencio (verificado con la
+// sonda: dsnTrasRequire: null). Connection.php resuelve primero las
+// constantes GRIMORIO_DB_* y solo recurre al entorno como fallback.
+if (!defined('GRIMORIO_DB_DSN')) {
+    define('GRIMORIO_DB_DSN', 'sqlite:' . $storageDir . '/grimorio_live.sqlite');
+}

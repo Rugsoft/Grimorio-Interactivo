@@ -58,9 +58,15 @@ final class Connection
     private function __construct()
     {
         // Las claves de configuración leen del entorno; sin parsear archivos ni usar extensiones extra.
-        $this->dsn         = (string) (getenv('GRIMORIO_DB_DSN') ?: 'sqlite::memory:');
-        $this->dbUser      = (string) (getenv('GRIMORIO_DB_USER') ?: '');
-        $this->dbPassword  = (string) (getenv('GRIMORIO_DB_PASS') ?: '');
+        // Orden de resolución: constantes del bootstrap de despliegue
+        // (deploy/infinityfree/env.php define GRIMORIO_DB_DSN vía `define`,
+        // porque el sandbox de InfinityFree tiene `putenv` en
+        // disable_functions y la vía de entorno muere en silencio) y,
+        // como fallback, el entorno clásico; si nada existe, SQLite en
+        // memoria (solo desarrollo).
+        $this->dsn         = (string) (defined('GRIMORIO_DB_DSN') ? constant('GRIMORIO_DB_DSN') : (getenv('GRIMORIO_DB_DSN') ?: 'sqlite::memory:'));
+        $this->dbUser      = (string) (defined('GRIMORIO_DB_USER') ? constant('GRIMORIO_DB_USER') : getenv('GRIMORIO_DB_USER'));
+        $this->dbPassword  = (string) (defined('GRIMORIO_DB_PASS') ? constant('GRIMORIO_DB_PASS') : getenv('GRIMORIO_DB_PASS'));
     }
 
     /**

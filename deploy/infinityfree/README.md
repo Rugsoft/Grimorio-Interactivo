@@ -15,8 +15,19 @@
 |---|---|---|
 | `deploy/infinityfree/htaccess-root` | `.htaccess` | Raíz del hosting (`htdocs/`) |
 | `deploy/infinityfree/htaccess-public` | `.htaccess` | `htdocs/public/` |
-| `deploy/infinityfree/user-ini` | `.user.ini` | `htdocs/public/` |
+| `deploy/infinityfree/user-ini` | `.user.ini` | `htdocs/public/` (solo si el servidor usa PHP-CGI/FastCGI; en mod_php lo ignora sin daño) |
 | `deploy/infinityfree/env.php` | `env.php` | `htdocs/public/` |
+
+> **Canales de carga de `env.php`**: el front controller
+> `public/index.php` lo invoca directamente (`require_once` con guardia
+> `is_file`) — es el canal PRINCIPAL y funciona en cualquier SAPI. En el
+> sandbox de InfinityFree el `auto_prepend_file` está monopolizado por el
+> propio servidor (`php_admin_value` hacia su script interno
+> `/var/www/errors/override.php`, no sobrescribible), por eso los
+> canales .htaccess/`php_value` y `.user.ini` del paquete son inertes
+> ALLÍ y el `require` del front controller es el que manda. El DSN no
+> viaja por el prepend: lo materializa `env.php` vía `putenv` ANTES de
+> que `Connection.php` lea la variable.
 
 ---
 
@@ -113,16 +124,24 @@ Abre `https://TU_SUBDOMINIO.infinityfreeapp.com/`:
 - `https://TU_SUBDOMINIO/src/Core/Router.php` → **404** (blindaje del funnel).
 - Registro + juramento + sellado en el tomo → los datos sobreviven a una
   recarga (SQLite persistente activo).
+- **Sonda del entorno** (recomendada tras la primera instalación): sube
+  `deploy/infinityfree/probe-env.php` como `htdocs/public/probe-env.php`,
+  ábrela en el navegador y comprueba que responde
+  `"dsnMaterializado": true` y `"ficheroSqliteBytes"` mayor que cero.
+  Si da `false`, el DSN no viaja: revisa los pasos 4-5. **Bórrala del
+  servidor tras el diagnóstico.**
 
 ## Solución de problemas
 
 | Síntoma | Causa probable | Remedio |
 |---|---|---|
+| Sesión que no perdura: «El canon no responde: los Ocho Linajes guardan silencio» tras consagrar/login | DSN sin materializar (`env.php` no se ejecuta) → base `sqlite::memory:` borrada en cada petición | La sonda `probe-env.php` da `"dsnMaterializado": false`. Verifica que subiste los `.htaccess` CORREGIDOS (con los bloques `php_value auto_prepend_file`) y que `env.php` está en `htdocs/public/` con la ruta absoluta correcta |
 | 500 al abrir la web | `.user.ini` rechazado o `env.php` no encontrado | Revisa el paso 5; prueba a usar la ruta absoluta en `auto_prepend_file` |
 | La API responde pero los datos desaparecen a cada clic | DSN sin materializar → `sqlite::memory:` | `env.php` mal instalado o `$projectRoot` mal escrita |
 | Página de error «your connection is not private» | SSL aún no propagado | Espera a que el certificado esté ACTIVO en el panel |
 | `Fatal: uncaught RuntimeException: La conexión al plano arcano...` | Ruta de `storage/` inaccesible | Verifica permisos 700/755 y que `$projectRoot` sea la absoluta correcta |
 | Los assets (CSS/JS) no cargan y da 404 | El funnel no está en la raíz o falta `RewriteBase` | Confirma `htdocs/.htaccess`; prueba a añadir `RewriteBase /` tras `RewriteEngine On` |
+| Al abrir la raíz responde JSON `ROUTE_NOT_FOUND` («Ningún sendero arcano…») | El servidor eligió `index.php` (la API) como índice de directorio en vez del shell `index.html` | Los `.htaccess` incluyen ya la regla explícita `RewriteRule ^$ …index.html`; confirma que instalaste las versiones corregidas y sube de nuevo ambos ficheros |
 
 ## Limitaciones conocidas del plan gratuito
 

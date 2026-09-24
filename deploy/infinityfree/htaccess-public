@@ -10,6 +10,23 @@
 # NOTA de instalación: copiar este fichero como «.htaccess» dentro de
 # public/.
 
+# =====================================================================
+# Materialización del entorno (env.php con el DSN de la base).
+#
+#Dos canales equivalentes, autoexcluyentes según la SAPI del hosting:
+#   - apache2handler (mod_php): `php_value auto_prepend_file` aquí.
+#   - cgi-fcgi: el public/.user.ini con la misma directiva.
+# La sonda deploy/infinityfree/probe-env.php confirma cuál está vivo.
+# Si el hosting rechaza php_value (error 500), comentar ESTE bloque y
+# dejar el .user.ini (o a la inversa).
+# =====================================================================
+<IfModule mod_php.c>
+    php_value auto_prepend_file env.php
+</IfModule>
+<IfModule mod_php7.c>
+    php_value auto_prepend_file env.php
+</IfModule>
+
 # Prioridad del índice de directorio: en «/» sirve el SHELL de la SPA
 # (index.html), no el front controller de la API (index.php).
 DirectoryIndex index.html index.php
@@ -17,7 +34,14 @@ DirectoryIndex index.html index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # La raíz «/» sirve SIEMPRE el shell de la SPA: la regla explícita
+    # antecede a cualquier decisión de índice de directorio del servidor
+    # (algunos CGI eligen index.php — la API — y el Router respondería
+    # ROUTE_NOT_FOUND ante una ruta que no es suya).
+    RewriteRule ^$ index.html [L]
+
     # Un fichero estático real (JS, CSS, img, index.html) se entrega tal cual.
+    # La sonda de diagnóstico (probe-env.php) también viaja como estático.
     RewriteCond %{REQUEST_FILENAME} -f
     RewriteRule ^ - [L]
 

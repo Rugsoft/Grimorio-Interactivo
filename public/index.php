@@ -20,6 +20,22 @@
 declare(strict_types=1);
 
 /**
+ * Bootstrap de despliegue (deploy/infinityfree/env.php): materializa el DSN
+ * de la base en hostings compartidos sin variables de entorno. En el
+ * sandbox de InfinityFree el `auto_prepend_file` está MONOPOLIZADO por el
+ * servidor (php_admin_value hacia /var/www/errors/override.php), así que
+ * el canal .htaccess/.user.ini es inert allí; este require lo sustituye.
+ *
+ * Guardia: en desarrollo local el fichero NO existe (vive solo en
+ * deploy/ y en la copia subida a public/ del hosting), así que el require
+ * se omite sin efecto. Si el hosting lo eliminara, la API seguiría
+ * funcionando con el fallback de Connection.php.
+ */
+if (is_file(__DIR__ . '/env.php')) {
+    require_once __DIR__ . '/env.php';
+}
+
+/**
  * Cargador de clases nativo (Artículo I: sin Composer ni autoloader externo).
  * Convención del proyecto: el prefijo Grimorio\ se mapea al directorio src/
  * (Grimorio\Core\Router -> src/Core/Router.php), con separadores aptos para

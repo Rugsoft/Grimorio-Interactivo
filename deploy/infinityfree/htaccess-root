@@ -11,6 +11,25 @@
 # NOTA de instalación: copiar este fichero como «.htaccess» (empieza por
 # punto) en la raíz de htdocs/, junto a src/ y public/.
 
+# =====================================================================
+# Materialización del entorno para TODO el árbol (env.php + DSN).
+#
+#Dos canales según la SAPI del hosting (la sonda probe-env.php
+# confirma cuál está vivo):
+#   - apache2handler (mod_php): estas directivas php_value aquí.
+#   - cgi-fcgi: el public/.user.ini del mismo paquete.
+# Si el hosting rechazara php_value con un error 500, comentar el bloque
+# correspondiente. El funnel ya reescribe todo hacia public/, donde vive
+# el segundo canal; este bloque cubre también ficheros PHP fuera de
+# public/ (no debería haber, pero es defensa de profundidad).
+# =====================================================================
+<IfModule mod_php.c>
+    php_value auto_prepend_file "deploy/infinityfree/env.php"
+</IfModule>
+<IfModule mod_php7.c>
+    php_value auto_prepend_file "deploy/infinityfree/env.php"
+</IfModule>
+
 # El listado de directorios jamás se exhibe (seguridad).
 Options -Indexes
 
@@ -30,4 +49,9 @@ Options -Indexes
     # REQUEST_URI, que conserva su ruta original) y /src/... jamás responde.
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
+
+    # La raíz pura «/» sirve el SHELL de la SPA: algunos despliegues CGI
+    # eligen index.php (la API) como índice de directorio y el Router
+    # respondería ROUTE_NOT_FOUND. La regla explícita lo imposibilita.
+    RewriteRule ^$ public/index.html [L]
 </IfModule>
