@@ -69,6 +69,16 @@ export const SPELL_BADGE_KINDS = Object.freeze({
 });
 
 /**
+ * Los ocho elementos canónicos del Códice (SPEC-06, RF-03.1): espejo del
+ * mapa del backend (`Spell::ELEMENTAL_AFFINITY_LABELS`). Un hechizo que
+ * declara su afinidad viste SU elemento; el mapa por escuela queda como
+ * respaldo para las obras que aún no la declaran (hallazgo H9).
+ */
+export const CANONICAL_ELEMENTS = Object.freeze(new Set([
+  'fire', 'water', 'lightning', 'earth', 'wind', 'light', 'darkness', 'pureArcane',
+]));
+
+/**
  * Crea el elemento tarjeta a partir del SpellSummaryDto.
  *
  * @param {object} spellSummaryDto DTO del plan 2.1 (camelCase).
@@ -100,6 +110,20 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
    * @param {MouseEvent|KeyboardEvent} activationEvent Evento recibido.
    */
   function handleCardActivation(activationEvent) {
+    // Los controles INTERNOS (gestos del tomo, retirada, conmutadores)
+    // atienden su propio gesto: el evento burbujea hasta la tarjeta y no
+    // debe convocar ADEMÁS el conjuro (hallazgo del recorrido manual,
+    // Tarea 9.2: «Elogiar» abría el Simulador con la obra).
+    const origin = activationEvent?.target ?? null;
+    if (
+      origin !== null
+      && origin !== cardElement
+      && typeof origin.closest === 'function'
+      && origin.closest('button, a, [role="switch"]') !== null
+    ) {
+      return;
+    }
+
     if (activationEvent.type === 'keydown') {
       if (!ACTIVATION_KEYS.has(activationEvent.key)) {
         return; // Tab, letras, etc.: no activan.
@@ -143,10 +167,14 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
   // ribete a posteriori, cuando el Salón revele quién reina (RF-04.4).
   cardElement.setAttribute('data-clan-id', String(spellSummaryDto.clanId ?? ''));
   // Nombre accesible: el lector anuncia el conjuro al enfocar (RNF-03).
-  cardElement.setAttribute(
-    'aria-label',
-    `Hechizo ${spellSummaryDto.name}, escuela ${spellSummaryDto.magicSchoolLabel}, coste ${spellSummaryDto.manaCost} de maná`
-  );
+  // Las partes que el DTO no porte se OMITEN: jamás un «undefined» literal
+  // alcanza la voz del lector (hallazgo del recorrido manual, Tarea 9.2).
+  const accessibleParts = [`Hechizo ${spellSummaryDto.name}`];
+  if (typeof spellSummaryDto.magicSchoolLabel === 'string' && spellSummaryDto.magicSchoolLabel !== '') {
+    accessibleParts.push(`escuela ${spellSummaryDto.magicSchoolLabel}`);
+  }
+  accessibleParts.push(`coste ${spellSummaryDto.manaCost} de maná`);
+  cardElement.setAttribute('aria-label', accessibleParts.join(', '));
 
   // --- Nombre del conjuro ---
   cardElement.appendChild(
@@ -158,9 +186,11 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
   badgesRow.className = 'spell-card__badges';
 
   // Insignia elemental (Tarea 3.2, RF-03.1/03.3): la afinidad se deriva
-  // de la escuela mágica (mapa canónico; SPEC-06 la formalizará) y se
-  // propaga como Custom Properties inline ligadas a los tokens de
-  // tokens.css (color, fulgor y glifo rúnico del elemento).
+  // del ELEMENTO CANÓNICO del DTO cuando viaja (SPEC-06, hallazgo H9 del
+  // recorrido manual) y solo cae al mapa por escuela cuando el hechizo no
+  // declara afinidad — así un conjuro de rayo no viste el fulgor del
+  // fuego—. Se propaga como Custom Properties inline ligadas a los tokens
+  // de tokens.css (color, fulgor y glifo rúnico del elemento).
   const SCHOOL_ELEMENT_AFFINITY = {
     evocation: 'fire',
     conjuration: 'water',
@@ -171,7 +201,15 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
     transmutation: 'earth',
     abjuration: 'light'
   };
-  const affinityName = SCHOOL_ELEMENT_AFFINITY[spellSummaryDto.magicSchool] ?? 'arcane';
+  // Arcano Puro viste la variante neutra del kit (tokens.css).
+  const ELEMENT_TOKEN_NAMES = Object.freeze({ pureArcane: 'arcane' });
+  const declaredElement = typeof spellSummaryDto.elementalAffinity === 'string'
+    && CANONICAL_ELEMENTS.has(spellSummaryDto.elementalAffinity)
+    ? spellSummaryDto.elementalAffinity
+    : null;
+  const affinityName = declaredElement !== null
+    ? (ELEMENT_TOKEN_NAMES[declaredElement] ?? declaredElement)
+    : (SCHOOL_ELEMENT_AFFINITY[spellSummaryDto.magicSchool] ?? 'arcane');
 
   const elementalBadge = elementFactory('span');
   elementalBadge.className = `spell-card__badge spell-card__badge-elemental spell-card__badge-elemental--${affinityName}`;
@@ -187,8 +225,13 @@ export function createSpellCardComponent(spellSummaryDto, componentOptions = {})
   elementalBadge.appendChild(createTextElement('span', 'spell-card__element-label', spellSummaryDto.elementalAffinityLabel ?? 'Arcano Puro'));
   badgesRow.appendChild(elementalBadge);
 
-  const schoolBadge = createTextElement('span', 'spell-card__badge spell-card__badge-school', spellSummaryDto.magicSchoolLabel);
-  badgesRow.appendChild(schoolBadge);
+  // La insignia de escuela solo se forja si el DTO porta su etiqueta: una
+  // cáscara vacía jamás llega al DOM (hallazgo del recorrido, Tarea 9.2).
+  if (typeof spellSummaryDto.magicSchoolLabel === 'string' && spellSummaryDto.magicSchoolLabel !== '') {
+    badgesRow.appendChild(
+      createTextElement('span', 'spell-card__badge spell-card__badge-school', spellSummaryDto.magicSchoolLabel)
+    );
+  }
 
   const manaBadge = createTextElement('span', 'spell-card__badge spell-card__badge--mana', `${spellSummaryDto.manaCost} maná`);
   badgesRow.appendChild(manaBadge);

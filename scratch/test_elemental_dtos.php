@@ -544,7 +544,7 @@ echo "Asertos superados: {$assertsPassed}" . PHP_EOL;
 echo "Asertos fallidos:  {$assertsFailed}" . PHP_EOL;
 
 if ($assertsFailed > 0) {
-    echo PHP_EOL . 'RESULTADO: FALLO' . PHP_EOL;
+    echo PHP_EOL . 'RESULTADO: DENEGADO' . PHP_EOL;
     exit(1);
 }
 echo PHP_EOL . 'RESULTADO: ÉXITO — Los DTOs de la Matriz Elemental cumplen el contrato del plan (Tarea 1.1).' . PHP_EOL;

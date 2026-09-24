@@ -240,6 +240,57 @@ let listenersRemoved = true;
 cleanupCard.dispatch('click');
 assertCondition(listenersRemoved === true, 'destroy() retira los listeners sin errores');
 
+// --- FASE 6: Vestido elemental declarado por el DTO (hallazgo H9) ---
+console.log('\nFASE 6: Insignia elemental declarada (hallazgo H9 del recorrido manual)');
+
+// Un conjuro que DECLARA su elemento viste SU fulgor y SU glifo: la
+// escuela ya no secuestra el vestido de la insignia.
+const boltSpell = {
+  ...sampleSpell,
+  slug: 'fragor-del-alto-cielo',
+  name: 'Fragor del Alto Cielo',
+  elementalAffinity: 'lightning',
+  elementalAffinityLabel: 'Rayo',
+};
+const boltCard = createSpellCardComponent(boltSpell, { elementFactory: fakeElementFactory });
+const boltBadges = findByClass(boltCard, 'spell-card__badge-elemental');
+assertCondition(boltBadges.length === 1, 'La tarjeta forja exactamente una insignia elemental');
+assertCondition(
+  boltBadges[0].classList.contains('spell-card__badge-elemental--lightning'),
+  'La insignia viste la variante del elemento DECLARADO (lightning), no la de su escuela'
+);
+assertCondition(
+  boltBadges[0].style.getProperty('--current-element') === 'var(--affinity-lightning)',
+  'El color de la insignia sigue al elemento declarado (token --affinity-lightning)'
+);
+assertCondition(
+  collectText(boltBadges[0]).includes('Rayo') && !collectText(boltBadges[0]).includes('Arcano Puro'),
+  'La insignia rotula «Rayo», jamás el neutro «Arcano Puro» (hallazgo H9)'
+);
+
+// Arcano Puro viste la variante neutra del kit (`arcane`).
+const pureSpell = {
+  ...sampleSpell,
+  slug: 'sello-arcano-puro',
+  name: 'Sello Arcano Puro',
+  elementalAffinity: 'pureArcane',
+  elementalAffinityLabel: 'Arcano Puro',
+};
+const pureCard = createSpellCardComponent(pureSpell, { elementFactory: fakeElementFactory });
+const pureBadges = findByClass(pureCard, 'spell-card__badge-elemental');
+assertCondition(
+  pureBadges[0].classList.contains('spell-card__badge-elemental--arcane'),
+  'Arcano Puro viste la variante neutra `--arcane` del kit de tokens'
+);
+
+// Sin afinidad declarada (DTO legado) el respaldo por escuela sigue vivo.
+const legacyCard = createSpellCardComponent(sampleSpell, { elementFactory: fakeElementFactory });
+const legacyBadges = findByClass(legacyCard, 'spell-card__badge-elemental');
+assertCondition(
+  legacyBadges[0].classList.contains('spell-card__badge-elemental--fire'),
+  'Sin afinidad en el DTO, el respaldo por escuela (evocation → fuego) permanece'
+);
+
 // --- Resumen final ---
 console.log('\n== RESUMEN ==');
 console.log(`Asertos superados: ${assertsPassed}`);
@@ -250,5 +301,5 @@ if (assertsFailed === 0) {
   process.exit(0);
 }
 
-console.log('\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].');
+console.log('\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].');
 process.exit(1);

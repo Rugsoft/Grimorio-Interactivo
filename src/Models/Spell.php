@@ -26,6 +26,31 @@ namespace Grimorio\Models;
  */
 final class Spell
 {
+    /**
+     * Afinidades elementales canónicas con su etiqueta en castellano
+     * (Códice de Afinidades, SPEC-06). El identificador técnico viaja
+     * intacto en `elementalAffinity`; esta tabla es la ÚNICA fuente de la
+     * etiqueta en el backend (precedente de MAGIC_SCHOOL_LABELS), de modo
+     * que ninguna tarjeta vuelva a rotular «Arcano Puro» por defecto
+     * (hallazgo H9 del recorrido manual, Tarea 9.2 de TASKS-11).
+     *
+     * Los nombres son los cortos canónicos que ya usan el Tomo, el filtro
+     * de afinidad y el libro del Simulador (ELEMENT_NAMES del cliente).
+     */
+    private const ELEMENTAL_AFFINITY_LABELS = [
+        'fire'       => 'Fuego',
+        'water'      => 'Agua',
+        'lightning'  => 'Rayo',
+        'earth'      => 'Tierra',
+        'wind'       => 'Viento',
+        'light'      => 'Luz',
+        'darkness'   => 'Oscuridad',
+        'pureArcane' => 'Arcano Puro',
+    ];
+
+    /** Etiqueta del elemento neutro (afinidad 'none' o ajena al Códice). */
+    private const ELEMENTAL_AFFINITY_FALLBACK = 'Arcano Puro';
+
     /** Escuelas de magia canónicas con su etiqueta en castellano (seeds.sql). */
     private const MAGIC_SCHOOL_LABELS = [
         'abjuration'    => 'Abjuración',
@@ -42,6 +67,7 @@ final class Spell
     private string $slug;
     private string $name;
     private string $magicSchool;
+    private string $elementalAffinity;
     private int $manaCost;
     private string $clanId;
     private string $clanName;
@@ -74,12 +100,14 @@ final class Spell
         ?string $validatedAt,
         string $description = '',
         array $components = [],
-        int $validationSignaturesCount = 0
+        int $validationSignaturesCount = 0,
+        string $elementalAffinity = 'none'
     ) {
         $this->id = $id;
         $this->slug = $slug;
         $this->name = $name;
         $this->magicSchool = $magicSchool;
+        $this->elementalAffinity = $elementalAffinity !== '' ? $elementalAffinity : 'none';
         $this->manaCost = $manaCost;
         $this->clanId = $clanId;
         $this->clanName = $clanName;
@@ -118,7 +146,8 @@ final class Spell
                 'somatic'  => (string) ($row['components_somatic'] ?? ''),
                 'material' => (string) ($row['components_material'] ?? ''),
             ],
-            validationSignaturesCount: (int) ($row['validation_signatures_count'] ?? 0)
+            validationSignaturesCount: (int) ($row['validation_signatures_count'] ?? 0),
+            elementalAffinity: (string) ($row['elemental_affinity'] ?? 'none')
         );
     }
 
@@ -140,6 +169,27 @@ final class Spell
     public function getMagicSchool(): string
     {
         return $this->magicSchool;
+    }
+
+    /**
+     * Afinidad elemental canónica del conjuro ('none' = sin afinidad
+     * declarada). El identificador es el del Códice (SPEC-06).
+     */
+    public function getElementalAffinity(): string
+    {
+        return $this->elementalAffinity;
+    }
+
+    /**
+     * Etiqueta en castellano de la afinidad elemental (Artículo IV).
+     *
+     * Una afinidad ajena al Códice se rotula con el elemento neutro en
+     * lugar de vomitar el identificador técnico en la tarjeta: el usuario
+     * jamás ve un `pureArcane` crudo (RNF-03).
+     */
+    public function getElementalAffinityLabel(): string
+    {
+        return self::ELEMENTAL_AFFINITY_LABELS[$this->elementalAffinity] ?? self::ELEMENTAL_AFFINITY_FALLBACK;
     }
 
     public function getManaCost(): int
@@ -213,6 +263,8 @@ final class Spell
             'name'             => $this->name,
             'magicSchool'      => $this->magicSchool,
             'magicSchoolLabel' => $this->getMagicSchoolLabel(),
+            'elementalAffinity'      => $this->elementalAffinity,
+            'elementalAffinityLabel' => $this->getElementalAffinityLabel(),
             'manaCost'         => $this->manaCost,
             'clanId'           => $this->clanId,
             'clanName'         => $this->clanName,
