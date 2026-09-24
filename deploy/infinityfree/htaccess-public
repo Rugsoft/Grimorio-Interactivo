@@ -1,0 +1,26 @@
+# htaccess-public — Instalar como public/.htaccess (junto a index.php)
+#
+# Constitución:
+#   - Artículo I: reescritura nativa de Apache, sin dependencias.
+#   - AGENTS.md 2.1: Front Controller único — toda ruta que no sea un
+#     fichero estático real viaja a index.php, que despacha la API.
+#   - El shell de la SPA (index.html) y los assets (assets/, img/) se
+#     sirven tal cual por ser ficheros reales.
+#
+# NOTA de instalación: copiar este fichero como «.htaccess» dentro de
+# public/.
+
+# Prioridad del índice de directorio: en «/» sirve el SHELL de la SPA
+# (index.html), no el front controller de la API (index.php).
+DirectoryIndex index.html index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Un fichero estático real (JS, CSS, img, index.html) se entrega tal cual.
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # Todo lo demás es una ruta de la API o del shell: front controller.
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

@@ -1,0 +1,33 @@
+# htaccess-root — Instalar en la RAÍZ del hosting (htdocs/.htaccess)
+#
+# Constitución:
+#   - Artículo I: servidor Apache nativo, sin dependencias.
+#   - AGENTS.md 6.1: src/, specs/, scratch/, database/ y storage/ quedan
+#     INALCANZABLES por URL — todo lo ajeno a /public/ se canaliza dentro
+#     del escaparate y muere en un 404 limpio.
+#   - SPEC-03: la cookie de sesión exige HTTPS en producción (secure=true),
+#     así que el tráfico HTTP se eleva a HTTPS de forma permanente.
+#
+# NOTA de instalación: copiar este fichero como «.htaccess» (empieza por
+# punto) en la raíz de htdocs/, junto a src/ y public/.
+
+# El listado de directorios jamás se exhibe (seguridad).
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Defensa de profundidad: el almacenamiento (base SQLite) jamás se sirve,
+    # ni siquiera si un futuro cambio de funnel lo expusiera.
+    RewriteRule ^storage/ - [F,L]
+
+    # Elevación a HTTPS: la sesión del santuario (SPEC-03) exige secure=true.
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]
+
+    # El funnel: toda petición ajena a /public/ se reescribe hacia dentro.
+    # Así /api/v1/... llega intacta a public/index.php (el Router lee
+    # REQUEST_URI, que conserva su ruta original) y /src/... jamás responde.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

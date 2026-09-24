@@ -1,0 +1,11 @@
+; user-ini — Instalar como public/.user.ini (junto a index.php)
+;
+; Los ficheros .user.ini solo aplican bajo PHP-CGI/FastCGI (el modo de
+; InfinityFree). Hacen que PHP ejecute env.php ANTES de cualquier script,
+; materializando el DSN de SQLite persistente sin tocar producción.
+;
+; NOTA de instalación: copiar como «.user.ini» dentro de public/.
+; Si el hosting rechazara la directiva, renombrar esta línea:
+;   auto_prepend_file = env.php
+
+auto_prepend_file = env.php
