@@ -55,6 +55,8 @@ $filesRequired = [
     $projectRoot . '/src/Repositories/WeeklyCycleRepository.php',
     $projectRoot . '/src/Repositories/LineageOathRepository.php',
     $projectRoot . '/src/Services/LineageSynergyService.php',
+    // La pluma exige su contrato desde SPEC-11 (Fase 2).
+    $projectRoot . '/src/Services/AuditRecorderInterface.php',
     $projectRoot . '/src/Services/AuditService.php',
     $projectRoot . '/src/Services/ClanAdmissionResult.php',
     $projectRoot . '/src/Services/PatriarchSuccessionResult.php',

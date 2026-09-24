@@ -97,6 +97,7 @@ require_once $projectRoot . '/src/Dto/ClanApplicationDto.php';
 require_once $projectRoot . '/src/Repositories/ClanRepository.php';
 require_once $projectRoot . '/src/Repositories/ClanMemberRepository.php';
 require_once $projectRoot . '/src/Repositories/ClanApplicationRepository.php';
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Services/LineageSynergyService.php';
 require_once $projectRoot . '/src/Services/ClanAdmissionResult.php';

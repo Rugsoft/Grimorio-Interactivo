@@ -104,6 +104,7 @@ require_once $projectRoot . '/src/Dto/ClanDto.php';
 require_once $projectRoot . '/src/Dto/ClanMemberDto.php';
 require_once $projectRoot . '/src/Dto/ClanApplicationDto.php';
 require_once $projectRoot . '/src/Models/AuditEntry.php';
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Dto/LineageDto.php';
 require_once $projectRoot . '/src/Services/LineageSynergyService.php';

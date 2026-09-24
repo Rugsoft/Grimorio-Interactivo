@@ -30,6 +30,9 @@ require __DIR__ . '/../src/Exceptions/ArcaneOverloadException.php';
 require __DIR__ . '/../src/Exceptions/DraftQuotaExceededException.php';
 require __DIR__ . '/../src/Models/AuditEntry.php';
 require __DIR__ . '/../src/Services/AuditLogPage.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): el arnés lo carga
+// antes del servicio, como el autoloader del front controller.
+require __DIR__ . '/../src/Services/AuditRecorderInterface.php';
 require __DIR__ . '/../src/Services/AuditService.php';
 require __DIR__ . '/../src/Services/SpellBalanceService.php';
 require __DIR__ . '/../src/Exceptions/SpellNotFoundException.php';

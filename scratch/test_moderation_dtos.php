@@ -373,6 +373,9 @@ echo "\nFASE 4: Cruz del canon (DTO vs repositorio vs CHECK de la base)
 require_once $projectRoot . '/src/Repositories/SpellReviewRepository.php';
 require_once $projectRoot . '/src/Repositories/MasterSignatureRepository.php';
 require_once $projectRoot . '/src/Repositories/ImperialDecreeRepository.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 
 $sqlSchema = (string) file_get_contents($projectRoot . '/database/schema.sql');

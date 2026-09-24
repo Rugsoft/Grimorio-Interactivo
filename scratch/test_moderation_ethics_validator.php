@@ -78,7 +78,7 @@ echo "FASE 0: Superficie del modulo\n";
 assertCondition(file_exists($validatorPath), 'Existe src/Services/ConstitutionalEthicsValidator.php');
 
 if (!file_exists($validatorPath)) {
-    echo "\nRESULTADO: FALLO — falta el validador de la Tarea 2.2 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el validador de la Tarea 2.2 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -100,6 +100,9 @@ foreach (['canMasterEvaluateSpell', 'validateClanPlurality', 'revokeConflictedSi
 }
 
 require_once $projectRoot . '/src/Models/AuditEntry.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Repositories/ClanMemberRepository.php';
 require_once $projectRoot . '/src/Services/ClanEthicsValidator.php';

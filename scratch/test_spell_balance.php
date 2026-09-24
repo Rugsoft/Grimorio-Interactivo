@@ -42,6 +42,9 @@ require __DIR__ . '/../src/Services/SpellBalanceService.php';
 require __DIR__ . '/../src/Models/User.php';
 require __DIR__ . '/../src/Models/AuditEntry.php';
 require __DIR__ . '/../src/Services/AuditLogPage.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): el arnés lo carga
+// antes del servicio, como el autoloader del front controller.
+require __DIR__ . '/../src/Services/AuditRecorderInterface.php';
 require __DIR__ . '/../src/Services/AuditService.php';
 require __DIR__ . '/../src/Repositories/SpellReviewRepository.php';
 require __DIR__ . '/../src/Services/SpellManagementService.php';

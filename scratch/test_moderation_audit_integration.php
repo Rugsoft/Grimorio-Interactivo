@@ -86,7 +86,7 @@ echo "FASE 0: Superficie del modulo\n";
 assertCondition(file_exists($repositoryPath), 'Existe src/Repositories/ImperialDecreeRepository.php');
 
 if (!file_exists($repositoryPath)) {
-    echo "\nRESULTADO: FALLO — falta el repositorio de la Tarea 1.4 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el repositorio de la Tarea 1.4 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -120,6 +120,9 @@ foreach (['insertDecree', 'findDecreeById', 'findDecreesBySpell', 'findLatestDec
     );
 }
 
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Models/AuditEntry.php';
 require_once $repositoryPath;
@@ -474,5 +477,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

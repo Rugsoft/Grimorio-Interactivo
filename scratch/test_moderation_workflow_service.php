@@ -100,7 +100,7 @@ assertCondition(file_exists($servicePath), 'Existe src/Services/ModerationWorkfl
 assertCondition(file_exists($exceptionPath), 'Existe src/Exceptions/ModerationWorkflowException.php');
 
 if (!file_exists($servicePath) || !file_exists($exceptionPath)) {
-    echo "\nRESULTADO: FALLO — faltan los ficheros de la Tarea 2.3 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — faltan los ficheros de la Tarea 2.3 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -154,6 +154,9 @@ require_once $projectRoot . '/src/Dto/SpellReviewDto.php';
 require_once $projectRoot . '/src/Dto/MasterSignatureDto.php';
 require_once $projectRoot . '/src/Dto/ObjectionVerdictDto.php';
 require_once $projectRoot . '/src/Services/SpellBalanceService.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Repositories/ClanMemberRepository.php';
 require_once $projectRoot . '/src/Services/ClanEthicsValidator.php';

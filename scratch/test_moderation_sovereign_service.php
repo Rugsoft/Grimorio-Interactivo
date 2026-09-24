@@ -96,7 +96,7 @@ echo "FASE 0: Superficie del servicio y de su contrato de errores\n";
 assertCondition(file_exists($servicePath), 'Existe src/Services/SovereignAdminService.php');
 
 if (!file_exists($servicePath)) {
-    echo "\nRESULTADO: FALLO — falta el servicio de la Tarea 2.5 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el servicio de la Tarea 2.5 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -147,6 +147,9 @@ require_once $projectRoot . '/src/Dto/LineageDto.php';
 require_once $projectRoot . '/src/Dto/ClanDto.php';
 require_once $projectRoot . '/src/Dto/ClanMemberDto.php';
 require_once $projectRoot . '/src/Dto/WeeklyCycleDto.php';
+// La pluma exige su contrato desde SPEC-11 (Fase 2): se carga antes del
+// servicio, como hace el autoloader del front controller.
+require_once $projectRoot . '/src/Services/AuditRecorderInterface.php';
 require_once $projectRoot . '/src/Services/AuditService.php';
 require_once $projectRoot . '/src/Services/ClanEthicsValidator.php';
 require_once $projectRoot . '/src/Services/LineageSynergyService.php';

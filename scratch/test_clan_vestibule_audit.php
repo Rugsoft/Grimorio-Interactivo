@@ -42,6 +42,7 @@ $filesRequired = [
     $projectRoot . '/src/Repositories/ClanMemberRepository.php',
     $projectRoot . '/src/Repositories/ClanApplicationRepository.php',
     $projectRoot . '/src/Services/LineageSynergyService.php',
+    $projectRoot . '/src/Services/AuditRecorderInterface.php',
     $projectRoot . '/src/Services/AuditService.php',
     $projectRoot . '/src/Services/ClanAdmissionResult.php',
     $projectRoot . '/src/Services/PatriarchSuccessionResult.php',
