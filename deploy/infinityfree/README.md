@@ -132,6 +132,69 @@ Abre `https://TU_SUBDOMINIO.infinityfreeapp.com/`:
   mano (navegador/curl con el sello de admin) o con un cron externo
   gratuito (p. ej. cron-job.org) apuntando a esas URLs.
 - Límites diarios de ancho de banda y «hits» (holgados para una demo).
-- La base SQLite es monofichero: perfecta para este volumen; si el
-  santuario creciera, el siguiente paso sería MySQL del propio hosting
-  cambiando solo el DSN en `env.php`.
+- La base SQLite es monofichero: perfecta para este volumen. Si el
+  santuario creciera, la **variante MySQL** del propio hosting está a un
+  DSN de distancia (sección siguiente).
+
+---
+
+## Variante MySQL del propio hosting (opcional)
+
+El plan gratuito incluye bases MySQL/MariaDB. El esquema canónico ya es
+compatible con ambos motores (cabecera de `database/schema.sql`:
+«SQLite 3.35+ y MySQL 8 / MariaDB 10.4+»), y `Connection.php` ya lee las
+tres variables del entorno — solo cambia el DSN en `env.php`.
+
+### Cuándo conviene
+
+- Si prevés crecimiento real del catálogo o escritura concurrente
+  intensiva (SQLite bloquea el fichero entero por escritura).
+- Si quieres administrar la base con phpMyAdmin del panel (cómodo para
+  respaldos y consultas manuales).
+
+Con la demo o un uso moderado, la SQLite persistente es perfecta y más
+simple: nada de credenciales ni de importar el esquema a mano.
+
+### Pasos
+
+1. **Crea la base** en el panel: **MySQL Databases** → anota el nombre
+   completo de la base (p. ej. `infi0000_grimorio`), el usuario y la
+   contraseña que el propio panel te asigna/genera.
+2. **Importa el esquema y las semillas** (en MySQL el auto-bootstrap de
+   `Connection.php` NO aplica — es exclusivo de SQLite): abre
+   **phpMyAdmin** desde el panel, entra en la base nueva y ejecuta en
+   orden, en la pestaña SQL:
+   1. el contenido íntegro de `database/schema.sql`
+   2. el contenido íntegro de `database/seeds.sql`
+
+   (Verifica al final que `spells`, `users` y `clans` existen y que las
+   semillas se asentaron.)
+3. **Edita `public/env.php`**: sustituye el bloque del DSN SQLite por el
+   trío MySQL (el resto del fichero, el guard de 403 y `$projectRoot`, no
+   hace falta tocarlo):
+
+   ```php
+   // DSN MySQL del hosting (variante alternativa a SQLite).
+   putenv('GRIMORIO_DB_DSN=mysql:host=sqlXXX.infinityfree.com;dbname=infi0000_grimorio;charset=utf8mb4');
+   putenv('GRIMORIO_DB_USER=infi0000_grimorio');
+   putenv('GRIMORIO_DB_PASS=tu_contraseña_de_la_base');
+   ```
+
+   - El **host** exacto (`sqlXXX.infinityfree.com`) lo muestra el panel
+     en **MySQL Databases** junto a cada base.
+   - `charset=utf8mb4` es obligatorio: los rótulos castellanos y las
+     leyendas solemnes viajan con acentos y «comillas angulares».
+
+4. **Verifica**: recarga la web y prueba el catálogo, el registro y el
+   juramento. Si el plano respondiera con «La conexión al plano arcano
+   no pudo establecerse», revisa host/usuario/contraseña contra el
+   panel — y que la base ya tenga las tablas importadas del paso 2.
+
+### Particularidades de la variante MySQL
+
+| Aspecto | Detalle |
+|---|---|
+| Sesiones | Siguen siendo ficheros PHP nativos del hosting — no cambian con el motor de la base. |
+| Migraciones nuevas | Las guiones de ascensión posteriores (`sql/*.sql`) son idempotentes en SQLite; en MySQL ejecútalos también en phpMyAdmin cuando el santuario crezca. |
+| `PRAGMA foreign_keys` | No aplica; MySQL con InnoDB aplica las claves foráneas por defecto (ya lo documenta `schema.sql`). |
+| Contraseña en el fichero | `env.php` vive en `public/` pero el funnel la protege; el guard de 403 impide servirla como URL. La contraseña de la base es la del plan gratuito — regénérala desde el panel si acaso. |
