@@ -134,12 +134,12 @@
 
 ## Fase 9 — Cierre y Verificación
 
-- [ ] **Tarea 9.1 — Regresión cruzada y guard de soberanía lingüística**
+- [x] **Tarea 9.1 — Regresión cruzada y guard de soberanía lingüística**
   * **Qué:** batería completa de las familias grimoire/dominion/clanes/auth en verde; guard de soberanía lingüística extendido a los módulos nuevos de colección (RNF-03); guard del Artículo V (claves JSON camelCase) sobre los contratos nuevos; cobertura CSS sin huérfanos.
   * **Cubre:** `RNF-02`, `RNF-03`, DoD de la spec (regresión completa).
   * **Hecho cuando:** la batería completa no registra ninguna suite en rojo y los guards ampliados pasan sobre los ficheros nuevos.
 
-- [ ] **Tarea 9.2 — Recorrido manual en navegador y evidencia**
+- [x] **Tarea 9.2 — Recorrido manual en navegador y evidencia**
   * **Qué:** los diez pasos del plan §6.3 contra el servidor de demo (sellado desde ambas superficies, ambas vías de entrada al tomo, convocatoria directa, elogio con gloria, militancia, marcas solemnes, peregrino retenido y reanudado, retirada con paginación viva, 401, teclado/reduced-motion), con evidencia documentada en `specs/11-adept-grimoire-collection.evidence-9.2.md`.
   * **Cubre:** DoD de la spec (recorrido manual documentado).
   * **Hecho cuando:** la evidencia de los diez pasos queda documentada con capturas y las incidencias halladas quedan corregidas o registradas como hallazgos.

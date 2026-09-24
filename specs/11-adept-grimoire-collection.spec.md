@@ -119,7 +119,7 @@ La Colección del Adepto cierra ambas brechas con una sola ceremonia de signific
 - [ ] El guard de soberanía lingüística extiende su auditoría a los módulos nuevos de colección (RNF-03).
 - [ ] El arnés de latencia certifica la consulta del tomo bajo el presupuesto de RNF-01.
 - [ ] La regresión completa del santuario (familias auth, clanes, dominio, simulador) en verde tras la integración.
-- [ ] Recorrido manual en navegador documentado (evidencia del flujo completo: añadir → consultar → convocar → elogiar, y del peregrino retenido).
+- [ ] Recorrido manual en navegador documentado (evidencia del flujo completo: añadir → consultar → convocar → elogiar, y del peregrino retenido). **Evidencia nombrada:** `specs/11-adept-grimoire-collection.evidence-9.2.md` (los diez pasos del plan §6.3, con las seis incidencias corregidas de §10.1 y los seis hallazgos registrados de §10.2).
 - [ ] Los hallazgos de la ronda de QA previa a la implementación quedan ratificados en esta spec con su registro de resoluciones (Sección 9).
 
 ## 9. Registro de Resoluciones de Diseño
@@ -158,3 +158,43 @@ La Colección del Adepto cierra ambas brechas con una sola ceremonia de signific
 | 18 | Gloria tras cambio de clan | Fuera de alcance: frontera con SPEC-07 declarada (caso límite 11, Sección 7). |
 | 20 | Bitácora ausente | Asiento de sellado y elogio como actos canónicos (RF-06 nuevo). |
 | 21 | «En revisión» ofende al Velo Arcano | Marcas solemnes «obra en gestación» / «obra retirada del canon» (RF-03.2). |
+
+## 10. Tercera ronda — Recorrido manual de la Tarea 9.2 (2026-09-23)
+
+Evidencia completa en `specs/11-adept-grimoire-collection.evidence-9.2.md` (los diez
+pasos del plan §6.3).
+
+### 10.1 Incidencias corregidas en el acto
+
+| # | Hallazgo | Resolución ratificada |
+|---|---|---|
+| 1 | El gesto del tomo con **sesión viva** abría «Cruzar el Umbral» (un linajado debía cruzar el umbral otra vez para sellar) | El orquestador despacha el acto directo con la sesión viva y narra el desenlace (RF-01.1, RF-04.0) |
+| 2 | El **peregrino** con sesión viva recibía el modal de acceso — contra la letra de RF-01.4 — y la ficha tapaba la ceremonia al conducirlo a ella | Retención + ceremonia, con la ficha retirada antes de navegar; el arnés de la Tarea 6.1 se realinea al contrato de la spec (RF-01.4) |
+| 3 | Los gestos internos de la tarjeta **burbujeaban** hasta la activación: «Elogiar»/«Retirar del tomo» abrían además el Simulador con la obra | Guardia anti-burbujeo en la activación de la tarjeta, con tres asertos de regresión (RF-04.0, RF-02.4) |
+| 4 | El nombre accesible anunciaba «escuela **undefined**» y la insignia de escuela nacía vacía en el Tomo | La tarjeta OMITE la parte que el DTO no porta; jamás una cáscara vacía (RNF-03) |
+| 5 | `.lineage-card__expansion` vencía el atributo `[hidden]`: la ceremonia mostraba doctrina íntegra y **«Jurar» en las 8 tarjetas plegadas** | Regla `[hidden]` explícita, la misma disciplina que el resto de la ceremonia (RF-02.2 de SPEC-09) |
+| 6 | El anuncio de impacto sin efecto encadenaba «no altera al maniquí **al maniquí de pruebas**» | El anuncio sin fragmentos narra «el maniquí de pruebas permanece intacto» (RNF-03) |
+| 7 | **`#/grimorio` no era retenible** para el peregrino: ni `RETAINABLE_VIEWS` ni el mapa hash→vista del middleware conocían «collection», así que la retención del tomo se descartaba en silencio (lo delató el guard de paridad de mapas de SPEC-09, 17/18 en rojo) | `'#/grimorio' => 'collection'`, con el mismo precedente que `#/vestibulo` (SPEC-10); el guard de paridad vuelve a 18/18 (RF-02.1) |
+
+### 10.2 Hallazgos registrados — requieren enmienda ratificada (No Spec, No Code)
+
+| # | Hallazgo | Destino |
+|---|---|---|
+| 8 | **CRÍTICO — La retención de ruta del juramento jamás persiste:** no hay `session_start()` en el repositorio y la retención escribe/lee `$_SESSION` (array por petición). Verificado en vivo: sello con `retainedRoute: null` y retorno al portal (RF-03.1 de SPEC-09 incumplido); los arneses no lo ven porque escriben y leen en el mismo proceso | Enmienda a SPEC-09: persistir la ruta retenida en la sesión real (`user_sessions` vía `SessionManager`) |
+| 9 | **RF-04.0 incompleto:** el gesto compartido no vive en las tarjetas de la Biblioteca ni del Simulador (el listado del catálogo no porta `adeptState` y la vista no cablea el gesto); hoy vive en la ficha y en el Tomo | Enmienda a SPEC-11 (Tareas 5.x/6.x) |
+| 10 | `elementalAffinityLabel` no viaja en ningún DTO: la insignia elemental de toda tarjeta rotula «Arcano Puro» aunque el hechizo sea de rayo o viento | Enmienda cruzada (SPEC-05/06) |
+| 11 | El rótulo «Ver mi libro personal» del umbral sigue abriendo el Simulador, contra la decisión §5 y RF-02.1; el arnés de SPEC-05 ratifica hoy ese contrato | Enmienda cruzada + realineación del arnés |
+| 12 | Carrera de arranque: en un deep-link, la vista no exenta se monta antes de que `auth/session` hidrate el store, y el peregrino escapa del desvío en el primer pintado | Enmienda a SPEC-09 (puerta de arranque) |
+
+### 10.3 Cierre de los hallazgos 8–12 (2026-09-23) — enmiendas implementadas y ratificadas
+
+Los cinco hallazgos de §10.2 quedan CERRADOS con su enmienda implementada y su
+arnés de regresión propio:
+
+| # | Enmienda ratificada | Cobertura de arnés |
+|---|---|---|
+| 8 | **Persistencia de la retención (SPEC-09 enmendado):** la ruta retenida vive en el vínculo (`user_sessions.retained_route`) vía `SessionManager`, no en `$_SESSION`; saneada a la vista, caduca con el vínculo y la disolución la arrastra | `test_lineage_retained_route_persistence.php` (14/14, entre procesos) · `test_lineage_oath_middleware.php` (20/20) · `test_lineage_oath_controller.php` (24/24) |
+| 9 | **RF-04.0 completo:** el catálogo `GET /api/v1/spells` embebe `adeptState` (`collected`/`praised`/`praiseAllowed`, camelCase) para el adepto linajado — jamás para anónimo ni peregrino — y el gesto compartido vive en las tarjetas de la Biblioteca y en la página iluminada del libro del Simulador; la marca viva se repinta sin recargar tras un acto confirmado | `test_catalog_adept_state.php` (14/14) · `test_library_view.mjs` Fase 6 (41/41) · `test_grimoire_simulator_view.mjs` Fase H8b (122/122) |
+| 10 | **Etiqueta elemental canónica (enmienda cruzada SPEC-05/06):** el mapa único `Spell::ELEMENTAL_AFFINITY_LABELS` (espejo exacto del `ELEMENT_NAMES` del cliente) viaja en los DTOs de resumen y detalle; la tarjeta viste el elemento DECLARADO y solo cae al mapa por escuela cuando el hechizo no declara afinidad; el neutro y las afinidades ajenas rotulan «Arcano Puro» | `test_elemental_affinity_labels.php` (22/22) · `test_spell_card.mjs` Fase 6 (28/28) |
+| 11 | **«Ver mi libro personal» apunta a Mi Grimorio (RF-02.1):** el gesto del umbral y el intent retenido conducen a `#/grimorio`, jamás al Simulador de ensayos; el arnés de ruta de SPEC-05 se realinea al contrato enmendado | `test_simulator_route.mjs` (42/42, fases C y D realineadas) |
+| 12 | **Puerta de arranque (SPEC-09 enmendado):** con un deep-link a una vista no exenta, el arranque ESPERA a que `auth/session` hidrate el store antes del primer montaje; el peregrino es recibido por la ceremonia con su ruta retenida, el linajado entra directo y la lectura pública anónima no espera a nadie | `test_intent_give_praise.mjs` Fase 6 (35/35) |

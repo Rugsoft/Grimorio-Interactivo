@@ -138,6 +138,7 @@ Hoy, la consagración (registro, SPEC-03) exige elegir ese vínculo dentro de un
   El sistema DEBERÁ exigir linaje jurado previo para la designación de Maestro (`master`): nadie es elevado al oficio validador desde la ventana sin linaje, garantizando que el conflicto de intereses del Artículo III tenga siempre un sujeto ético determinado.
 * **RF-05.3 [Ubicuo]:**
   La ruta retenida para el retorno post-juramento DEBERÁ residir en la sesión del servidor (no en la URL ni en el cliente), caducando con la sesión; su contenido se sanea para admitir únicamente rutas internas del portal.
+  **Enmienda ratificada (hallazgo 8 del recorrido de SPEC-11, §10.3):** la sesión del servidor es la fila REAL de `user_sessions` vía `SessionManager` — jamás `$_SESSION`, que en esta pila es un array por petición y no sobrevive al salto entre peticiones. La ruta viaja en el vínculo (`retained_route`), se sanea a la vista, caduca con el vínculo y la disolución la arrastra. La vista no exenta de un deep-link ESPERA a que la sesión hidrate antes del primer montaje (puerta de arranque, hallazgo 12).
 
 ---
 
