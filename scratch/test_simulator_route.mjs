@@ -338,6 +338,35 @@ function createFakeGrimoireClient({ essaysStatus = 200, essaySpells = [ESSAY_SPE
   };
 }
 
+/**
+ * Cliente del Tomo Personal simulado (SPEC-11): «Ver mi libro personal»
+ * conduce a MI GRIMORIO (hallazgo H10), así que la navegación del badge
+ * consulta el sobre del tomo y jamás los Ensayos del Simulador.
+ */
+function createFakeCollectionClient() {
+  const calls = [];
+  return {
+    calls,
+    async fetchCollection(element = null, page = 1) {
+      calls.push({ element, page });
+      return {
+        success: true,
+        status: 200,
+        data: { entries: [], total: 0, page: 1, limit: 50, totalPages: 1 },
+      };
+    },
+    async collectSpell(spellId) {
+      return { success: true, status: 201, data: { spellId, collected: true } };
+    },
+    async praiseSpell(spellId) {
+      return { success: true, status: 201, data: { spellId, praised: true } };
+    },
+    async discardSpell(spellId) {
+      return { success: true, status: 200, data: { spellId, total: 0 } };
+    },
+  };
+}
+
 function buildFakeShell(initialUrl) {
   const appRoot = createFakeElement('main');
   appRoot.setAttribute('id', 'app');
@@ -402,7 +431,7 @@ function buildFakeShell(initialUrl) {
   };
 }
 
-function buildApp(shell, { authClient, grimoireClient } = {}) {
+function buildApp(shell, { authClient, grimoireClient, collectionClient } = {}) {
   return createGrimoireApp({
     appRoot: shell.appRoot,
     navRoot: shell.navRoot,
@@ -412,6 +441,8 @@ function buildApp(shell, { authClient, grimoireClient } = {}) {
     spellClient: shell.spellClient,
     authClient: authClient ?? createFakeAuthClient(),
     grimoireClient: grimoireClient ?? createFakeGrimoireClient(),
+    // Mi Grimorio (SPEC-11): cliente del tomo inyectado, jamás el real.
+    grimoireCollectionClient: collectionClient ?? createFakeCollectionClient(),
     windowRef: shell.fakeWindow,
     documentRef: shell.fakeDocument,
   });
@@ -535,8 +566,9 @@ console.log('\n[C] Con vínculo vivo: «Ver mi libro personal»');
 
 const shellC = buildFakeShell('http://grimorio.test/');
 const grimoireC = createFakeGrimoireClient();
+const collectionC = createFakeCollectionClient();
 const authC = createFakeAuthClient({ sessionUser: SESSION_USER });
-const appC = buildApp(shellC, { authClient: authC, grimoireClient: grimoireC });
+const appC = buildApp(shellC, { authClient: authC, grimoireClient: grimoireC, collectionClient: collectionC });
 await appC.boot();
 await wait(10);
 
@@ -548,13 +580,16 @@ assertCondition(grimoireAction !== null, 'el menú arcano ofrece «Ver mi libro 
 
 grimoireAction.dispatch('click');
 await wait(10);
-assertCondition(appC.store.getState().currentView === 'simulator', 'la acción navega al Simulador (RF-01.2)');
-assertCondition(grimoireC.essayCalls().length === 1, 'el Tomo de Ensayos se consulta con el vínculo activo');
-assertCondition(grimoireC.essayCalls()[0]?.mode === 'essays', 'la consulta declara mode=essays (plan 2.1)');
+// REALINEACIÓN DEL CONTRATO (SPEC-11, RF-02.1 — hallazgo H10 del recorrido
+// manual): «Ver mi libro personal» abre MI GRIMORIO, el Tomo Personal, y
+// jamás el Simulador de ensayos.
+assertCondition(appC.store.getState().currentView === 'collection', 'la acción navega a Mi Grimorio (RF-02.1 de SPEC-11)');
+assertCondition(byClass(shellC.appRoot, 'collection-view') !== null, 'la vista del Tomo Personal se monta en el punto de anclaje');
+assertCondition(collectionC.calls.length === 1, 'el sobre del tomo se consulta con el vínculo activo');
+assertCondition(byClass(shellC.appRoot, 'grimoire-simulator') === null, 'el Simulador NO se monta: el libro personal es el Tomo Personal');
+assertCondition(grimoireC.essayCalls().length === 0, 'los Ensayos privados del Simulador ya no se consultan desde el badge');
 assertCondition(shellC.accessDialog.open === false, 'con vínculo no se despliega «Cruzar el Umbral»');
 assertCondition(appC.store.getState().pendingIntent.action === null, 'no queda intención pendiente que consumir');
-assertCondition(activeCatalogMode(shellC) === 'essays', 'el conmutador declara activo el Tomo de Ensayos (RF-01.2)');
-assertCondition(exhibitedSpell(shellC) === 'Borrador del Alba', 'la lámina ilumina el ensayo privado del autor (RF-01.5)');
 
 // =====================================================================
 // [D] Restauración de la intención tras «Cruzar el Umbral»
@@ -563,8 +598,9 @@ console.log('\n[D] Restauración de la intención tras autenticar');
 
 const shellD = buildFakeShell('http://grimorio.test/');
 const grimoireD = createFakeGrimoireClient();
+const collectionD = createFakeCollectionClient();
 const authD = createFakeAuthClient();
-const appD = buildApp(shellD, { authClient: authD, grimoireClient: grimoireD });
+const appD = buildApp(shellD, { authClient: authD, grimoireClient: grimoireD, collectionClient: collectionD });
 await appD.boot();
 await appD.navigate('simulator', { catalogMode: 'essays' });
 await wait(10);
@@ -578,9 +614,10 @@ await wait(20);
 
 assertCondition(authD.calls.bind.length === 1, 'el orquestador llamó a bind() con las credenciales del shell (SPEC-03)');
 assertCondition(appD.store.getState().pendingIntent.action === null, 'la intención retenida se consumió (RF-05.3)');
-assertCondition(grimoireD.essayCalls().length === 1, 'tras autenticar se restablece la navegación al Tomo de Ensayos');
-assertCondition(appD.store.getState().currentView === 'simulator', 'la restauración desemboca en el Simulador');
-assertCondition(exhibitedSpell(shellD) === 'Borrador del Alba', 'el tomo privado queda abierto tras el vínculo');
+// La intención retenida se restablece hacia MI GRIMORIO (hallazgo H10).
+assertCondition(appD.store.getState().currentView === 'collection', 'la restauración desemboca en Mi Grimorio (RF-02.1 de SPEC-11)');
+assertCondition(byClass(shellD.appRoot, 'collection-view') !== null, 'el Tomo Personal queda abierto tras el vínculo');
+assertCondition(grimoireD.essayCalls().length === 0, 'la restauración no abre los Ensayos del Simulador');
 assertCondition(queryById(shellD.badgeRoot, 'userProfileBadge').length === 1, 'el badge reemplaza al botón del umbral');
 
 // =====================================================================
@@ -611,5 +648,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El Simulador está cableado en el orquestador con su navegación protegida.');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

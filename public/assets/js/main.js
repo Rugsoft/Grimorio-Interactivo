@@ -73,11 +73,15 @@ import {
   fetchOathCatalog as apiFetchOathCatalog,
   sealOath as apiSealOath,} from './api/lineageOathClient.js';
 import { createVestibuleClient } from './api/vestibuleClient.js';
-import { createGrimoireCollectionClient } from './api/grimoireCollectionClient.js';
+import { createGrimoireCollectionClient, ceremonialLegendFor } from './api/grimoireCollectionClient.js';
 import { createCodexView } from './views/elementalCodexView.js';
 import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
 import { createExperimentalHallView } from './views/experimentalHallView.js';
 import { createMastersTowerView } from './views/mastersTowerView.js';
+// El gesto compartido del tomo (SPEC-11, RF-04.0 — hallazgo H8): la misma
+// tarjeta del catálogo emite sus actos al orquestador desde la Biblioteca,
+// el Simulador y el Tomo Personal.
+import { TOME_CARD_EVENTS } from './components/spellCardComponent.js';
 import { createModerationClient } from './api/moderationClient.js';
 import { createAuditLogView } from './views/auditLogView.js';
 import { createObjectionModalComponent } from './components/objectionModalComponent.js';
@@ -250,6 +254,16 @@ export function createGrimoireApp(options = {}) {
   const OATH_EXEMPT_VIEWS = Object.freeze(['landing', 'juramento', 'error']);
 
   /**
+   * Nombres castellanos de los gestos del tomo (SPEC-11, Tarea 9.2). El
+   * mapa es también la lista blanca: solo estos dos gestos portan hechizo
+   * concreto y admiten despacho directo con la sesión viva.
+   */
+  const TOME_ACTION_NAMES = Object.freeze({
+    addToGrimoire: 'sellado',
+    givePraise: 'homenaje',
+  });
+
+  /**
    * Interceptor de retención (SPEC-09, Tarea 3.2 — RF-01.3, RNF-04):
    * un «Peregrino sin Linaje» (sesión activa, lineage null, rol distinto
    * de supremeAdmin) que pida una vista no exenta es desviado a la
@@ -334,6 +348,8 @@ export function createGrimoireApp(options = {}) {
         store,
         spellClient,
         onSpellSelect: (slug, originElement) => openSpellDetailBySlug(slug, { originElement }),
+        // Gesto del tomo en la rejilla (SPEC-11, RF-04.0 — hallazgo H8).
+        onTomeGesture: (eventType, gesturePayload) => handleTomeCardGesture(eventType, gesturePayload),
         // El Tomo consulta al Salón quién reina para ceñir el ribete dorado a
         // los conjuros de su casa (SPEC-07, RF-04.4). Best-effort.
         dominionClient,
@@ -439,6 +455,9 @@ export function createGrimoireApp(options = {}) {
         // Gloria de hermandad de cada reacción detonada (SPEC-07, RF-03.2):
         // el orquestador aporta la sesión y el cliente; la Cámara solo narra.
         awardSimulatorPractice: (comboElement) => awardSimulatorPractice(comboElement),
+        // Gesto compartido del tomo en la página iluminada (SPEC-11,
+        // RF-04.0 — hallazgo H8b): la MISMA máquina del orquestador.
+        onTomeGesture: (eventType, gesturePayload) => handleTomeCardGesture(eventType, gesturePayload),
       });
       currentView = { name: effectiveView, instance: simulatorView };
       await simulatorView.render();
@@ -745,16 +764,26 @@ export function createGrimoireApp(options = {}) {
    * El eco viaja por la franja solemne del shell (aria-live del slot).
    * @param {object} result Sobre del cliente del tomo.
    * @param {string} actName Nombre castellano del acto («sellado», «homenaje»).
+   * @param {boolean} [awaited=true] El acto fue retenido en el umbral (true)
+   *        o consumado con la sesión viva (false, Tarea 9.2).
    */
-  function announceIntentResumption(result, actName) {
+  function announceIntentResumption(result, actName, awaited = true) {
     const status = Number(result?.status ?? 0);
     let legend;
     if (result?.success === true && status >= 200 && status < 300) {
-      legend = `Tu ${actName} aguardado queda consumado: el tomo lo recuerda.`;
+      // El acto AGUARDADO y el gesto vivo comparten desenlace, no prosodia:
+      // solo el primero fue esperado al otro lado del umbral.
+      legend = awaited
+        ? `Tu ${actName} aguardado queda consumado: el tomo lo recuerda.`
+        : `El ${actName} queda consumado: el tomo lo recuerda.`;
     } else if (status === 401) {
       legend = 'Tu vínculo con el santuario ha expirado: renuévalo y tus gestos aguardarán donde los dejaste.';
     } else {
-      legend = 'El acto aguardado no pudo completarse: inténtalo de nuevo cuando quieras.';
+      // Recibos solemnes (militancia, obra en gestación, colisión): la
+      // leyenda canónica del Anexo A los narra sin tecnicismos (RNF-03).
+      legend = awaited
+        ? 'El acto aguardado no pudo completarse: inténtalo de nuevo cuando quieras.'
+        : ceremonialLegendFor(result);
     }
     announceShellLegend(legend);
   }
@@ -793,8 +822,78 @@ export function createGrimoireApp(options = {}) {
    */
   function handleReservedAction(action, targetSlug = null, targetSpellId = null) {
     if (isDestroyed) return;
+
+    // GESTO DEL TOMO CON LA SESIÓN VIVA (SPEC-11, Tarea 9.2 — hallazgo del
+    // recorrido manual): un adepto LINAIADO consuma el acto sin cruzar el
+    // umbral otra vez; un PEREGRINO lo retiene y es conducido al juramento,
+    // donde el retorno lo completa solo (RF-01.4); sin sesión, el umbral de
+    // siempre retiene la intención (RF-02.3).
+    const actName = TOME_ACTION_NAMES[action];
+    const spellId = typeof targetSpellId === 'string' ? targetSpellId : '';
+    if (actName !== undefined && spellId !== '') {
+      const sessionState = store.getState();
+      if (sessionState.isAuthenticated === true) {
+        if (sessionState.userLineage === null && sessionState.userRole !== 'supremeAdmin') {
+          store.setState({ pendingIntent: { action, targetSlug, targetSpellId } });
+          // La ficha cede el paso: la ceremonia es la nueva morada y un
+          // pergamino abierto la taparía (hallazgo del recorrido, Tarea 9.2).
+          if (detailModal !== null && spellDetailDialog.open === true) {
+            detailModal.close();
+          }
+          void navigate('juramento');
+          return;
+        }
+        void performTomeAct(action, spellId, actName);
+        return;
+      }
+    }
+
     store.setState({ pendingIntent: { action, targetSlug, targetSpellId } });
     accessModal.open({ action, targetSlug });
+  }
+
+  /**
+   * Consuma el gesto del tomo con la sesión VIVA (SPEC-11, Tarea 9.2): el
+   * sellado o el homenaje se despachan directamente sobre el hechizo de la
+   * ficha, sin ceremonial de umbral ni gesto repetido. La reanudación es la
+   * misma máquina de `handleOathSealed`, y los recibos solemnes (militancia,
+   * obra en gestación, colisión) se narran con su leyenda canónica.
+   *
+   * @param {'addToGrimoire'|'givePraise'} action Gesto del tomo activado.
+   * @param {string} spellId Hechizo concreto de la ficha.
+   * @param {string} actName Nombre castellano del acto.
+   * @returns {Promise<void>}
+   */
+  async function performTomeAct(action, spellId, actName) {
+    const result = action === 'addToGrimoire'
+      ? await grimoireCollectionClient.collectSpell(spellId)
+      : await grimoireCollectionClient.praiseSpell(spellId);
+    announceIntentResumption(result, actName, false);
+
+    // La rejilla viva refleja el acto SIN recargar (SPEC-11, RF-04.0 —
+    // hallazgo H8): solo se marca lo que el santuario confirmó. Un recibo
+    // denegado (militancia) o una colisión narran su leyenda y dejan la
+    // ficha intacta.
+    const consummated = action === 'addToGrimoire'
+      ? result?.success === true
+      : result?.success === true && result?.data?.praised === true;
+    if (consummated) {
+      currentView?.instance?.applyTomeMark?.(spellId, action === 'addToGrimoire' ? 'seal' : 'praise');
+    }
+  }
+
+  /**
+   * Gesto compartido del tomo activado en la rejilla del catálogo (SPEC-11,
+   * RF-04.0 — hallazgo H8 del recorrido manual): la MISMA máquina del
+   * orquestador que ya sirve la ficha y el umbral decide aquí — sesión viva
+   * consume el acto, peregrino retiene y jura, visitante cruza el umbral.
+   *
+   * @param {string} eventType Evento del bus emitido por la tarjeta.
+   * @param {Object} payload { spellId, slug, originElement } de la tarjeta.
+   */
+  function handleTomeCardGesture(eventType, payload) {
+    const action = eventType === TOME_CARD_EVENTS.tomePraise ? 'givePraise' : 'addToGrimoire';
+    handleReservedAction(action, payload?.slug ?? null, payload?.spellId ?? null);
   }
 
   /**
@@ -821,8 +920,11 @@ export function createGrimoireApp(options = {}) {
       void navigate('creator');
     } else if (retainedIntent?.action === 'openGrimoire') {
       // «Ver mi libro personal» retenido en el umbral: ahora con vínculo,
-      // el Simulador abre directamente el tomo privado (RF-01.2).
-      void navigate('simulator', { catalogMode: 'essays' });
+      // se abre MI GRIMORIO — el Tomo Personal de SPEC-11 (RF-02.1), no el
+      // Simulador de ensayos (hallazgo H10 del recorrido manual, Tarea 9.2).
+      // El peregrino que aún no juró es desviado a la ceremonia por el
+      // interceptor, con la ruta retenida (enmienda de SPEC-09).
+      void navigate('collection');
     } else    if (retainedIntent?.action === 'joinClan' && typeof retainedIntent.targetSlug === 'string' && retainedIntent.targetSlug !== '') {
       // Postulación retenida en el umbral (RF-01.5): ya con vínculo, la ficha
       // de la casa vuelve a montarse con su gesto de ingreso disponible.
@@ -938,13 +1040,16 @@ export function createGrimoireApp(options = {}) {
   }
 
   /**
-   * «Ver mi libro personal» (RF-07.1 de SPEC-03): con vínculo abre el Tomo de
-   * Ensayos; sin él, retiene la intención y despliega «Cruzar el Umbral».
+   * «Ver mi libro personal» (RF-07.1 de SPEC-03, enmendado por RF-02.1 de
+   * SPEC-11 — hallazgo H10 del recorrido manual): con vínculo abre MI
+   * GRIMORIO, el Tomo Personal del adepto; sin él, retiene la intención y
+   * despliega «Cruzar el Umbral». Un peregrino sin linaje queda retenido
+   * por el interceptor y conduce a la ceremonia, jamás al Simulador.
    */
   function handleOpenGrimoire() {
     if (isDestroyed) return;
     if (store.getState().isAuthenticated === true) {
-      void navigate('simulator', { catalogMode: 'essays' });
+      void navigate('collection');
       return;
     }
     handleReservedAction('openGrimoire');
@@ -1099,9 +1204,16 @@ export function createGrimoireApp(options = {}) {
 
     // Verificación de sesión al arrancar (Tarea 4.2): la cookie HttpOnly
     // decide el estado real; el badge y el store se sincronizan sin recarga.
-    if (authClient?.checkSession) {
-      void apiCheckSessionWrapper();
-    }
+    //
+    // PUERTA DE ARRANQUE (SPEC-09, hallazgo H12 del recorrido manual): el
+    // sobre se conserva como promesa para poder ESPERARLO cuando la URL
+    // traiga un enlace directo a una vista no exenta. Antes, el deep-link
+    // montaba la vista antes de que la sesión hidratara, y el peregrino
+    // navegaba una vista de gestión sin desvío ni retención. El pintado de
+    // las vistas exentas (portal, ceremonia) sigue sin esperar a nadie.
+    const sessionGate = authClient?.checkSession
+      ? apiCheckSessionWrapper().catch(() => { /* Corte de maná: visitante */ })
+      : Promise.resolve();
 
     // El veredicto del juramento (SPEC-09, Tarea 3.2): la ceremonia anuncia
     // `oath:sealed` en el bus del shell y el orquestador actualiza store y
@@ -1183,6 +1295,11 @@ export function createGrimoireApp(options = {}) {
     // Un hash directo #hechizo-slug montará la portada de fondo mientras el
     // historyManager (resolveInitialHash) despliega la ficha por su cuenta (plan 4.3).
     const initialViewFromHash = resolveViewFromHash(windowRef?.location?.hash);
+    // La puerta solo se cierra ante un enlace directo a una vista de gestión
+    // (no exenta): es el único caso en que la identidad decide el desvío.
+    if (initialViewFromHash !== null && !OATH_EXEMPT_VIEWS.includes(initialViewFromHash)) {
+      await sessionGate;
+    }
     await navigate(initialViewFromHash ?? 'landing');
   }
 

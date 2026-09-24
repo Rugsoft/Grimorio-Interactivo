@@ -383,7 +383,12 @@ assertCondition(reserveButton1 !== null, 'la ficha porta el gesto reservado «A�
 reserveButton1.dispatch('click');
 await wait(30);
 
-assertCondition(shell1.accessDialog.open === true, 'el umbral «Cruzar el Umbral» se despliega sobre la ficha (RF-05.2)');
+// RF-01.4: el adepto SIN linaje ya está vinculado — el gesto NO le pide
+// cruzar el umbral de nuevo, sino que lo conduce a la ceremonia del
+// juramento con el acto retenido (hallazgo del recorrido de la Tarea 9.2:
+// el arnés ratificaba el modal de acceso, contra la letra de la spec).
+assertCondition(shell1.accessDialog.open === false, 'un adepto ya vinculado no vuelve a cruzar el umbral (RF-01.4)');
+assertCondition(app1.store.getState().currentView === 'juramento', 'el gesto conduce a la ceremonia del juramento (RF-01.4)');
 const intent1 = app1.store.getState().pendingIntent;
 assertCondition(intent1.action === 'addToGrimoire', 'la intención retiene addToGrimoire (catálogo vivo)');
 assertCondition(intent1.targetSlug === 'llamas-de-frieren', 'la intención porta el slug del hechizo (forma compatible)');
@@ -393,8 +398,9 @@ assertCondition(intent1.targetSpellId === 'spl-1', 'la intención porta targetSp
 assertCondition(shell1.oathClient.calls.retainRoute.includes('#/biblioteca'),
   'el interceptor retuvo la ruta de la Biblioteca (SPEC-09, RF-05.3)');
 
-// El gesto del orquestador no navegó: el modal de acceso es quien conduce.
-assertCondition(shell1.spellDetailDialog.open === true, 'la ficha NO se cierra: el acceso se apila encima (RF-05.2)');
+// La ficha cede el paso: la ceremonia es la nueva morada y un pergamino
+// abierto la taparía (RF-01.4; hallazgo del recorrido de la Tarea 9.2).
+assertCondition(shell1.spellDetailDialog.open === false, 'la ficha se retira para dejar ver la ceremonia (RF-01.4)');
 
 // =====================================================================
 // [2] El peregrino que intenta ELOGIAR aterriza igual (givePraise,
@@ -584,6 +590,95 @@ assertCondition(byClass(shell7.appRoot, 'library-view') !== null,
 const echo7 = shell7.arcaneNoticeRoot.querySelector('.arcane-echo');
 assertCondition(echo7 !== null && !/\b(500|HTTP)\b/.test(echo7.textContent ?? ''),
   'la leyenda del fallo se narra sin tecnicismos (RNF-03)');
+
+// =====================================================================
+// [6] Puerta de arranque del deep-link (hallazgo H12 del recorrido)
+// =====================================================================
+console.log('\n[6] Puerta de arranque: el deep-link espera a la sesión');
+
+/**
+ * Sesión RETARDADA: la identidad tarda más que el primer despacho del
+ * orquestador. Es el escenario exacto del hallazgo H12 — antes de la
+ * puerta, la vista no exenta se montaba antes de que el sobre llegara y
+ * el peregrino navegaba la Biblioteca sin desvío ni retención.
+ */
+function delayedAuthClient(user, delayMs = 25) {
+  return {
+    checkSession: async () => {
+      await wait(delayMs);
+      return user === null
+        ? { success: true, status: 200, data: { authenticated: false, user: null } }
+        : { success: true, status: 200, data: { authenticated: true, user } };
+    },
+    bind: async () => ({ success: true, status: 200, data: { user } }),
+    consecrate: async () => ({ success: true, status: 201, data: { user } }),
+    dissolve: async () => ({ success: true, status: 200, data: { dissolved: true } }),
+    dissolveAll: async () => ({ success: true, status: 200, data: { dissolved: true } }),
+  };
+}
+
+const buildDeepLinkApp = (shell, authClient) => createGrimoireApp({
+  appRoot: shell.appRoot,
+  navRoot: shell.navRoot,
+  badgeRoot: shell.badgeRoot,
+  arcaneNoticeRoot: shell.arcaneNoticeRoot,
+  spellDetailDialog: shell.spellDetailDialog,
+  accessDialog: shell.accessDialog,
+  spellClient: shell.spellClient,
+  authClient,
+  lineageOathClient: shell.oathClient,
+  grimoireCollectionClient: shell.collectionClient,
+  windowRef: shell.fakeWindow,
+  documentRef: shell.fakeDocument,
+});
+
+const DEEP_LINK = 'http://grimorio.test/#/biblioteca';
+
+// (a) Pergamino directo al catálogo con vínculo PEREGRINO.
+const shell8 = buildFakeShell(DEEP_LINK);
+const app8 = buildDeepLinkApp(shell8, delayedAuthClient(shell8.authClient.pilgrimUser));
+await app8.boot();
+await wait(80);
+assertCondition(
+  byClass(shell8.appRoot, 'library-view') === null,
+  'El deep-link del peregrino NO monta la Biblioteca: la puerta espera a la sesión (H12)',
+);
+assertCondition(
+  app8.store.getState().currentView === 'juramento',
+  'El peregrino es recibido por la ceremonia del juramento (RF-01.3 de SPEC-09)',
+);
+assertCondition(
+  shell8.oathClient.calls.retainRoute.includes('#/biblioteca'),
+  'La ruta pedida queda retenida en la sesión para el retorno (RF-05.3)',
+);
+
+// (b) El mismo pergamino con vínculo LINAIADO: la vista se monta.
+const shell9 = buildFakeShell(DEEP_LINK);
+const app9 = buildDeepLinkApp(shell9, delayedAuthClient(shell9.authClient.linagedUser));
+await app9.boot();
+await wait(80);
+assertCondition(
+  app9.store.getState().currentView === 'library',
+  'El adepto linajado entra directo a su Biblioteca por el pergamino (RF-03.1)',
+);
+assertCondition(
+  byClass(shell9.appRoot, 'library-view') !== null,
+  'La rejilla del catálogo se monta para el linajado',
+);
+assertCondition(
+  shell9.oathClient.calls.retainRoute.length === 0,
+  'El linajado jamás retiene ruta: no hay desvío que preparar',
+);
+
+// (c) Visitante anónimo: la lectura pública sigue instantánea.
+const shell10 = buildFakeShell(DEEP_LINK);
+const app10 = buildDeepLinkApp(shell10, delayedAuthClient(null));
+await app10.boot();
+await wait(80);
+assertCondition(
+  app10.store.getState().currentView === 'library' && byClass(shell10.appRoot, 'library-view') !== null,
+  'El visitante anónimo conserva su Biblioteca pública (RF-05.1 de SPEC-03)',
+);
 
 // =====================================================================
 // Veredicto
