@@ -96,7 +96,10 @@ function buildRouter(): Router
     $connection       = Connection::getInstance();
     $discoveryService = new SpellDiscoveryService($connection);
     $portalController = new PortalController($discoveryService);
-    $spellController  = new SpellController($discoveryService);
+    // El controlador del catálogo recibe también el canal de estado del
+    // adepto (SPEC-11, RF-04.0, hallazgo H8): el listado embebe
+    // `adeptState` para que la tarjeta nazca con su gesto del tomo.
+    $spellController  = new SpellController($discoveryService, new GrimoireQueryService($connection->getPdo()));
     // Gobierno de hermandades (SPEC-07, Tareas 2.4 y 3.2): el servicio se
     // cablea con la Bitácora pública para que fundaciones, expulsiones,
     // renuncias y disoluciones queden inscritas (RNF-04).
@@ -324,6 +327,9 @@ function buildRouter(): Router
     $lineageOathController = new LineageOathController(
         new LineageCatalogService($lineageOathRepository),
         new LineageOathService($lineageOathRepository, new AuditService($connection->getPdo())),
+        // La ruta retenida se consume de la FILA del vínculo (SPEC-09,
+        // enmienda de la Tarea 9.2 de SPEC-11).
+        new SessionManager($connection->getPdo()),
     );
     $router->addRoute('GET', '/api/v1/lineage/oath-catalog', fn (Request $request): Response => $lineageOathController->oathCatalog($request));
     $router->addRoute('POST', '/api/v1/lineage/oath', fn (Request $request): Response => $lineageOathController->sealOath($request));
@@ -374,7 +380,10 @@ if (PHP_SAPI !== 'cli') {
         // El RbacMiddleware por-ruta sigue actuando dentro del despacho
         // para la jerarquía fina (SPEC-03, RF-05).
         $lineageOathMiddleware = new LineageOathMiddleware(
-            new LineageOathRepository(Connection::getInstance()->getPdo())
+            new LineageOathRepository(Connection::getInstance()->getPdo()),
+            // La retención se persiste en el vínculo activo (SPEC-09,
+            // enmienda de la Tarea 9.2 de SPEC-11): sobrevive a la petición.
+            new SessionManager(Connection::getInstance()->getPdo())
         );
         $oathGuardResponse = $lineageOathMiddleware->guard($request);
         if ($oathGuardResponse !== null) {

@@ -40,6 +40,7 @@ require __DIR__ . '/../src/Models/Spell.php';
 require __DIR__ . '/../src/Core/Response.php';
 require __DIR__ . '/../src/Core/Request.php';
 require __DIR__ . '/../src/Core/Router.php';
+require __DIR__ . '/../src/Repositories/GrimoireCollectionRepository.php';
 require __DIR__ . '/../src/Services/GrimoireQueryService.php';
 require __DIR__ . '/../src/Controllers/GrimoireController.php';
 
@@ -311,7 +312,7 @@ echo "Asertos superados: {$assertsPassed}" . PHP_EOL;
 echo "Asertos fallidos:  {$assertsFailed}" . PHP_EOL;
 
 if ($assertsFailed > 0) {
-    echo PHP_EOL . 'RESULTADO: FALLO' . PHP_EOL;
+    echo PHP_EOL . 'RESULTADO: DENEGADO' . PHP_EOL;
     exit(1);
 }
 echo PHP_EOL . 'RESULTADO: EXITO — Los 4 tests del plan 6.1 pasan al 100% (Tarea 1.4).' . PHP_EOL;

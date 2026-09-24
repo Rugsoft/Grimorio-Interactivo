@@ -61,13 +61,18 @@ const MAGIC_SCHOOLS = Object.freeze([
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica inyectable (tests).
  * @param {Object} [options.dominionClient] Cliente del Dominio (Tarea 5.1; necesita
  *   fetchLeaderboard). Best-effort: si falta o cae, el Tomo se sirve sin ribete.
- * @returns {Object} API: { render, destroy, retry, setSpellClient }.
+ * @param {(eventType: string, payload: Object) => void} [options.onTomeGesture]
+ *   Gesto compartido del tomo (SPEC-11, RF-04.0 — hallazgo H8): la tarjeta
+ *   del catálogo delega aquí su sellado o su homenaje y el orquestador
+ *   decide (umbral, ceremonia o acto directo).
+ * @returns {Object} API: { render, destroy, retry, setSpellClient, applyTomeMark }.
  */
 export function createLibraryView(mountRoot, options) {
   const {
     store,
     spellClient,
     onSpellSelect,
+    onTomeGesture = null,
     dominionClient = null,
     elementFactory = (tagName) => document.createElement(tagName),
   } = options;
@@ -84,6 +89,14 @@ export function createLibraryView(mountRoot, options) {
 
   /** Nodos vivos de la vista, para limpieza determinista en destroy(). */
   const mountedNodes = [];
+
+  /**
+   * Fichas vivas de la rejilla (SPEC-11, hallazgo H8): la vista conserva
+   * los DTO ya recibidos —replace y append— para poder repintar una tarjeta
+   * con su nuevo `adeptState` sin volver a consultar al santuario ni
+   * perder el scroll ganado con «Desenrollar más pergaminos».
+   */
+  let catalogItems = [];
 
   /** Temporizador del debounce de búsqueda. */
   let searchDebounceHandle = null;
@@ -285,6 +298,9 @@ export function createLibraryView(mountRoot, options) {
         // Compatibilidad con el DOM simulado: vaciado manual.
         for (const child of [...catalogGrid.children]) child.remove();
       }
+      catalogItems = [...items];
+    } else {
+      catalogItems = [...catalogItems, ...items];
     }
     // En modo `append` (RF-03.7) las tarjetas previas NO se tocan: se
     // concatena al pie (sin salto de scroll, criterio de la Tarea 5.3).
@@ -292,6 +308,9 @@ export function createLibraryView(mountRoot, options) {
     for (const spellSummaryDto of items) {
       const card = createSpellCardComponent(spellSummaryDto, {
         onSpellSelect: (slug, originElement) => onSpellSelect?.(slug, originElement),
+        // Gesto compartido del tomo (SPEC-11, RF-04.0 — hallazgo H8): la
+        // tarjeta solo lo pinta si el DTO porta `adeptState`.
+        onTomeGesture: (eventType, payload) => onTomeGesture?.(eventType, payload),
         // Ribete ceremonial del Clan Regente (SPEC-07, RF-04.4).
         isRegent: isRegentSpell(spellSummaryDto),
         elementFactory,
@@ -723,5 +742,42 @@ export function createLibraryView(mountRoot, options) {
     }
   }
 
-  return { render, destroy, retry, setSpellClient };
+  /**
+   * Marca viva del gesto del tomo (SPEC-11, RF-04.0 — hallazgo H8): el
+   * orquestador narra el desenlace y pide a la vista que repinte la ficha
+   * afectada con su nuevo estado, sin recargar el catálogo ni perder la
+   * tanda ya desenrollada. Idempotente: la obra ya marcada no se repinta.
+   *
+   * @param {string} spellId Hechizo del gesto.
+   * @param {'seal'|'praise'} act Acto consumado (sellado u homenaje).
+   */
+  function applyTomeMark(spellId, act) {
+    const targetId = String(spellId ?? '');
+    if (targetId === '') return;
+
+    let marked = false;
+    const nextItems = catalogItems.map((spellSummaryDto) => {
+      if (String(spellSummaryDto?.id ?? '') !== targetId) return spellSummaryDto;
+      const currentState = spellSummaryDto.adeptState;
+      // Sin estado embebido no hay gesto que marcar (DTO anónimo o legado).
+      if (currentState === null || currentState === undefined) return spellSummaryDto;
+      const alreadyMarked = act === 'praise' ? currentState.praised === true : currentState.collected === true;
+      if (alreadyMarked) return spellSummaryDto;
+      marked = true;
+      return {
+        ...spellSummaryDto,
+        adeptState: {
+          ...currentState,
+          collected: act === 'praise' ? currentState.collected : true,
+          praised: act === 'praise' ? true : currentState.praised,
+        },
+      };
+    });
+
+    if (!marked) return;
+    catalogItems = nextItems;
+    renderCatalogCards(catalogItems, 'replace');
+  }
+
+  return { render, destroy, retry, setSpellClient, applyTomeMark };
 }

@@ -239,6 +239,74 @@ final class GrimoireQueryService
     }
 
     /**
+     * Enriquecimiento embebido del CATÁLOGO de tarjetas con el estado del
+     * adepto (SPEC-11, RF-04.0 — hallazgo H8 del recorrido manual, Tarea
+     * 9.2 de TASKS-11).
+     *
+     * El gesto compartido del tomo vive en la tarjeta del catálogo (el
+     * MISMO componente que viste la Biblioteca y el Tomo), y la tarjeta
+     * nace sabiendo su estado: `adeptState` viaja embebido en cada ficha
+     * del listado, jamás se consulta al santuario fila por fila (RNF-01).
+     *
+     * El mapa es el que consume la tarjeta (plan §4.2):
+     *   - `collected`: la obra ya vive en el Tomo Personal (RF-01.3).
+     *   - `praised`: el adepto ya rindió homenaje (RF-04.3).
+     *   - `praiseAllowed`: el elogio procede — obra `validated` y ajena a
+     *     la casa viva del adepto (RF-04.4/RF-04.5). La militancia se
+     *     juzga aquí para que el gesto vedado no nazca, con el backend
+     *     como última guardia (el recibo denegado sigue existiendo).
+     *
+     * Solo se invoca para un lector LINAIADO autenticado: el visitante
+     * anónimo jamás recibe un `adeptState` que mentiría (RF-05.1 de
+     * SPEC-03), y el peregrino sin linaje no colecciona (RF-01.1).
+     *
+     * @param User $reader El adepto autenticado de la sesión.
+     * @param list<array<string, mixed>> $summaries Fichas del catálogo
+     *        (la proyección SpellSummaryDto del modelo Spell).
+     * @return list<array<string, mixed>> Las fichas con `adeptState`.
+     */
+    public function embedCatalogAdeptState(User $reader, array $summaries): array
+    {
+        if ($summaries === []) {
+            return $summaries;
+        }
+
+        $spellIds = [];
+        foreach ($summaries as $summary) {
+            $spellId = (string) ($summary['id'] ?? '');
+            if ($spellId !== '') {
+                $spellIds[] = $spellId;
+            }
+        }
+
+        // --- Dos consultas de lote para TODA la hoja (RNF-01) ------------
+        $collectedIds = [];
+        foreach ($this->collectionRepository()->spellIdsForUser($reader->getId()) as $collectedId) {
+            $collectedIds[(string) $collectedId] = true;
+        }
+        $praisedIds = $spellIds === [] ? [] : $this->praisedSpellIdsFor($reader->getId(), $spellIds);
+        // --- Militancia viva del adepto: una sola lectura (RF-04.4) ------
+        $adeptClanId = $this->activeClanIdFor($reader->getId());
+
+        return array_map(
+            static function (array $summary) use ($collectedIds, $praisedIds, $adeptClanId): array {
+                $spellId = (string) ($summary['id'] ?? '');
+                $isValidated = (string) ($summary['status'] ?? '') === 'validated';
+                $ownClan = $adeptClanId !== null && $adeptClanId === (string) ($summary['clanId'] ?? '');
+
+                $summary['adeptState'] = [
+                    'collected' => isset($collectedIds[$spellId]),
+                    'praised' => in_array($spellId, $praisedIds, true),
+                    'praiseAllowed' => $isValidated && !$ownClan,
+                ];
+
+                return $summary;
+            },
+            $summaries,
+        );
+    }
+
+    /**
      * Filas de `spells` de un lote de identificadores, indexadas por id
      * (con autoría y casa resueltas por JOIN, la misma proyección del
      * motor común): una consulta por hoja, jamás una por fila.

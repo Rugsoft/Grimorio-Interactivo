@@ -883,6 +883,62 @@ assertCondition(calm.view.getState().sceneRunning === false, 'destroy() detiene 
 assertCondition(calm.view.getState().canvasRunning === false, 'destroy() detiene el bucle del lienzo');
 
 // =====================================================================
+// Fase H8b: gesto compartido del tomo en la página iluminada (SPEC-11)
+// =====================================================================
+console.log('\nFASE H8b: gesto del tomo bajo la página del libro');
+
+// El catálogo del Simulador con estado embebido del adepto: la primera
+// página declara que la obra es ajena y sin sellar; el DTO legado de la
+// segunda carece de `adeptState` y jamás pinta la zona.
+const adeptCatalog = [
+  { ...CATALOG[0], status: 'validated', adeptState: { collected: false, praised: false, praiseAllowed: true } },
+  { ...CATALOG[1], adeptState: undefined },
+];
+const gestureEvents = [];
+const gestured = buildView({
+  client: createFakeGrimoireClient({ catalog: adeptCatalog }),
+  options: { onTomeGesture: (eventType, payload) => gestureEvents.push({ eventType, ...payload }) },
+});
+await gestured.view.render();
+
+assertCondition(
+  queryFirst(gestured.host, 'grimoire-simulator__tome-gestures') !== null,
+  'La Cámara aloja la zona del gesto compartido bajo la página (H8b)'
+);
+assertCondition(
+  queryFirst(gestured.host, 'spell-card__tome-gesture--seal') !== null,
+  'La obra ajena sin sellar ofrece «Añadir al tomo» en la página iluminada (RF-01.1)'
+);
+assertCondition(
+  queryFirst(gestured.host, 'spell-card__tome-gesture--praise') !== null,
+  'El elogio procede y se ofrece (RF-04.1)'
+);
+
+// El clic del gesto delega en el orquestador con el hechizo de la página.
+queryFirst(gestured.host, 'spell-card__tome-gesture--seal').dispatch('click');
+assertCondition(
+  gestureEvents.length === 1 && gestureEvents[0].eventType === 'tome:seal' && gestureEvents[0].spellId === 'spl_1',
+  'El gesto de la página viaja con el hechizo iluminado (RF-04.0)'
+);
+
+// Hojear a la página legado: la zona queda vacía, sin cáscaras.
+gestured.view.nextPage();
+assertCondition(
+  queryFirst(gestured.host, 'spell-card__tome-gesture--seal') === null
+    && queryFirst(gestured.host, 'spell-card__tome-gesture--praise') === null,
+  'La página sin `adeptState` (DTO legado) no pinta la zona del gesto'
+);
+
+// Hojear de vuelta: el gesto vuelve a estar disponible (repintado vivo).
+gestured.view.previousPage();
+assertCondition(
+  queryFirst(gestured.host, 'spell-card__tome-gesture--seal') !== null,
+  'Volver a la página repinta su gesto: la zona es un estado vivo'
+);
+
+gestured.view.destroy();
+
+// =====================================================================
 // Resumen
 // =====================================================================
 console.log('\n== RESUMEN ==');
@@ -891,5 +947,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — La vista del Simulador orquesta el tomo, el lienzo, el maniquí y la voz (Tarea 5.1).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

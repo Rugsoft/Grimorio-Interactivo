@@ -83,6 +83,26 @@ function createObservableElement(tagName) {
         handler({ currentTarget: this, target: this, preventDefault() {}, ...event });
       }
     },
+    /**
+     * Ascenso de ancestros por selectores simples (Tarea 9.2): permite
+     * ejercer la guardia anti-burbujeo de la tarjeta. Soporta los tres
+     * selectores que la guardia consulta: button, a y [role="switch"].
+     */
+    closest(selector) {
+      const matches = (node) => selector.split(',').some((rawSelector) => {
+        const candidate = rawSelector.trim();
+        if (candidate === 'button') return String(node.tagName).toUpperCase() === 'BUTTON';
+        if (candidate === 'a') return String(node.tagName).toUpperCase() === 'A';
+        if (candidate === '[role="switch"]') return node.getAttribute('role') === 'switch';
+        return false;
+      });
+      let node = this;
+      while (node) {
+        if (matches(node)) return node;
+        node = node.parentNode ?? null;
+      }
+      return null;
+    },
     click() {
       this.dispatch('click');
     },
@@ -301,6 +321,37 @@ const cardLegacy = createSpellCardComponent(
 );
 cardLegacy.dispatch('click');
 assertCondition(selected === true, 'la activación de selección (click/teclado) sigue viva sin adeptState');
+
+// =====================================================================
+// [6] El gesto interno NO convoca el conjuro (hallazgo del recorrido
+//     manual de la Tarea 9.2: el evento burbujeaba hasta la tarjeta y
+//     «Elogiar» abría además el Simulador con la obra)
+// =====================================================================
+console.log('\n[6] La guardia anti-burbujeo de los controles internos');
+let convocatorias = 0;
+const cardBubble = createSpellCardComponent(
+  // Coleccionado y validado: la tarjeta porta conmutador Y «Elogiar».
+  cardDto({ adeptState: { collected: true, praised: false, praiseAllowed: true } }),
+  {
+    onSpellSelect: () => { convocatorias += 1; },
+    onTomeGesture: () => {},
+    elementFactory: factory,
+  },
+);
+
+// 1) Click que BURBUJEA desde el botón de gesto: target = el botón.
+const gestoBubble = findButtonByText(cardBubble, TOME_CARD_LABELS.praise);
+cardBubble.dispatch('click', { target: gestoBubble });
+assertCondition(convocatorias === 0, 'el click burbujeado desde «Elogiar» no convoca el conjuro');
+
+// 2) Click burbujeado desde un conmutador informativo: tampoco convoca.
+const toggleBubble = findToggleByText(cardBubble, TOME_CARD_LABELS.alreadyInTome);
+cardBubble.dispatch('click', { target: toggleBubble });
+assertCondition(convocatorias === 0, 'el conmutador informativo tampoco convoca el conjuro');
+
+// 3) El click sobre el cuerpo de la tarjeta SÍ convoca (regresión).
+cardBubble.dispatch('click', { target: cardBubble });
+assertCondition(convocatorias === 1, 'el click sobre el cuerpo de la tarjeta sigue convocando el conjuro');
 
 console.log(`\n=== RESULTADO: ${assertsPassed} pasan, ${assertsFailed} fallan ===`);
 process.exit(assertsFailed === 0 ? 0 : 1);

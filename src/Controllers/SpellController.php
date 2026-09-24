@@ -17,6 +17,7 @@ namespace Grimorio\Controllers;
 
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
+use Grimorio\Services\GrimoireQueryService;
 use Grimorio\Services\SpellDiscoveryService;
 
 /**
@@ -30,9 +31,18 @@ final class SpellController
 
     private SpellDiscoveryService $discoveryService;
 
-    public function __construct(SpellDiscoveryService $discoveryService)
+    /**
+     * Canal del estado del adepto (SPEC-11, RF-04.0): embebe
+     * `adeptState` en las fichas del catálogo cuando la lectura nace de
+     * un adepto LINAIADO autenticado (hallazgo H8). Inyectable: los
+     * arneses de controlador lo forjan con su base sembrada.
+     */
+    private ?GrimoireQueryService $queryService;
+
+    public function __construct(SpellDiscoveryService $discoveryService, ?GrimoireQueryService $queryService = null)
     {
         $this->discoveryService = $discoveryService;
+        $this->queryService = $queryService;
     }
 
     /**
@@ -108,13 +118,28 @@ final class SpellController
             limit: $limit
         );
 
+        // --- Estado embebido del adepto (SPEC-11, RF-04.0, hallazgo H8) ---
+        // La tarjeta nace sabiendo si la obra ya vive en su tomo y si el
+        // elogio procede: el gesto compartido se pinta sin consultar al
+        // santuario por fila. Solo para un adepto LINAIADO autenticado.
+        $items = array_map(
+            static fn ($spell): array => $spell->toSummaryDto(),
+            $catalogPage['items']
+        );
+        $reader = $request->getUser();
+        if (
+            $this->queryService !== null
+            && $reader !== null
+            && $reader->getId() !== ''
+            && $reader->getLineage() !== null
+        ) {
+            $items = $this->queryService->embedCatalogAdeptState($reader, $items);
+        }
+
         return Response::json([
             'success' => true,
             'data'    => [
-                'items'   => array_map(
-                    static fn ($spell): array => $spell->toSummaryDto(),
-                    $catalogPage['items']
-                ),
+                'items'   => $items,
                 'hasMore' => $catalogPage['hasMore'],
                 'offset'  => $offset,
                 'limit'   => $limit,

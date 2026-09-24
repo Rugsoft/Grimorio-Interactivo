@@ -337,6 +337,87 @@ assertCondition(allByClass(root5, 'spell-card').length === 5, 'Re-render idempot
 library5.destroy();
 assertCondition(allByClass(root5, 'spell-card').length === 0, 'destroy() limpia la vista del montaje');
 
+// --- FASE 6: Gesto compartido del tomo en la rejilla (hallazgo H8) ---
+console.log('\nFASE 6: Gesto del tomo en las tarjetas del catálogo (hallazgo H8)');
+
+// El catálogo de un adepto LINAIADO: el backend embebe `adeptState` en cada
+// ficha (Tarea 9.2), así que la tarjeta nace con su gesto y jamás consulta
+// al santuario por fila.
+const adeptCatalog = [
+  { ...catalogSpells[0], slug: 'brisa-de-sal', name: 'Brisa de Sal', id: 'spl-brisa', adeptState: { collected: false, praised: false, praiseAllowed: true } },
+  { ...catalogSpells[1], slug: 'chispa-de-ignicion', name: 'Chispa de Ignición', id: 'spl-chispa', clanId: 'cln-propia', adeptState: { collected: false, praised: false, praiseAllowed: false } },
+  { ...catalogSpells[2], id: 'spl-anonima' },
+];
+const store6 = createStore();
+const root6 = createFakeElement('main');
+const gestured6 = [];
+const library6 = createLibraryView(root6, {
+  store: store6,
+  spellClient: { fetchSpells: async () => ({ success: true, data: { items: adeptCatalog, hasMore: false } }) },
+  elementFactory: fakeElementFactory,
+  onTomeGesture: (eventType, payload) => gestured6.push({ eventType, ...payload }),
+});
+await library6.render();
+
+assertCondition(allByClass(root6, 'spell-card').length === 3, 'El catálogo del adepto monta sus 3 tarjetas');
+assertCondition(
+  allByClass(root6, 'spell-card__tome').length === 2,
+  'Solo las fichas con `adeptState` pintan la zona del gesto (la anónima no)',
+);
+assertCondition(
+  byClass(root6, 'spell-card__tome-gesture--seal') !== null,
+  'La obra ajena sin sellar ofrece el gesto «Añadir al tomo» (RF-01.1)',
+);
+assertCondition(
+  allByClass(root6, 'spell-card__tome-gesture--praise').length === 1,
+  'El elogio se ofrece SOLO donde procede: la obra de la casa propia no lo porta (RF-04.4)',
+);
+assertCondition(
+  byClass(root6, 'spell-card__tome-vedado')?.textContent === 'Un adepto de la casa no granjea gloria para su propio estandarte',
+  'La militancia se comunica con su leyenda sobria, jamás con silencio (RF-04.4)'
+);
+
+// El clic del gesto delega en el orquestador, jamás en el cliente HTTP.
+const sealButton6 = byClass(root6, 'spell-card__tome-gesture--seal');
+sealButton6.dispatch('click');
+assertCondition(
+  gestured6.length === 1 && gestured6[0].eventType === 'tome:seal' && gestured6[0].spellId === 'spl-brisa',
+  'Activar «Añadir al tomo» emite el gesto del tomo con su hechizo (RF-04.0)',
+);
+assertCondition(
+  gestured6[0].slug === 'brisa-de-sal' && gestured6[0].originElement !== null,
+  'El gesto viaja con el slug y el nodo origen (contrato del bus, plan §4.2)'
+);
+
+const praiseButton6 = byClass(root6, 'spell-card__tome-gesture--praise');
+praiseButton6.dispatch('click');
+assertCondition(
+  gestured6.length === 2 && gestured6[1].eventType === 'tome:praise',
+  'Activar «Elogiar» emite su gesto propio (RF-04.1)'
+);
+
+// El orquestador pide la marca viva: la ficha se repinta sin recargar.
+library6.applyTomeMark('spl-brisa', 'seal');
+assertCondition(
+  byClass(root6, 'spell-card__tome-toggle--collected')?.textContent === 'Ya está en tu tomo',
+  'Tras el sellado consumado la ficha exhibe el conmutador «Ya está en tu tomo» (RF-01.3)'
+);
+assertCondition(
+  allByClass(root6, 'spell-card__tome-gesture--seal').length === 1,
+  'El gesto operativo se retira de la ficha sellada (solo la obra sin sellar lo conserva)'
+);
+assertCondition(
+  allByClass(root6, 'spell-card__tome-toggle--collected').length === 1,
+  'La marca viva alcanza SOLO a la ficha del acto (jamás a la rejilla entera)'
+);
+
+// Idempotencia: repetir la marca no duplica conmutadores ni pierde fichas.
+library6.applyTomeMark('spl-brisa', 'seal');
+assertCondition(
+  allByClass(root6, 'spell-card__tome-toggle--collected').length === 1 && allByClass(root6, 'spell-card').length === 3,
+  'applyTomeMark es idempotente: sin duplicados y sin perder el catálogo cargado'
+);
+
 // --- Resumen final ---
 console.log('\n== RESUMEN ==');
 console.log(`Asertos superados: ${assertsPassed}`);
@@ -347,5 +428,5 @@ if (assertsFailed === 0) {
   process.exit(0);
 }
 
-console.log('\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].');
+console.log('RESULTADO: FALSO — Corregir los asertos marcados con [FALLA].');
 process.exit(1);

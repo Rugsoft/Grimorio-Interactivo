@@ -39,6 +39,9 @@ import { createCombatDummyComponent, DUMMY_MAX_HEALTH, CC_DURATION_MS } from '..
 import { createFloatingCombatTextComponent } from '../components/floatingCombatTextComponent.js';
 import { createSpeechService } from '../utils/speechService.js';
 import { createTestLogStorage } from '../utils/testLogStorage.js';
+// El gesto compartido del tomo (SPEC-11, RF-04.0 — hallazgo H8b): los
+// rótulos y clases viven UNA sola vez en la tarjeta compartida.
+import { TOME_CARD_EVENTS, TOME_CARD_LABELS } from '../components/spellCardComponent.js';
 
 /** Modos del conmutador rúnico del catálogo (RF-01.2). */
 export const CATALOG_MODES = Object.freeze({
@@ -162,6 +165,10 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     grimoireClient,
     storage = null,
     elementFactory = (tagName) => document.createElement(tagName),
+    /** Gesto compartido del tomo (SPEC-11, RF-04.0 — hallazgo H8b): la
+     *  página iluminada del libro delega aquí su sellado o su homenaje y
+     *  el orquestador decide (umbral, ceremonia o acto directo). */
+    onTomeGesture = null,
   } = options;
 
   const doc = options.document ?? (typeof document !== 'undefined' ? document : null);
@@ -281,6 +288,16 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   const cameraSlot = elementFactory('div');
   cameraSlot.className = 'grimoire-book__camera-slot';
 
+  /**
+   * Zona del gesto compartido bajo la página iluminada (SPEC-11, RF-04.0
+   * — hallazgo H8b): el mismo gesto del catálogo, montado con el estado
+   * embebido del DTO de la página corriente. Repintada en cada cambio de
+     * página por `renderTomeGestures()` (desde `handlePageChange`).
+   */
+  const tomeGestureHost = elementFactory('div');
+  tomeGestureHost.className = 'grimoire-simulator__tome-gestures';
+
+
   const canvas = options.canvas ?? elementFactory('canvas');
   canvas.className = 'arcane-canvas';
   cameraSlot.appendChild(canvas);
@@ -289,6 +306,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   const dummyHost = elementFactory('div');
   dummyHost.className = 'grimoire-simulator__dummy-host';
   cameraSlot.appendChild(dummyHost);
+  dummyHost.appendChild(tomeGestureHost);
 
   // --- Bitácora de Pruebas (RF-05.3) ---
   const logbook = elementFactory('aside');
@@ -516,10 +534,80 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
    * El maniquí conserva su estado (RF-02.3) y los rótulos flotantes no
    * cruzan de lámina (RF-05.2).
    */
+  /**
+   * Repinta la zona del gesto compartido con el estado embebido de la
+   * página corriente (SPEC-11, RF-04.0 — hallazgo H8b). La lógica de
+   * derivación vive en la tarjeta compartida y NO se duplica aquí: sin
+   * `adeptState` (anónimo, DTO legado) la zona queda vacía y la
+   * contemplación pública queda intocada.
+   */
+  function renderTomeGestures() {
+    if (typeof tomeGestureHost.replaceChildren === 'function') {
+      tomeGestureHost.replaceChildren();
+    } else {
+      for (const child of [...(tomeGestureHost.children ?? [])]) child.remove?.();
+    }
+
+    const spell = state.currentSpell;
+    if (spell === null || spell === undefined) return;
+    const adeptState = spell.adeptState;
+    if (adeptState === null || adeptState === undefined || typeof adeptState !== 'object') return;
+
+    const status = String(spell.status ?? '');
+    const collected = adeptState.collected === true;
+    const praised = adeptState.praised === true;
+    const allowedToPraise = adeptState.praiseAllowed !== false;
+    const isValidated = status === 'validated';
+
+    const emitGesture = (eventType) => {
+      if (typeof onTomeGesture === 'function') {
+        onTomeGesture(eventType, { spellId: spell.id ?? null, slug: spell.slug, originElement: tomeGestureHost });
+      }
+    };
+
+    const buildButton = (kind, label, eventType) => {
+      const button = elementFactory('button');
+      button.type = 'button';
+      button.className = `spell-card__tome-gesture spell-card__tome-gesture--${kind}`;
+      button.textContent = label;
+      button.addEventListener('click', () => emitGesture(eventType));
+      return button;
+    };
+
+    const buildToggle = (kind, label) => {
+      const toggle = elementFactory('span');
+      toggle.className = `spell-card__tome-toggle spell-card__tome-toggle--${kind}`;
+      toggle.setAttribute('role', 'switch');
+      toggle.setAttribute('aria-pressed', 'true');
+      toggle.setAttribute('aria-label', label);
+      toggle.textContent = label;
+      return toggle;
+    };
+
+    if (collected) tomeGestureHost.appendChild(buildToggle('collected', TOME_CARD_LABELS.alreadyInTome));
+    if (praised) tomeGestureHost.appendChild(buildToggle('praised', TOME_CARD_LABELS.alreadyPraised));
+    if (!collected && isValidated) {
+      tomeGestureHost.appendChild(buildButton('seal', TOME_CARD_LABELS.addToTome, TOME_CARD_EVENTS.tomeSeal));
+    }
+    if (isValidated && !praised && allowedToPraise) {
+      tomeGestureHost.appendChild(buildButton('praise', TOME_CARD_LABELS.praise, TOME_CARD_EVENTS.tomePraise));
+    }
+    if (isValidated && !praised && !allowedToPraise) {
+      const legend = elementFactory('p');
+      legend.className = 'spell-card__tome-vedado';
+      legend.textContent = TOME_CARD_LABELS.ownClanLegend;
+      tomeGestureHost.appendChild(legend);
+    }
+  }
+
   function handlePageChange({ spell, pageNumber, totalPages }) {
     state.currentSpell = spell ?? null;
     state.pageNumber = pageNumber ?? 1;
     state.totalPages = totalPages ?? 1;
+    // GESTO COMPARTIDO EN LA PÁGINA (SPEC-11, RF-04.0 — hallazgo H8b): el
+    // libro expone la zona del gesto de la ficha iluminada con el estado
+    // embebido del DTO, sin variantes del motor de SPEC-05.
+    renderTomeGestures();
     dummy.onPageChange();
     floatingTexts.clear();
     dispatchBus('grimoire:page-change', {
@@ -863,11 +951,17 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
     }
     // La detonación del Códice encabeza el anuncio con el nombre solemne
     // de la reacción (la etiqueta completa de la bitácora es Tarea 4.3).
+    const spellName = spell?.name ?? 'conjuro desconocido';
     if (verdict?.isReaction === true && verdict.reactionName) {
-      return `¡${verdict.reactionName}! Lanzado ${spell?.name ?? 'conjuro desconocido'}: ${fragments.join(', ') || 'no altera al maniquí'}`;
+      const aftermath = fragments.length > 0 ? fragments.join(', ') : 'no altera al maniquí';
+      return `¡${verdict.reactionName}! Lanzado ${spellName}: ${aftermath}`;
     }
-    const summary = fragments.length > 0 ? fragments.join(', ') : 'no altera al maniquí';
-    return `Lanzado ${spell?.name ?? 'conjuro desconocido'}: ${summary} al maniquí de pruebas`;
+    // Sin efecto que narrar, el anuncio NO encadena la muletilla al maniquí
+    // (hallazgo de redacción del recorrido manual, Tarea 9.2).
+    if (fragments.length === 0) {
+      return `Lanzado ${spellName}: el maniquí de pruebas permanece intacto.`;
+    }
+    return `Lanzado ${spellName}: ${fragments.join(', ')} al maniquí de pruebas`;
   }
 
   /**
