@@ -116,11 +116,21 @@ La cascada hacia `users` (purga de cuenta, RF-05.3) y hacia `spells` (defensa de
 ```json
 {
   "id": "…", "slug": "…", "name": "…",
-  "elementalAffinity": "fire", "circle": 3, "manaCost": 42,
+  "elementalAffinity": "fire",
+  "elementalAffinityLabel": "Fuego",
+  "circle": 3, "manaCost": 42,
   "status": "validated",
   "adeptState": { "collected": true, "praised": false }
 }
 ```
+
+**Etiqueta elemental canónica (enmienda del hallazgo 13, §10.4 de la spec):**
+`GrimoirePageDto` porta `elementalAffinityLabel` junto a `elementalAffinity`,
+resuelta con el MISMO mapa canónico `Spell::ELEMENTAL_AFFINITY_LABELS` que ya
+viaja en los DTOs de resumen y detalle (cierre del hallazgo 10). La tarjeta
+compartida (`spellCardComponent`) consume ese campo para su rótulo; sin él, la
+ficha del tomo rotulaba «Arcano Puro» aunque la obra declarara Fuego — la
+costura que el recorrido de producción (2026-09-24) destapó en «Mi Grimorio».
 
 ### 2.2 Contratos de API REST (camelCase, códigos HTTP del santuario)
 

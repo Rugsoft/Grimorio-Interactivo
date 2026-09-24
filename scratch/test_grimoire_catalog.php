@@ -257,7 +257,7 @@ $allPages = $payload['data']['spells'] ?? [];
 assertCondition(count($allPages) >= 5, 'La batería litúrgica cubre todo el tomo canónico sembrado');
 
 $contractKeys = [
-    'id', 'slug', 'name', 'magicSchool', 'elementalAffinity', 'circle',
+    'id', 'slug', 'name', 'magicSchool', 'elementalAffinity', 'elementalAffinityLabel', 'circle',
     'manaCost', 'castingTime', 'incantationFormula',
     'hasVerbal', 'hasSomatic', 'hasMaterial',
     'rangeType', 'areaType', 'durationType',
@@ -282,7 +282,7 @@ foreach ($allPages as $spellPage) {
         $incantationInSpanish = false;
     }
 }
-assertCondition($structureOk, 'Cada página porta EXACTAMENTE las 20 claves camelCase del contrato (con effects anidado)');
+assertCondition($structureOk, 'Cada página porta EXACTAMENTE las 21 claves camelCase del contrato (con effects anidado y rótulo elemental, hallazgo 13)');
 assertCondition($noNulls, 'Ninguna página porta campos nulos (plan Test 4)');
 assertCondition($incantationInSpanish, 'La fórmula litúrgica viaja como texto en cada página (declamación RF-04.2)');
 

@@ -129,7 +129,7 @@ $decoded = json_decode((string) $payload, true);
 assertCondition(is_array($decoded), 'El cuerpo se decodifica sin advertencias de tipo');
 
 $expectedKeys = [
-    'id', 'slug', 'name', 'magicSchool', 'elementalAffinity', 'circle',
+    'id', 'slug', 'name', 'magicSchool', 'elementalAffinity', 'elementalAffinityLabel', 'circle',
     'manaCost', 'castingTime', 'incantationFormula',
     'hasVerbal', 'hasSomatic', 'hasMaterial',
     'rangeType', 'areaType', 'durationType',
@@ -153,6 +153,46 @@ assertCondition(
     json_encode($minimal, JSON_UNESCAPED_UNICODE) !== false
     && !str_contains((string) json_encode($minimal, JSON_UNESCAPED_UNICODE), 'null'),
     'El DTO mínimo serializa sin null ni advertencias',
+);
+
+// ---------------------------------------------------------------------
+// [3b] Rótulo elemental canónico (hallazgo 13, spec §10.4).
+// ---------------------------------------------------------------------
+echo PHP_EOL . '[3b] Rótulo elemental canónico (paridad con resumen/detalle)' . PHP_EOL;
+
+assertCondition(
+    ($decoded['elementalAffinityLabel'] ?? null) === 'Fuego',
+    'La obra de afinidad fire rota «Fuego» — jamás «Arcano Puro» por defecto (hallazgo 13)',
+);
+assertCondition(
+    in_array('elementalAffinityLabel', $actualKeys, true),
+    'La clave elementalAffinityLabel viaja en la serialización (plan §2.1 enmendado)',
+);
+
+$noneDecoded = json_decode((string) json_encode($minimal, JSON_UNESCAPED_UNICODE), true);
+assertCondition(
+    ($noneDecoded['elementalAffinityLabel'] ?? null) === 'Arcano Puro',
+    'La afinidad none rota el neutro «Arcano Puro» (RNF-03: jamás un identificador crudo)',
+);
+
+$forgedLabel = GrimoirePageDto::fromDatabaseRow($row)->elementalAffinityLabel;
+assertCondition(
+    $forgedLabel === 'Fuego',
+    'El rótulo forjado desde fila resuelve el canónico «Fuego» (mapa espejo de Spell::ELEMENTAL_AFFINITY_LABELS)',
+);
+
+$enriched = $dto->withAdeptState(true, false);
+assertCondition(
+    $enriched->elementalAffinityLabel === 'Fuego' && $enriched->adeptState !== null,
+    'La enriquecedora withAdeptState() conserva el rótulo elemental (inmutabilidad por copia)',
+);
+
+$unknownRow = buildCanonicalDatabaseRow();
+$unknownRow['elemental_affinity'] = 'aetherium';
+$unknownDecoded = json_decode((string) json_encode(GrimoirePageDto::fromDatabaseRow($unknownRow), JSON_UNESCAPED_UNICODE), true);
+assertCondition(
+    ($unknownDecoded['elementalAffinityLabel'] ?? null) === 'Arcano Puro',
+    'Una afinidad ajena al Códice rota el neutro (sin identifiers técnicos en la tarjeta)',
 );
 
 // ---------------------------------------------------------------------

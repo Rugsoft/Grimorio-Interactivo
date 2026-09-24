@@ -44,6 +44,36 @@ use JsonSerializable;
 final readonly class GrimoirePageDto implements JsonSerializable
 {
     /**
+     * Espejo EXACTO del mapa canónico `Spell::ELEMENTAL_AFFINITY_LABELS`
+     * (hallazgo 13, §10.4 de la spec): el DTO es autocontenido —los arneses
+     * lo cargan sin el autoload del front controller— y rota con la MISMA
+     * voz que resumen y detalle. El arnés test_spec11_closure cruza ambos
+     * mapas para prohibir la divergencia.
+     */
+    private const ELEMENTAL_AFFINITY_LABELS = [
+        'fire'       => 'Fuego',
+        'water'      => 'Agua',
+        'lightning'  => 'Rayo',
+        'earth'      => 'Tierra',
+        'wind'       => 'Viento',
+        'light'      => 'Luz',
+        'darkness'   => 'Oscuridad',
+        'pureArcane' => 'Arcano Puro',
+    ];
+
+    /** Etiqueta del neutro (afinidad nula, 'none' o ajena al Códice). */
+    private const ELEMENTAL_AFFINITY_FALLBACK = 'Arcano Puro';
+
+    /** Resuelve el rótulo con el mapa espejo (única lógica de caída). */
+    private static function resolveElementalAffinityLabel(string $elementalAffinity): string
+    {
+        if ($elementalAffinity === '' || $elementalAffinity === 'none') {
+            return self::ELEMENTAL_AFFINITY_FALLBACK;
+        }
+        return self::ELEMENTAL_AFFINITY_LABELS[$elementalAffinity] ?? self::ELEMENTAL_AFFINITY_FALLBACK;
+    }
+
+    /**
      * Forja la página del tomo.
      *
      * @param array{damage: int, healing: int, barrier: int, crowdControlType: string} $effects
@@ -54,6 +84,14 @@ final readonly class GrimoirePageDto implements JsonSerializable
         public string $name,
         public string $magicSchool,
         public string $elementalAffinity = 'none',
+        /**
+         * Etiqueta en castellano de la afinidad elemental (hallazgo 13,
+         * §10.4 de la spec): resuelta con el mapa espejo del canónico
+         * `Spell::ELEMENTAL_AFFINITY_LABELS`, para que la ficha del tomo
+         * rote igual que Biblioteca y Simulador. Se deriva del constructor
+         * cuando el llamador no la porta.
+         */
+        public ?string $elementalAffinityLabel = null,
         public int $circle = 1,
         public int $manaCost = 5,
         public string $castingTime = 'action',
@@ -107,6 +145,11 @@ final readonly class GrimoirePageDto implements JsonSerializable
             name: $readString('name'),
             magicSchool: $readString('magic_school'),
             elementalAffinity: $readString('elemental_affinity') !== '' ? $readString('elemental_affinity') : 'none',
+            // El rótulo elemental nace SIEMPRE del mapa espejo del canónico
+            // (hallazgo 13, §10.4 de la spec): misma voz que resumen y detalle.
+            elementalAffinityLabel: self::resolveElementalAffinityLabel(
+                $readString('elemental_affinity') !== '' ? $readString('elemental_affinity') : 'none'
+            ),
             circle: max(1, min(5, $readInt('circle', 1))),
             manaCost: max(0, $readInt('mana_cost', 5)),
             castingTime: $readString('casting_time') !== '' ? $readString('casting_time') : 'action',
@@ -148,6 +191,7 @@ final readonly class GrimoirePageDto implements JsonSerializable
             name: $this->name,
             magicSchool: $this->magicSchool,
             elementalAffinity: $this->elementalAffinity,
+            elementalAffinityLabel: $this->elementalAffinityLabel,
             circle: $this->circle,
             manaCost: $this->manaCost,
             castingTime: $this->castingTime,
@@ -183,6 +227,8 @@ final readonly class GrimoirePageDto implements JsonSerializable
             'name'               => $this->name,
             'magicSchool'        => $this->magicSchool,
             'elementalAffinity'  => $this->elementalAffinity,
+            'elementalAffinityLabel' => $this->elementalAffinityLabel
+                ?? self::resolveElementalAffinityLabel($this->elementalAffinity),
             'circle'             => $this->circle,
             'manaCost'           => $this->manaCost,
             'castingTime'        => $this->castingTime,

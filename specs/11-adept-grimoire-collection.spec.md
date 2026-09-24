@@ -198,3 +198,19 @@ arnés de regresión propio:
 | 10 | **Etiqueta elemental canónica (enmienda cruzada SPEC-05/06):** el mapa único `Spell::ELEMENTAL_AFFINITY_LABELS` (espejo exacto del `ELEMENT_NAMES` del cliente) viaja en los DTOs de resumen y detalle; la tarjeta viste el elemento DECLARADO y solo cae al mapa por escuela cuando el hechizo no declara afinidad; el neutro y las afinidades ajenas rotulan «Arcano Puro» | `test_elemental_affinity_labels.php` (22/22) · `test_spell_card.mjs` Fase 6 (28/28) |
 | 11 | **«Ver mi libro personal» apunta a Mi Grimorio (RF-02.1):** el gesto del umbral y el intent retenido conducen a `#/grimorio`, jamás al Simulador de ensayos; el arnés de ruta de SPEC-05 se realinea al contrato enmendado | `test_simulator_route.mjs` (42/42, fases C y D realineadas) |
 | 12 | **Puerta de arranque (SPEC-09 enmendado):** con un deep-link a una vista no exenta, el arranque ESPERA a que `auth/session` hidrate el store antes del primer montaje; el peregrino es recibido por la ceremonia con su ruta retenida, el linajado entra directo y la lectura pública anónima no espera a nadie | `test_intent_give_praise.mjs` Fase 6 (35/35) |
+
+### 10.4 Cuarta ronda — Recorrido de producción (2026-09-24) — hallazgo 13 y su cierre
+
+Recorrido en vivo contra el despliegue InfinityFree (`grimoriointeractivo.freedev.app`):
+registro → juramento → biblioteca → tomo → simulador → «Mi Grimorio» → RBAC de la
+Torre. Todo en verde salvo una incidencia:
+
+| # | Hallazgo | Destino |
+|---|---|---|
+| 13 | **El rótulo elemental de «Mi Grimorio» rotula «Arcano Puro» para toda obra:** el vestido de la insignia es correcto (clase `--fire`, glifo y color del elemento declarado) pero el TEXTO cae al neutro — `GrimoirePageDto` no porta `elementalAffinityLabel` (el plan §2.1 original solo definía `elementalAffinity`) y la tarjeta compartida rotula el neutro cuando el campo falta. Los catálogos de Biblioteca y Simulador (`Spell::toSummaryDto`) sí lo llevan: el tomo quedó fuera del cierre del hallazgo 10 | Enmienda al plan §2.1: `GrimoirePageDto` porta `elementalAffinityLabel` con el MISMO mapa canónico `Spell::ELEMENTAL_AFFINITY_LABELS` |
+
+**Cierre del hallazgo 13 (implementado y ratificado):**
+
+| # | Enmienda ratificada | Cobertura de arnés |
+|---|---|---|
+| 13 | **Paridad de rótulos entre catálogos:** `GrimoirePageDto` serializa `elementalAffinityLabel` (mapa único de `Spell`, mismo origen que resumen y detalle); la ficha del tomo rotula el elemento DECLARADO — «Fuego» para la Chispa de Ignición — y solo el neutro cuando la obra no declara afinidad | `test_grimoire_page_dto.php` (fase de rótulo) · `test_spec11_closure.php` en EXITO |

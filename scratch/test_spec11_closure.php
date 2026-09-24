@@ -134,11 +134,13 @@ audit(
     . ($missingInPlan ? ' — huérfanos: ' . implode(', ', $missingInPlan) : '')
 );
 
-/* 1.4 · Estado de las tareas: todas cerradas salvo esta misma 9.3. */
+/* 1.4 · Estado de las tareas: las 25 cerradas (la propia 9.3 quedó sellada
+ * al certificar su cierre; las enmiendas posteriores —hallazgo 13, §10.4—
+ * viven en la tríada sin tareas nuevas). */
 $doneTasks = preg_match_all('/^- \[x\] \*\*Tarea /m', $tasksSource);
 $openTasks = preg_match_all('/^- \[ \] \*\*Tarea /m', $tasksSource);
-audit($doneTasks === 24, "Las 24 tareas previas están cerradas (halladas {$doneTasks})");
-audit($openTasks === 1, "Solo queda abierta esta misma 9.3 (abiertas: {$openTasks})");
+audit($doneTasks === 25, "Las 25 tareas están cerradas (halladas {$doneTasks})");
+audit($openTasks === 0, "Ninguna tarea queda abierta (abiertas: {$openTasks})");
 
 /* 1.5 · Fases declaradas. */
 $phases = preg_match_all('/^## Fase \d+/m', $tasksSource);
