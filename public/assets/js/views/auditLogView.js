@@ -127,6 +127,10 @@ export function createAuditLogView(mountRoot, options = {}) {
       CLAN_APPLICATION_WITHDRAWN: 'Retirada de una Petición de Ingreso',
       CLAN_APPLICATION_VERDICT: 'Dictamen sobre una Petición de Ingreso',
       CLAN_APPLICATION_RESIDUALS_ANNULLED: 'Anulación de Peticiones Huérfanas',
+      // Actos del Tomo Personal (SPEC-11): el sellado íntimo y el elogio
+      // que mueve gloria se leen con su nombre propio (plan §2.3).
+      TOME_SEAL: 'Sellado en el Tomo Personal',
+      TOME_PRAISE: 'Elogio con Gloria Acreditada',
     };
     return labels[actionType] ?? String(actionType);
   }

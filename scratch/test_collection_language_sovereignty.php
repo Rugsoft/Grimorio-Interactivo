@@ -102,24 +102,29 @@ function findSnakeCaseJsonKeys(string $source): array
     preg_match_all("/'([a-z]+(?:_[a-z0-9]+)+)'\s*=>/", $source, $hits);
     $allowedSnake = [
         // Las claves de BD legítimas viven en consultas SQL, no en sobres
-        // JSON; la lista negra 下面 cubre las visibles al cliente.
+        // JSON; la lista negra de abajo cubre las visibles al cliente.
     ];
     return array_values(array_diff(array_unique($hits[1]), $allowedSnake));
 }
 
+// Raíz del proyecto anclada al PROPIO fichero: el guard ha de juzgar las
+// mismas rutas se invoque desde donde se invoque (un lote que lo ejecute
+// desde scratch/ jamás ha de dar un falso rojo por cwd).
+$projectRoot = dirname(__DIR__);
+
 // Módulos NUEVOS de la superficie de colección (SPEC-11).
 $jsModules = [
-    'public/assets/js/views/grimoireCollectionView.js',
-    'public/assets/js/views/grimoireSimulatorView.js',
-    'public/assets/js/components/discardTomeEntryModalComponent.js',
-    'public/assets/js/components/spellCardComponent.js',
-    'public/assets/js/api/grimoireCollectionClient.js',
+    $projectRoot . '/public/assets/js/views/grimoireCollectionView.js',
+    $projectRoot . '/public/assets/js/views/grimoireSimulatorView.js',
+    $projectRoot . '/public/assets/js/components/discardTomeEntryModalComponent.js',
+    $projectRoot . '/public/assets/js/components/spellCardComponent.js',
+    $projectRoot . '/public/assets/js/api/grimoireCollectionClient.js',
 ];
 $phpModules = [
-    'src/Controllers/GrimoireCollectionController.php',
-    'src/Services/GrimoireCollectionService.php',
-    'src/Dto/CollectionEntryDto.php',
-    'src/Dto/CollectionPageDto.php',
+    $projectRoot . '/src/Controllers/GrimoireCollectionController.php',
+    $projectRoot . '/src/Services/GrimoireCollectionService.php',
+    $projectRoot . '/src/Dto/CollectionEntryDto.php',
+    $projectRoot . '/src/Dto/CollectionPageDto.php',
 ];
 
 // ---------------------------------------------------------------------
@@ -162,8 +167,8 @@ assertArcane($snakeHits === [], 'PHP: cero claves JSON en snake_case en los sobr
 
 // ---------------------------------------------------------------------
 echo "[3] Leyendas canónicas del Anexo A presentes y castellanas\n";
-$clientSource = (string) file_get_contents('public/assets/js/api/grimoireCollectionClient.js');
-$viewSource = stripComments((string) file_get_contents('public/assets/js/views/grimoireCollectionView.js'));
+$clientSource = (string) file_get_contents($projectRoot . '/public/assets/js/api/grimoireCollectionClient.js');
+$viewSource = stripComments((string) file_get_contents($projectRoot . '/public/assets/js/views/grimoireCollectionView.js'));
 $canonLegends = [
     'Ya está en tu tomo',
     'Ya rendiste homenaje',
@@ -176,7 +181,7 @@ $canonLegends = [
 $missingLegends = [];
 foreach ($canonLegends as $legend) {
     if (!str_contains($clientSource, $legend) && !str_contains($viewSource, $legend)
-        && !str_contains((string) file_get_contents('public/assets/js/components/spellCardComponent.js'), $legend)) {
+        && !str_contains((string) file_get_contents($projectRoot . '/public/assets/js/components/spellCardComponent.js'), $legend)) {
         $missingLegends[] = $legend;
     }
 }
@@ -192,5 +197,5 @@ if ($assertsFailed === 0) {
     echo "\nRESULTADO: EXITO — El guard de soberanía lingüística no halla literales técnicos.\n";
     exit(0);
 }
-echo "\nRESULTADO: FALLO — Revisar los hallazgos marcados.\n";
+echo "\nRESULTADO: DENEGADO — Revisar los hallazgos marcados.\n";
 exit(1);

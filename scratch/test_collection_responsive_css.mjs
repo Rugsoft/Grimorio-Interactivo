@@ -24,6 +24,8 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let assertsPassed = 0;
 let assertsFailed = 0;
@@ -38,9 +40,13 @@ function assertCondition(condition, message) {
   }
 }
 
-const STYLESHEET = 'public/assets/css/components/grimoire-collection.css';
-const SHELL = 'public/index.html';
-const TOKENS = 'public/assets/css/tokens.css';
+// Raíz del proyecto anclada al PROPIO módulo: el arnés ha de juzgar las
+// mismas rutas se invoque desde donde se invoque (un lote que lo ejecute
+// desde scratch/ jamás ha de dar un falso rojo por cwd).
+const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const STYLESHEET = join(projectRoot, 'public/assets/css/components/grimoire-collection.css');
+const SHELL = join(projectRoot, 'public/index.html');
+const TOKENS = join(projectRoot, 'public/assets/css/tokens.css');
 
 const css = readFileSync(STYLESHEET, 'utf8');
 const shell = readFileSync(SHELL, 'utf8');

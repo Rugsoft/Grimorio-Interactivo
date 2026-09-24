@@ -224,6 +224,14 @@
   padding-top: var(--space-ink-2);
 }
 
+/* La doctrina íntegra y el gesto de jurar solo viven en la tarjeta
+   DESPLEGADA: el atributo `hidden` debe vencer al `display: flex` de arriba
+   (misma disciplina que .lineage-oath__sealing[hidden]) — hallazgo visual
+   del recorrido manual de la Tarea 9.2. */
+.lineage-card__expansion[hidden] {
+  display: none;
+}
+
 .lineage-card__doctrine-full {
   margin: 0;
   font-family: var(--font-arcane-body);

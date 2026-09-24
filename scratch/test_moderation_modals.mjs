@@ -538,5 +538,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Los modales bloquean bajo veinte caracteres y emiten sus eventos solemnes (Tarea 6.1).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados con [FALLA].');
 process.exit(1);

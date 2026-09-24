@@ -304,7 +304,10 @@ const navVisitor = createNavbarComponent(shell2.navRoot, {
 navVisitor.render();
 
 const renderedVisitorLinks = linksList2.children.filter((c) => c.tagName === 'A');
-assertCondition(renderedVisitorLinks.length === 9, `El visitante ve exactamente 9 enlaces públicos, incluidas las Hermandades de SPEC-10 (hallados ${renderedVisitorLinks.length})`);
+// REALINEACIÓN (SPEC-11, Fase 7): «Mi Grimorio» (#/grimorio) entró en la
+// barra como rótulo soberano del Tomo Personal. El conteo pasa de 9 a 10.
+assertCondition(renderedVisitorLinks.length === 10, `El visitante ve exactamente 10 enlaces públicos, incluidas las Hermandades y Mi Grimorio (hallados ${renderedVisitorLinks.length})`);
+assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'collection'), 'Mi Grimorio (#/grimorio, SPEC-11) está presente para todos');
 assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'codex'), 'Códice de Afinidades (#/codex) está presente para todos');
 assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'experimentalHall'), 'Atrio de Pruebas (#/atrio) está presente para todos');
 assertCondition(renderedVisitorLinks.some((l) => l.getAttribute('data-view') === 'auditLog'), 'Bitácora de Auditoría (#/bitacora) está presente para todos');
@@ -314,7 +317,7 @@ assertCondition(!renderedVisitorLinks.some((l) => l.getAttribute('data-view') ==
 // 2.2 Enlace condicional para master
 navVisitor.setSession(true, 'master');
 const renderedMasterLinks = linksList2.children.filter((c) => c.tagName === 'A');
-assertCondition(renderedMasterLinks.length === 10, `El Maestro ve 10 enlaces incluyendo la Torre de Deliberación (hallados ${renderedMasterLinks.length})`);
+assertCondition(renderedMasterLinks.length === 11, `El Maestro ve 11 enlaces incluyendo la Torre de Deliberación (hallados ${renderedMasterLinks.length})`);
 assertCondition(renderedMasterLinks.some((l) => l.getAttribute('data-view') === 'tower'), 'Torre de Deliberación (#/torre) es visible para rol master');
 
 // 2.3 Enlace condicional para supremeAdmin
@@ -436,5 +439,5 @@ if (assertsFailed === 0) {
   process.exit(0);
 }
 
-console.log('\nRESULTADO: FALLO — Corregir asertos fallidos.');
+console.log('\nRESULTADO: DENEGADO — Corregir asertos fallidos.');
 process.exit(1);
