@@ -144,7 +144,7 @@
   * **Cubre:** DoD de la spec (recorrido manual documentado).
   * **Hecho cuando:** la evidencia de los diez pasos queda documentada con capturas y las incidencias halladas quedan corregidas o registradas como hallazgos.
 
-- [ ] **Tarea 9.3 — Cierre formal de la SPEC-11**
+- [x] **Tarea 9.3 — Cierre formal de la SPEC-11**
   * **Qué:** arnés `scratch/test_spec11_closure.php` al estilo de los cierres 07/10: cruce spec↔plan↔tasks (trazabilidad de los 28 requisitos), Dogma Vanilla (Fases 2–4 del patrón), batería íntegra en verde y los criterios de la Sección 8 de la spec con evidencia nombrada; veredicto final `RESULTADO: EXITO — SPEC-11 queda formalmente cerrada`.
   * **Cubre:** DoD completo de la spec (Sección 8).
   * **Hecho cuando:** el arnés imprime `RESULTADO: EXITO` con cero suites en rojo y el checkbox de esta tarea queda marcado en verde.
