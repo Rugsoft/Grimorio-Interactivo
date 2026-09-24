@@ -503,6 +503,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — La Torre redirige al no autorizado y el Atrio es libre (Tarea 6.4).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — las vistas incumplen su criterio.');
+  console.log('RESULTADO: DENEGADO — las vistas incumplen su criterio.');
   process.exit(1);
 }

@@ -82,7 +82,7 @@ echo "FASE 0: Superficie del modulo\n";
 assertCondition(file_exists($repositoryPath), 'Existe src/Repositories/SpellReviewRepository.php');
 
 if (!file_exists($repositoryPath)) {
-    echo "\nRESULTADO: FALLO — falta el repositorio de la Tarea 1.2 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el repositorio de la Tarea 1.2 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -534,5 +534,5 @@ if ($assertsFailed === 0) {
     echo "RESULTADO: EXITO — El expediente de moderacion se persiste con PDO preparado, cupo medible y bloqueo transaccional (Tarea 1.2).\n";
     exit(0);
 }
-echo "RESULTADO: FALLO — El repositorio del expediente no cumple su criterio 'Hecho cuando'.\n";
+echo "RESULTADO: DENEGADO — El repositorio del expediente no cumple su criterio 'Hecho cuando'.\n";
 exit(1);

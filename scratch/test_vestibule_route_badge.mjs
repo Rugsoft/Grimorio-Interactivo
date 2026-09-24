@@ -260,5 +260,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Ambas vías conducen al mismo Vestíbulo, el rótulo luce solo con veredictos sin leer y se apaga al contemplarlos sin bloquear navegación (Tarea 4.2).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

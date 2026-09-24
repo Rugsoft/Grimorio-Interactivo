@@ -68,7 +68,7 @@ echo "FASE 0: Superficie del controlador y registro de las rutas\n";
 assertCondition(is_file($controllerPath), 'Existe src/Controllers/MasterDeliberationController.php');
 
 if (!is_file($controllerPath)) {
-    echo "\nRESULTADO: FALLO — falta el controlador de la Tarea 3.2 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el controlador de la Tarea 3.2 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -608,7 +608,7 @@ if ($assertsFailed > 0) {
     foreach ($failures as $failure) {
         echo "  - {$failure}\n";
     }
-    echo "\nRESULTADO: FALLO — la Tarea 3.2 no cumple su criterio «Hecho cuando».\n";
+    echo "\nRESULTADO: DENEGADO — la Tarea 3.2 no cumple su criterio «Hecho cuando».\n";
     exit(1);
 }
 

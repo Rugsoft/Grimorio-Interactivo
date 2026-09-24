@@ -123,7 +123,7 @@ try {
   console.log('\n== RESUMEN ==');
   console.log('Asertos superados: 0');
   console.log('Asertos fallidos: 1');
-  console.log('\nRESULTADO: FALLO — Fase roja: implementar public/assets/js/components/spellFormControls.js');
+  console.log('\nRESULTADO: DENEGADO — Fase roja: implementar public/assets/js/components/spellFormControls.js');
   process.exit(1);
 }
 
@@ -289,5 +289,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('\nRESULTADO: EXITO — spellFormControls.js listo para el Taller.');
   process.exit(0);
 }
-console.log('\nRESULTADO: FALLO');
+console.log('\nRESULTADO: DENEGADO');
 process.exit(1);

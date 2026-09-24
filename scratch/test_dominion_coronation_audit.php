@@ -240,7 +240,7 @@ echo "\n" . str_repeat('─', 72) . "\n";
 echo "Asertos superados: {$assertionsPassed}, fallidos: {$assertionsFailed}\n";
 
 if ($assertionsFailed > 0) {
-    echo "RESULTADO: FALLO — la coronación no deja su memoria completa en la Bitácora.\n";
+    echo "RESULTADO: DENEGADO — la coronación no deja su memoria completa en la Bitácora.\n";
     exit(1);
 }
 echo "RESULTADO: EXITO — La coronación semanal queda asentada en la Bitácora pública (RNF-04).\n";

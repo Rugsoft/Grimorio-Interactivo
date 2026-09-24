@@ -63,7 +63,7 @@ try {
   console.log('\n== RESUMEN ==');
   console.log('Asertos superados: 0');
   console.log('Asertos fallidos: 1');
-  console.log('\nRESULTADO: FALLO — Fase roja: implementar public/assets/js/api/authClient.js');
+  console.log('\nRESULTADO: DENEGADO — Fase roja: implementar public/assets/js/api/authClient.js');
   process.exit(1);
 }
 
@@ -323,5 +323,5 @@ if (assertsFailed === 0) {
   process.exit(0);
 }
 
-console.log('\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].');
+console.log('\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].');
 process.exit(1);

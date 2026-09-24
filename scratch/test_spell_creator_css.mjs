@@ -119,7 +119,7 @@ if (cssContent === '') {
   console.log('\n== RESUMEN ==');
   console.log('Asertos superados: 2');
   console.log('Asertos fallidos: 0');
-  console.log('\nRESULTADO: FALLO — Fase roja: implementar public/assets/css/components/spell-creator.css');
+  console.log('\nRESULTADO: DENEGADO — Fase roja: implementar public/assets/css/components/spell-creator.css');
   process.exit(1);
 }
 
@@ -277,5 +277,5 @@ if (assertsFailed === 0) {
   console.log('\nRESULTADO: EXITO — spell-creator.css listo; SPEC-04 completa.');
   process.exit(0);
 }
-console.log('\nRESULTADO: FALLO');
+console.log('\nRESULTADO: DENEGADO');
 process.exit(1);

@@ -782,7 +782,7 @@ console.log('\n== RESUMEN ==');
 console.log(`Asertos superados: ${assertsPassed}`);
 console.log(`Asertos fallidos:  ${assertsFailed}`);
 if (assertsFailed > 0) {
-  console.log("\nRESULTADO: FALLO — La Tarea 6.3 no cumple aún su criterio 'Hecho cuando'.");
+  console.log("\nRESULTADO: DENEGADO — La Tarea 6.3 no cumple aún su criterio 'Hecho cuando'.");
   process.exit(1);
 }
 console.log("\nRESULTADO: EXITO — La Tarea 6.3 cumple su criterio 'Hecho cuando'.");

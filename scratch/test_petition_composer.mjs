@@ -321,5 +321,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('RESULTADO: EXITO — Remitir exige 20–500, el contador vive mientras se escribe, ninguna regla de estilo filtra el texto y el kit se aquienta bajo movimiento reducido (Tareas 5.3 y 8.2).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
+console.log('RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.');
 process.exit(1);

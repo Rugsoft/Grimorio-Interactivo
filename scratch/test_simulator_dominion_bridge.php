@@ -472,7 +472,7 @@ if ($assertionsFailed > 0) {
     foreach ($failures as $failure) {
         echo "  · {$failure}\n";
     }
-    echo "\nRESULTADO: FALLO — la Tarea 7.1 no cumple aún su criterio 'Hecho cuando'.\n";
+    echo "\nRESULTADO: DENEGADO — la Tarea 7.1 no cumple aún su criterio 'Hecho cuando'.\n";
     exit(1);
 }
 

@@ -356,5 +356,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('RESULTADO: EXITO — La casa queda nombrada, las advertencias visten el cuerpo, el descarte no muta nada, el foco vuelve a la tarjeta y el kit se aquienta bajo movimiento reducido (Tareas 5.2 y 8.2).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
+console.log('RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.');
 process.exit(1);

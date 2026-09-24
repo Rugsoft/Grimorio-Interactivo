@@ -614,5 +614,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El Atrio de Pruebas exhibe solo lo experimental, proclama el bloqueo de PDA y abre el simulador (Tarea 5.2).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

@@ -474,5 +474,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El cliente del Vestíbulo consume los cuatro endpoints y cada error viste su leyenda del Anexo A sin exponer trazas, incluidos los guardias ratificados en la Fase 7 (Tareas 4.1 y 8.3).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

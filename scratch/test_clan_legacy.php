@@ -503,7 +503,7 @@ echo "Asertos superados: {$assertsPassed}\n";
 echo "Asertos fallidos:  {$assertsFailed}\n";
 
 if ($assertsFailed > 0) {
-    echo "\nRESULTADO: FALLO — El legado ancestral no cumple aún su criterio.\n";
+    echo "\nRESULTADO: DENEGADO — El legado ancestral no cumple aún su criterio.\n";
     exit(1);
 }
 

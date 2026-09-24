@@ -77,7 +77,7 @@ assertCondition(file_exists($applicationPath), 'Existe el fichero src/Repositori
 assertCondition(file_exists($cyclePath), 'Existe el fichero src/Repositories/WeeklyCycleRepository.php');
 
 if (!file_exists($applicationPath) || !file_exists($cyclePath)) {
-    echo "\nRESULTADO: FALLO — faltan repositorios de SPEC-07 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — faltan repositorios de SPEC-07 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -101,7 +101,7 @@ foreach ([
 }
 
 if (!class_exists(ClanApplicationRepository::class) || !class_exists(WeeklyCycleRepository::class)) {
-    echo "\nRESULTADO: FALLO — alguna clase no carga.\n";
+    echo "\nRESULTADO: DENEGADO — alguna clase no carga.\n";
     exit(1);
 }
 
@@ -154,7 +154,7 @@ try {
 assertCondition($bootstrapOk, 'El plano relacional se materializa sin errores');
 
 if (!$bootstrapOk) {
-    echo "\nRESULTADO: FALLO — no se pudo preparar la base de pruebas.\n";
+    echo "\nRESULTADO: DENEGADO — no se pudo preparar la base de pruebas.\n";
     exit(1);
 }
 
@@ -576,5 +576,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

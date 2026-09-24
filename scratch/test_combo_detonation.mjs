@@ -417,5 +417,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — La detonación deflagra en bicromía y corona el rótulo monumental (Tarea 4.2).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

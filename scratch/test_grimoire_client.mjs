@@ -204,6 +204,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — grimoireClient listo para el Tomo Arcano (Tarea 4.1).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+  console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
   process.exit(1);
 }

@@ -126,7 +126,7 @@ assertCondition(file_exists($seedsPath), 'Existen las semillas database/seeds.sq
 assertCondition(file_exists($ascensionPath), 'Existe la migracion sql/08_moderation_schema.sql (entregable de la tarea)');
 
 if (!file_exists($ascensionPath)) {
-    echo "\nRESULTADO: FALLO — falta la migracion de SPEC-08 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta la migracion de SPEC-08 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -184,7 +184,7 @@ try {
 assertCondition($executionOk, 'schema.sql + seeds.sql + sql/08_moderation_schema.sql se ejecutan sin errores de sintaxis');
 
 if (!$executionOk) {
-    echo "\nRESULTADO: FALLO — el DDL no se aplica limpiamente sobre SQLite.\n";
+    echo "\nRESULTADO: DENEGADO — el DDL no se aplica limpiamente sobre SQLite.\n";
     exit(1);
 }
 
@@ -529,5 +529,5 @@ if ($assertsFailed === 0) {
     echo "RESULTADO: EXITO — El Conclave de Moderacion se inscribe con tipos estrictos y firma unica activa (Tarea 1.1).\n";
     exit(0);
 }
-echo "RESULTADO: FALLO — El esquema del Conclave no cumple su criterio 'Hecho cuando'.\n";
+echo "RESULTADO: DENEGADO — El esquema del Conclave no cumple su criterio 'Hecho cuando'.\n";
 exit(1);

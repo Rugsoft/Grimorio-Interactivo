@@ -384,6 +384,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El autor consulta el motivo exacto y reabre como borrador (Tarea 6.2).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — la libreta de subsanación incumple su criterio.');
+  console.log('RESULTADO: DENEGADO — la libreta de subsanación incumple su criterio.');
   process.exit(1);
 }

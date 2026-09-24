@@ -80,7 +80,7 @@ try {
   console.log('\n== RESUMEN ==');
   console.log('Asertos superados: 0');
   console.log('Asertos fallidos: 1');
-  console.log('\nRESULTADO: FALLO — Fase roja: implementar public/assets/js/api/spellCreatorClient.js');
+  console.log('\nRESULTADO: DENEGADO — Fase roja: implementar public/assets/js/api/spellCreatorClient.js');
   process.exit(1);
 }
 
@@ -361,5 +361,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('\nRESULTADO: EXITO — spellCreatorClient.js listo para las vistas del Taller.');
   process.exit(0);
 }
-console.log('\nRESULTADO: FALLO');
+console.log('\nRESULTADO: DENEGADO');
 process.exit(1);

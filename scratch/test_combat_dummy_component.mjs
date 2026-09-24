@@ -310,6 +310,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Maniquí Arcano listo para la Cámara de Conjuración (Tarea 3.1).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+  console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
   process.exit(1);
 }

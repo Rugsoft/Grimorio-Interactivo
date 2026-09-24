@@ -279,7 +279,7 @@ echo "Asertos superados: {$assertsPassed}" . PHP_EOL;
 echo "Asertos fallidos:  {$assertsFailed}" . PHP_EOL;
 
 if ($assertsFailed > 0) {
-    echo PHP_EOL . 'RESULTADO: FALLO' . PHP_EOL;
+    echo PHP_EOL . 'RESULTADO: DENEGADO' . PHP_EOL;
     exit(1);
 }
 echo PHP_EOL . 'RESULTADO: EXITO — GrimoireController listo para el front controller (Tarea 1.3).' . PHP_EOL;

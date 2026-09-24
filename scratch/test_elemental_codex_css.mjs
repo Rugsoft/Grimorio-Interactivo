@@ -251,6 +251,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: ÉXITO — La hoja del Códice aplica el sistema de diseño con contraste AA (Tarea 3.4).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — La hoja incumple la Tarea 3.4.');
+  console.log('RESULTADO: DENEGADO — La hoja incumple la Tarea 3.4.');
   process.exit(1);
 }

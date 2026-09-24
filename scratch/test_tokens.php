@@ -44,7 +44,7 @@ echo "FASE A: Análisis del archivo\n";
 assertCondition(file_exists($tokensPath), 'Existe public/assets/css/tokens.css');
 
 if (!file_exists($tokensPath)) {
-    echo "\nRESULTADO: FALLO — tokens.css no existe aún (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — tokens.css no existe aún (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -199,5 +199,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

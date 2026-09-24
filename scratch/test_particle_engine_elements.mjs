@@ -328,6 +328,6 @@ if (failed === 0) {
   console.log('RESULTADO: EXITO — Perfiles elementales y Círculos listos (Tarea 2.3).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+  console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
   process.exit(1);
 }

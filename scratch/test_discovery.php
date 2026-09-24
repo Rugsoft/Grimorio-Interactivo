@@ -320,5 +320,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

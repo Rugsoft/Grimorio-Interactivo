@@ -288,6 +288,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Textos Flotantes Escalonados listos (Tarea 3.2).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+  console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
   process.exit(1);
 }

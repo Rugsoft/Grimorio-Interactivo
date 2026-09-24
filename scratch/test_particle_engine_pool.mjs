@@ -189,6 +189,6 @@ if (failed === 0) {
   console.log('RESULTADO: EXITO — Particle + ParticlePool listos para el motor (Tarea 2.1).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+  console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
   process.exit(1);
 }

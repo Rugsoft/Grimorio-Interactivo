@@ -85,7 +85,7 @@ assertCondition(
 );
 
 if (!file_exists($migrationPath)) {
-    echo "\nRESULTADO: FALLO — falta la migracion de SPEC-07 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta la migracion de SPEC-07 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -107,7 +107,7 @@ try {
 assertCondition($executionOk, 'schema.sql + seeds.sql se ejecutan sin errores de sintaxis');
 
 if (!$executionOk) {
-    echo "\nRESULTADO: FALLO — el DDL canonico no se aplica limpiamente.\n";
+    echo "\nRESULTADO: DENEGADO — el DDL canonico no se aplica limpiamente.\n";
     exit(1);
 }
 
@@ -365,5 +365,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

@@ -298,5 +298,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('RESULTADO: EXITO — El modal exige segunda pulsación, el descarte no consume nada, el foco queda atrapado y devuelto, y la región viva anuncia apertura y veredicto (Tarea 4.2).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
+console.log('RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.');
 process.exit(1);

@@ -520,7 +520,7 @@ console.log(`Asertos superados: ${assertsPassed}`);
 console.log(`Asertos fallidos:  ${assertsFailed}`);
 
 if (assertsFailed > 0) {
-  console.log('\nRESULTADO: FALLO');
+  console.log('\nRESULTADO: DENEGADO — Revisa los asertos [FALLA].');
   process.exit(1);
 }
 console.log('\nRESULTADO: EXITO — La cabecera refleja el vínculo vivo en todo momento.');

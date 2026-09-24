@@ -93,7 +93,7 @@ assertCondition(file_exists($signaturePath), 'Existe src/Repositories/MasterSign
 assertCondition(file_exists($verdictPath), 'Existe src/Repositories/ObjectionVerdictRepository.php');
 
 if (!file_exists($signaturePath) || !file_exists($verdictPath)) {
-    echo "\nRESULTADO: FALLO — faltan los repositorios de la Tarea 1.3 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — faltan los repositorios de la Tarea 1.3 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -570,5 +570,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

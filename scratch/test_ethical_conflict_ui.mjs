@@ -368,5 +368,5 @@ if (assertsFailed === 0) {
   console.log('\nRESULTADO: EXITO — La advertencia del vínculo de sangre (RF-06.1) vive en la Torre con sus controles deshabilitados.');
   process.exit(0);
 }
-console.log('\nRESULTADO: FALLO');
+console.log('\nRESULTADO: DENEGADO');
 process.exit(1);

@@ -317,5 +317,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Los cinco estados se pintan desde el DTO, el sello y la corona visten el kit, el vedado porta su leyenda y el vacío invita (Tarea 5.1).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

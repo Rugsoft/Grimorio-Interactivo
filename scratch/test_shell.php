@@ -43,7 +43,7 @@ echo "FASE 1: Sintaxis y carga del documento\n";
 assertCondition(file_exists($shellPath), 'Existe public/index.html');
 
 if (!file_exists($shellPath)) {
-    echo "\nRESULTADO: FALLO — el shell no existe aún (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — el shell no existe aún (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -265,5 +265,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

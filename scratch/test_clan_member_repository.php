@@ -68,7 +68,7 @@ $repositoryPath = $projectRoot . '/src/Repositories/ClanMemberRepository.php';
 assertCondition(file_exists($repositoryPath), 'Existe el fichero src/Repositories/ClanMemberRepository.php');
 
 if (!file_exists($repositoryPath)) {
-    echo "\nRESULTADO: FALLO — falta el repositorio de SPEC-07 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el repositorio de SPEC-07 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -84,7 +84,7 @@ assertCondition(
 assertCondition(class_exists(ClanMemberRepository::class), 'La clase Grimorio\Repositories\ClanMemberRepository se resuelve por autoload');
 
 if (!class_exists(ClanMemberRepository::class)) {
-    echo "\nRESULTADO: FALLO — la clase no carga.\n";
+    echo "\nRESULTADO: DENEGADO — la clase no carga.\n";
     exit(1);
 }
 
@@ -142,7 +142,7 @@ try {
 assertCondition($bootstrapOk, 'El plano relacional se materializa sin errores');
 
 if (!$bootstrapOk) {
-    echo "\nRESULTADO: FALLO — no se pudo preparar la base de pruebas.\n";
+    echo "\nRESULTADO: DENEGADO — no se pudo preparar la base de pruebas.\n";
     exit(1);
 }
 
@@ -492,5 +492,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

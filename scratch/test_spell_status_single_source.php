@@ -93,7 +93,7 @@ $repositoryPath = $projectRoot . '/src/Repositories/SpellReviewRepository.php';
 echo "FASE 0: Superficie del guion y del espejo\n";
 assertCondition(file_exists($scriptPath), 'Existe sql/08_spell_status_single_source.sql');
 if (!file_exists($scriptPath)) {
-    echo "\nRESULTADO: FALLO — falta el guion de reconciliacion de la Tarea 1.5.\n";
+    echo "\nRESULTADO: DENEGADO — falta el guion de reconciliacion de la Tarea 1.5.\n";
     exit(1);
 }
 $scriptSource = (string) file_get_contents($scriptPath);
@@ -464,5 +464,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

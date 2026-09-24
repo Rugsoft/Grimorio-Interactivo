@@ -101,7 +101,7 @@ assertCondition(
 if (cssContent === '') {
   console.log('\n== RESUMEN ==');
   console.log('Asertos superados: 1, fallidos: 1');
-  console.log('RESULTADO: FALLO — Fase roja: implementar la hoja del Tomo.');
+  console.log('RESULTADO: DENEGADO — Fase roja: implementar la hoja del Tomo.');
   process.exit(1);
 }
 
@@ -260,5 +260,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Estilos del Tomo listos (Tarea 4.4).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
 process.exit(1);

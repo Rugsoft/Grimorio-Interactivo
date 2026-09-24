@@ -158,7 +158,7 @@ $NOW = '2026-09-18T10:00:00Z';
 echo "FASE 0: Superficie del guion\n";
 assertCondition(file_exists($migrationPath), 'Existe sql/09_lineage_oath.sql');
 if (!file_exists($migrationPath)) {
-    echo "\nRESULTADO: FALLO — falta el guion de migracion de la Tarea 1.1.\n";
+    echo "\nRESULTADO: DENEGADO — falta el guion de migracion de la Tarea 1.1.\n";
     exit(1);
 }
 $scriptSource = (string) file_get_contents($migrationPath);
@@ -354,5 +354,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

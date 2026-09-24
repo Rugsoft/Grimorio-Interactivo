@@ -624,7 +624,7 @@ if ($assertsFailed > 0) {
     foreach ($failures as $failure) {
         echo "  - {$failure}\n";
     }
-    echo "\nRESULTADO: FALLO — la integración cruzada no cumple su criterio.\n";
+    echo "\nRESULTADO: DENEGADO — la integración cruzada no cumple su criterio.\n";
     exit(1);
 }
 

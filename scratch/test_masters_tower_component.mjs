@@ -673,5 +673,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — La Torre de Deliberación veta con su causa, admite al Maestro apto y declara el canon (Tarea 5.3).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

@@ -100,7 +100,7 @@ $repositoryPath = $projectRoot . '/src/Repositories/LineageOathRepository.php';
 echo "FASE 0: Superficie del repositorio\n";
 assertCondition(file_exists($repositoryPath), 'Existe src/Repositories/LineageOathRepository.php');
 if (!file_exists($repositoryPath)) {
-    echo "\nRESULTADO: FALLO — falta el repositorio de la Tarea 1.3.\n";
+    echo "\nRESULTADO: DENEGADO — falta el repositorio de la Tarea 1.3.\n";
     exit(1);
 }
 $repositorySource = (string) file_get_contents($repositoryPath);
@@ -213,5 +213,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

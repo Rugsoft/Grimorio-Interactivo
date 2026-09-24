@@ -476,7 +476,7 @@ console.log(`Asertos superados: ${assertsPassed}`);
 console.log(`Asertos fallidos:  ${assertsFailed}`);
 
 if (assertsFailed > 0) {
-  console.log('\nRESULTADO: FALLO');
+  console.log('\nRESULTADO: DENEGADO');
   process.exit(1);
 }
 console.log('\nRESULTADO: EXITO — El enchufe SPEC-03 de main.js cumple sus criterios.');

@@ -85,7 +85,7 @@ echo "FASE 0: Superficie del servicio y sus DTOs\n";
 $missing = array_filter([$servicePath, $profileDtoPath, $catalogDtoPath], static fn (string $path): bool => !file_exists($path));
 assertCondition($missing === [], 'Existen el servicio y los dos DTOs de la tarea');
 if ($missing !== []) {
-    echo "\nRESULTADO: FALLO — faltan ficheros de la Tarea 2.1: " . implode(', ', $missing) . "\n";
+    echo "\nRESULTADO: DENEGADO — faltan ficheros de la Tarea 2.1: " . implode(', ', $missing) . "\n";
     exit(1);
 }
 foreach ([$servicePath, $profileDtoPath, $catalogDtoPath] as $path) {
@@ -221,5 +221,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.\n";
+echo "RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.\n";
 exit(1);

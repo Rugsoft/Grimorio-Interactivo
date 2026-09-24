@@ -262,7 +262,7 @@ echo "\n" . str_repeat('─', 72) . "\n";
 echo "Asertos superados: {$assertionsPassed}, fallidos: {$assertionsFailed}\n";
 
 if ($assertionsFailed > 0) {
-    echo "RESULTADO: FALLO — el contrato del Libro Mayor no está completo.\n";
+    echo "RESULTADO: DENEGADO — el contrato del Libro Mayor no está completo.\n";
     exit(1);
 }
 echo "RESULTADO: EXITO — El Libro Mayor de Campeones cumple su contrato REST (RF-06.1).\n";

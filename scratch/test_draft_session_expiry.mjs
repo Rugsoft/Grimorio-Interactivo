@@ -352,5 +352,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('\nRESULTADO: EXITO — El borrador retiene el vínculo expirado y se reanuda sin pérdida (caso límite 3).');
   process.exit(0);
 }
-console.log('\nRESULTADO: FALLO');
+console.log('\nRESULTADO: DENEGADO');
 process.exit(1);

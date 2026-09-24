@@ -53,7 +53,7 @@ assertCondition(file_exists($schemaPath), "Existe el archivo database/schema.sql
 assertCondition(file_exists($seedsPath), "Existe el archivo database/seeds.sql");
 
 if (!file_exists($schemaPath) || !file_exists($seedsPath)) {
-    echo "\nRESULTADO: FALLO — faltan archivos SQL por crear (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — faltan archivos SQL por crear (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -233,5 +233,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].\n";
+echo "\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].\n";
 exit(1);

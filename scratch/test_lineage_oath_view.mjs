@@ -599,5 +599,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   console.log('RESULTADO: EXITO — La ceremonia carga el canon, despliega las 8 tarjetas, sella de punta a punta con veredicto { lineage, retainedRoute }, avisa sin liberar retención, queda operativa ante fallos y viste el Velo Arcano con tokens y AA (Tareas 4.1+4.3+4.4).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
+console.log('RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.');
 process.exit(1);

@@ -267,6 +267,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — La liturgia visual de la moderación viste sus cinco componentes (Tarea 6.3).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — la hoja ceremonial incumple su criterio.');
+  console.log('RESULTADO: DENEGADO — la hoja ceremonial incumple su criterio.');
   process.exit(1);
 }

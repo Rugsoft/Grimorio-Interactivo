@@ -325,5 +325,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El glifo de la ficha enfoca el Códice con enlaces iluminados (Tarea 4.4).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

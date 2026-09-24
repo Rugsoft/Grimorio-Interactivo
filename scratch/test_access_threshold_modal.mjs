@@ -290,5 +290,5 @@ if (assertsFailed === 0) {
   process.exit(0);
 }
 
-console.log('\nRESULTADO: FALLO — Corregir los asertos marcados con [FALLA].');
+console.log('\nRESULTADO: DENEGADO — Corregir los asertos marcados con [FALLA].');
 process.exit(1);

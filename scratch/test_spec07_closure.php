@@ -528,5 +528,5 @@ if ($failed === 0) {
     echo "RESULTADO: EXITO — SPEC-07 queda formalmente cerrada por la Tarea 7.2.\n";
     exit(0);
 }
-echo "RESULTADO: FALLO — SPEC-07 no puede declararse cerrada.\n";
+echo "RESULTADO: DENEGADO — SPEC-07 no puede declararse cerrada.\n";
 exit(1);

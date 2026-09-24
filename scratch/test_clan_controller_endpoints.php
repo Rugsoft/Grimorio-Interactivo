@@ -993,7 +993,7 @@ if ($assertionsFailed > 0) {
     foreach ($failures as $failure) {
         echo "    - {$failure}\n";
     }
-    echo "\n  RESULTADO: FALLO — la Tarea 3.2 no cumple su criterio «Hecho cuando».\n";
+    echo "\n  RESULTADO: DENEGADO — la Tarea 3.2 no cumple su criterio «Hecho cuando».\n";
     exit(1);
 }
 

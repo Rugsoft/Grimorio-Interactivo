@@ -280,7 +280,7 @@ echo "\n" . str_repeat('─', 72) . "\n";
 echo "Asertos superados: {$assertsPassed}, fallidos: {$assertsFailed}\n";
 
 if ($assertsFailed > 0) {
-    echo "RESULTADO: FALLO — la Tarea 2.2 no cumple aún su criterio 'Hecho cuando'.\n";
+    echo "RESULTADO: DENEGADO — la Tarea 2.2 no cumple aún su criterio 'Hecho cuando'.\n";
     exit(1);
 }
 

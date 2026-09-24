@@ -429,5 +429,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El Sello Rúnico se forja determinista, se lee sin color y jamás imprime su clave (SPEC-02 RF-07).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — la heráldica forjada incumple el criterio de RF-07.');
+console.log('RESULTADO: DENEGADO — la heráldica forjada incumple el criterio de RF-07.');
 process.exit(1);

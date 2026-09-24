@@ -70,7 +70,7 @@ assertCondition(is_file($controllerPath), 'Existe src/Controllers/ModerationCont
 assertCondition(is_file($projectRoot . '/src/Repositories/SpellReviewRepository.php'), 'Existe el repositorio del expediente');
 
 if (!is_file($controllerPath)) {
-    echo "\nRESULTADO: FALLO — falta el controlador de la Tarea 3.1 (fase roja del TDD).\n";
+    echo "\nRESULTADO: DENEGADO — falta el controlador de la Tarea 3.1 (fase roja del TDD).\n";
     exit(1);
 }
 
@@ -572,7 +572,7 @@ if ($assertsFailed > 0) {
     foreach ($failures as $failure) {
         echo "  - {$failure}\n";
     }
-    echo "\nRESULTADO: FALLO — la Tarea 3.1 no cumple su criterio «Hecho cuando».\n";
+    echo "\nRESULTADO: DENEGADO — la Tarea 3.1 no cumple su criterio «Hecho cuando».\n";
     exit(1);
 }
 

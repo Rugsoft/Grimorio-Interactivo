@@ -291,5 +291,5 @@ if ($assertsFailed === 0) {
     exit(0);
 }
 
-echo "\nRESULTADO: FALLO — Corregir las infracciones listadas arriba.\n";
+echo "\nRESULTADO: DENEGADO — Corregir las infracciones listadas arriba.\n";
 exit(1);

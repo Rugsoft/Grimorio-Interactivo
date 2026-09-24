@@ -343,5 +343,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — La bitácora inscribe el combo y la región viva lo anuncia (Tarea 4.3).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

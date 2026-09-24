@@ -1223,7 +1223,7 @@ if ($assertsFailed > 0) {
     foreach ($failures as $failure) {
         echo "  - {$failure}\n";
     }
-    echo "\nRESULTADO: FALLO — el flujo completo de moderacion no cumple su criterio.\n";
+    echo "\nRESULTADO: DENEGADO — el flujo completo de moderacion no cumple su criterio.\n";
     exit(1);
 }
 

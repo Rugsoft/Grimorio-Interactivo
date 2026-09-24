@@ -187,6 +187,6 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — Bitácora de Pruebas lista (Tarea 4.3).');
   process.exit(0);
 } else {
-  console.log('RESULTADO: FALLO — hay asertos incumplidos.');
+  console.log('RESULTADO: DENEGADO — hay asertos incumplidos.');
   process.exit(1);
 }

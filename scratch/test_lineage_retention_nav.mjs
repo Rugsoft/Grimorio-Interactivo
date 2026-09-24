@@ -455,5 +455,5 @@ if (assertsFailed === 0 && uncaughtErrors === 0) {
   process.exit(0);
 }
 
-console.log('RESULTADO: FALLO — Corregir los asertos en rojo antes de continuar.');
+console.log('RESULTADO: DENEGADO — Corregir los asertos en rojo antes de continuar.');
 process.exit(1);

@@ -1003,5 +1003,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El aura persiste al hojear y el Códice detona en la Cámara (Tarea 4.1).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);

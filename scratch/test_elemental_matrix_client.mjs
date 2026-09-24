@@ -298,5 +298,5 @@ if (assertsFailed === 0) {
   console.log('RESULTADO: EXITO — El cliente HTTP consume la Matriz Elemental y doma 404/400 (Tarea 5.1).');
   process.exit(0);
 }
-console.log('RESULTADO: FALLO — Revisa los asertos marcados.');
+console.log('RESULTADO: DENEGADO — Revisa los asertos marcados.');
 process.exit(1);
