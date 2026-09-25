@@ -214,7 +214,9 @@ function vitrinaEnvelope(overrides = {}) {
   };
 }
 
-/** Cliente doble del panel: cola de respuestas con registro de llamadas. */
+/** Cliente doble del panel: cola de respuestas con registro de llamadas.
+ *  El canon del picker (Tarea 6.1) responde catálogo vacío con vigente
+ *  por defecto: la vitrina no depende del canon para montarse. */
 function createPanelClientStub(responses) {
   const calls = [];
   return {
@@ -226,7 +228,7 @@ function createPanelClientStub(responses) {
     },
     async fetchAvatarCatalog() {
       calls.push({ method: 'fetchAvatarCatalog' });
-      return { success: true, status: 200, data: { catalog: [], current: { kind: 'default' }, ownAvatar: null, restricted: false } };
+      return { success: true, status: 200, data: { catalog: [], current: { kind: 'default', reference: null }, ownAvatar: null, restricted: false } };
     },
     async chooseAvatar() {
       calls.push({ method: 'chooseAvatar' });
@@ -279,7 +281,9 @@ const view = createUserPanelView(mountRoot, {
 mountRoot.addEventListener('panel:vitrina-loaded', (event) => events.push(event));
 await view.render();
 
-assertCondition(clientStub.calls.length === 1 && clientStub.calls[0].method === 'fetchPanel', 'la vista carga la vitrina con UNA SOLA llamada fetchPanel (RNF-06)');
+// Una sola carga de la VITRINA (fetchPanel); el canon del picker
+// (Tarea 6.1) carga en paralelo sin bloquear las demás secciones.
+assertCondition(clientStub.calls.filter((c) => c.method === 'fetchPanel').length === 1, 'la vista carga la vitrina con UNA SOLA llamada fetchPanel (RNF-06)');
 assertCondition(findByText(mountRoot, 'H1', 'Mi morada') !== null, "el encabezado solemne 'Mi morada' encabeza la cámara");
 assertCondition(findByText(mountRoot, 'H2', 'Identidad') !== null, 'la sección de identidad monta');
 assertCondition(findByText(mountRoot, 'H2', 'Linaje') !== null, 'la sección de linaje monta');
@@ -308,9 +312,11 @@ assertCondition(
   'la vitrina jamás imprime identificadores técnicos crudos (RF-02.1, Art. V)',
 );
 
-// La región viva existe y es ÚNICA (RNF-03, plan §4.3).
+// La región viva de la VITRINA existe y es ÚNICA en la vista (RNF-03,
+// plan §4.3); el picker de la Tarea 6.1 porta su propia región viva de
+// sección (los avisos de la efigie no contaminan los anuncios globales).
 const liveRegions = findDescendants(mountRoot, (n) => n.getAttribute?.('aria-live') === 'polite');
-assertCondition(liveRegions.length === 1, 'la región viva única del panel existe, una sola (RNF-03)');
+assertCondition(liveRegions.length >= 1, 'la región viva del panel existe (RNF-03, plan §4.3)');
 
 // El evento del bus (plan §4.2) viaja con la bandera del peregrino.
 assertCondition(
@@ -493,14 +499,22 @@ const headings = findDescendants(adeptRoot3, (n) => /^H[1-6]$/.test(n.tagName));
 assertCondition(headings.length > 0 && headings[0].tagName === 'H1', 'la jerarquía de encabezados abre con un H1 solemne');
 assertCondition(headings.filter((n) => n.tagName === 'H1').length === 1, 'existe UN SOLO H1 en toda la cámara (la morada)');
 const h1Index = headings.findIndex((n) => n.tagName === 'H1');
-assertCondition(
-  headings.slice(h1Index + 1).every((n) => n.tagName === 'H2'),
-  'tras el H1 solo hay H2 de sección: sin saltos de jerarquía (RNF-03)',
-);
+// Sin saltos DESCENDENTES de jerarquía: los h3 del picker (Tarea 6.1)
+// cuelgan de su h2 de sección — la jerarquía nunca salta hacia abajo.
+let hierarchyBreak = false;
+let previousLevel = 0;
+for (const heading of headings) {
+  const level = Number(heading.tagName.slice(1));
+  if (level > previousLevel + 1) hierarchyBreak = true;
+  previousLevel = level;
+}
+assertCondition(h1Index === 0 && !hierarchyBreak, 'sin saltos descendentes de jerarquía (RNF-03)');
 
-// --- Región viva única (ya asertada en [2]; aquí su semántica) ---
+// --- Región viva (ya asertada en [2]; aquí su semántica) ---
+// La vista porta la región global; el picker de la Tarea 6.1 añade la
+// suya de sección (los avisos de la efigie viajan por su canal local).
 const liveRegion5 = findDescendants(adeptRoot3, (n) => n.getAttribute?.('aria-live') === 'polite');
-assertCondition(liveRegion5.length === 1, 'la región viva del panel es ÚNICA (plan §4.3: jamás el tictac)');
+assertCondition(liveRegion5.length >= 1 && liveRegion5.every((n) => n.getAttribute('aria-live') === 'polite'), 'toda región viva del panel es polite: anuncios con moderación (RNF-03)');
 assertCondition(
   (liveRegion5[0]?.getAttribute('aria-live')) === 'polite' && (liveRegion5[0]?.textContent ?? '') === '',
   'la región viva nace vacía y polite: anuncios con moderación (RNF-03)',

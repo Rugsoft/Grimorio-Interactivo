@@ -128,22 +128,22 @@
 
 ## FASE 6 — Componentes del Panel
 
-- [ ] **Tarea 6.1 — `avatarPickerComponent`**
+- [x] **Tarea 6.1 — `avatarPickerComponent`**
   *Cubre:* RF-03.1–RF-03.5, RNF-03, casos límite 14/15.  
   *Alcance:* rejilla del catálogo con `aria-pressed` en la vigente, zona de subida con `input[type=file]` real + previsualización + marco cuadrado, aviso solemne por código de error, repinta de cabecera vía `panel:avatar-changed`, aviso+reintento ante fallo de catálogo, degradación canónica ante fichero corrupto. Arnés `scratch/test_avatar_picker.mjs` fases [1–6].  
   **Hecho cuando:** las 6 fases del arnés del picker pasan (incluidas las degradaciones 14 y 15 de la spec).
 
-- [ ] **Tarea 6.2 — `passphraseChangerComponent`**
+- [x] **Tarea 6.2 — `passphraseChangerComponent`**
   *Cubre:* RF-04.1, RF-04.2, caso límite 12.  
   *Alcance:* tres campos exigidos, los cuatro veredictos con su leyenda castellana canónica, recibo con `othersDissolvedCount`, doble envío → recibo idempotente (jamás aviso mentiroso), anuncio único por región viva. Arnés `scratch/test_passphrase_changer.mjs` fases [1–5].  
   **Hecho cuando:** las 5 fases del arnés del cambiador pasan, incluido el doble envío con recibo idempotente.
 
-- [ ] **Tarea 6.3 — `personalLedgerComponent`**
+- [x] **Tarea 6.3 — `personalLedgerComponent`**
   *Cubre:* RF-06.1, RF-06.3, RF-06.4.  
   *Alcance:* lista semántica de asientos con estampas legibles (ISO → fecha castellana), paginación por cursor con botón «Ver más», leyenda de silencio ante `entries: []`. Arnés `scratch/test_personal_ledger_view.mjs` (fases: render, paginación, silencio).  
   **Hecho cuando:** el arnés de la lente aserta render, paginación sin duplicados y leyenda de silencio ante vacío.
 
-- [ ] **Tarea 6.4 — `convalescenceCountdownComponent`**
+- [x] **Tarea 6.4 — `convalescenceCountdownComponent`**
   *Cubre:* RF-05.1–RF-05.3, RNF-03, caso límite 8.  
   *Alcance:* cuenta atrás en días con reloj inyectable, anuncios SOLO en hitos {≤7, ≤3, 1, alzamiento}, refresco sin recarga + `panel:convalescence-lifted` al llegar a cero, sin montaje si no hay convalecencia. Arnés `scratch/test_convalescence_countdown.mjs` fases [1–5].  
   **Hecho cuando:** las 5 fases del arnés del contador pasan, incluido el alzamiento sin recarga y el no-montaje sin veto.

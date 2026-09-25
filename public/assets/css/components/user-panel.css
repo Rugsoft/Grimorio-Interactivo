@@ -138,6 +138,134 @@
 }
 
 /* ------------------------------------------------------------------
+   El selector de efigie (Tarea 6.1): previsualización dentro del marco
+   ceremonial cuadrado — el recorte visual lo dicta el marco, jamás una
+   deformación de la imagen (object-fit del canon CSS nativo).
+   ------------------------------------------------------------------ */
+.avatar-picker__preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-scroll);
+}
+
+/* ------------------------------------------------------------------
+   La custodia de la frase de paso (Tarea 6.2): tres campos con
+   etiqueta propia (operables sin ratón) y veredicto de lectura
+   estable; el anuncio único viaja por la región viva.
+   ------------------------------------------------------------------ */
+.passphrase-changer__form label {
+  display: block;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-burnished);
+  margin-top: var(--space-ink-2);
+}
+
+.passphrase-changer__form input[type='password'] {
+  display: block;
+  width: 100%;
+  max-width: var(--measure-parchment);
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2);
+  color: var(--color-text-primary);
+  background: var(--color-parchment-base);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+}
+
+.passphrase-changer__form input[type='password']:focus-visible {
+  outline: 2px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.passphrase-changer__verdict {
+  min-height: 1.5em;
+  margin: var(--space-ink-3) 0;
+  color: var(--color-text-secondary);
+}
+
+/* ------------------------------------------------------------------
+   La lente de bitácora personal (Tarea 6.3): lista semántica con
+   estampas legibles y paginación perezosa; el silencio tiene su
+   propia leyenda (RF-06.3), jamás una lista vacía cruda.
+   ------------------------------------------------------------------ */
+.panel-ledger__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.panel-ledger__entry {
+  padding: var(--space-ink-3) 0;
+  border-bottom: var(--border-ink);
+}
+
+.panel-ledger__stamp {
+  display: block;
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-burnished);
+}
+
+.panel-ledger__action {
+  margin: var(--space-ink-1) 0 0;
+  color: var(--color-text-primary);
+}
+
+.panel-ledger__target {
+  color: var(--color-text-muted);
+}
+
+.panel-ledger__narrative {
+  margin: var(--space-ink-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-ink-small);
+}
+
+.panel-ledger__empty,
+.panel-ledger__unavailable {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.panel-ledger__more {
+  margin-top: var(--space-ink-3);
+}
+
+.panel-ledger__more[disabled] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* ------------------------------------------------------------------
+   La cuenta atrás de la Convalecencia (Tarea 6.4): penitencia viva
+   con hitos solemnes; al alzarse, la sección se disuelve sin recarga
+   (el refresco de la vitrina la retira, RF-05.2).
+   ------------------------------------------------------------------ */
+.convalescence-countdown__days {
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-arcane);
+  margin: 0 0 var(--space-ink-2);
+}
+
+.convalescence-countdown__days[data-lifted='true'] {
+  color: var(--color-valid-runes);
+}
+
+.convalescence-countdown__cause,
+.convalescence-countdown__retained {
+  margin: var(--space-ink-1) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-ink-small);
+}
+
+/* ------------------------------------------------------------------
    Diálogo solemne propio (Tarea 5.3): foco preso por el elemento
    <dialog> nativo; la vista devuelve el foco a su origen al cerrar
    (verificado por el arnés, RNF-03).

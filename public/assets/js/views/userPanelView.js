@@ -30,6 +30,19 @@
  * @module views/userPanelView
  */
 
+// El selector de efigie (SPEC-12, Tarea 6.1): rejilla del canon +
+// subida propia con previsualización y marco ceremonial.
+import { createAvatarPickerComponent } from '../components/avatarPickerComponent.js';
+// La custodia de la frase de paso (SPEC-12, Tarea 6.2): tres campos y
+// los cuatro veredictos con su narración castellana.
+import { createPassphraseChangerComponent } from '../components/passphraseChangerComponent.js';
+// La lente de bitácora personal (SPEC-12, Tarea 6.3): lista semántica,
+// paginación por cursor y leyenda de silencio.
+import { createPersonalLedgerComponent } from '../components/personalLedgerComponent.js';
+// La cuenta atrás de la Convalecencia (SPEC-12, Tarea 6.4): reloj
+// diario, hitos {≤7, ≤3, 1, alzamiento} y alzamiento sin recarga.
+import { createConvalescenceCountdownComponent } from '../components/convalescenceCountdownComponent.js';
+
 /** Rótulos solemnes de la vista (Art. V). */
 export const USER_PANEL_VIEW_TITLE = 'Mi morada';
 export const USER_PANEL_EXPIRED_LEGEND =
@@ -301,7 +314,10 @@ export function createUserPanelView(mountRoot, options = {}) {
     return section;
   }
 
-  /** Sección de convalecencia o silencio noble (RF-05.1, RF-05.3). */
+  /** Sección de convalecencia o silencio noble (RF-05.1, RF-05.3).
+   *  Tarea 6.4: el contador real viste la cámara — reloj diario, hitos
+   *  y alzamiento SIN recarga (el evento dispara el refresco de la
+   *  vitrina completa, plan §3.4). */
   function convalescenceSection(panel) {
     const convalescence = panel.convalescence ?? null;
     // RF-05.3: sin convalecencia no se monta sección fantasma alguna.
@@ -309,28 +325,44 @@ export function createUserPanelView(mountRoot, options = {}) {
 
     const section = forge('article', { className: 'panel-section panel-section--convalescence' });
     section.appendChild(forge('h2', { text: 'Convalecencia Arcana' }));
-    const days = forge('p', {
-      className: 'panel-convalescence__days',
-      text: `Alzamiento de tu penitencia en ${convalescence.daysRemaining ?? 0} día(s).`,
+    const countdownRoot = forge('div', { className: 'panel-convalescence-slot' });
+    section.appendChild(countdownRoot);
+
+    const countdown = createConvalescenceCountdownComponent(countdownRoot, {
+      convalescence,
+      documentRef,
+      eventTarget,
+      onLifted: () => {
+        // RF-05.2: alzamiento → refresco de la vitrina SIN recarga; el
+        // santuario refrenda con sus datos (la penitencia desaparece,
+        // plan §3.4) y la región viva global lo anuncia ya narrado.
+        announce('Tu penitencia ha concluido.');
+        void retryLoad();
+      },
     });
-    const cause = forge('p', { text: convalescence.causeLegend ?? '' });
-    const retained = forge('p', { text: convalescence.retainedLegend ?? '' });
-    section.appendChild(days);
-    section.appendChild(cause);
-    section.appendChild(retained);
+    countdown.render();
     return section;
   }
 
-  /** Sección de credenciales: la custodia de la frase (RF-04, plan §2.6). */
+  /** Sección de credenciales: la custodia de la frase (RF-04, plan §2.6).
+   *  Tarea 6.2: el passphraseChangerComponent real viste el slot — los
+   *  tres campos, los cuatro veredictos y el recibo de disolución. */
   function credentialsSection() {
     const section = forge('article', { className: 'panel-section panel-section--credentials' });
     section.appendChild(forge('h2', { text: 'Custodia de la frase de paso' }));
-    // Tarea 6.2: el componente passphraseChangerComponent se monta aquí
-    // como slot; la vista declara la cámara y el aviso solemne del acto.
-    section.appendChild(forge('p', {
-      className: 'panel-section__slot',
-      text: 'La cámara de la custodia abre con el próximo sello de FASE 6.',
-    }));
+    const changerRoot = forge('div', { className: 'panel-passphrase-changer-slot' });
+    section.appendChild(changerRoot);
+
+    const changer = createPassphraseChangerComponent(changerRoot, {
+      panelClient,
+      documentRef,
+      eventTarget,
+      onPassphraseChanged: () => {
+        // La sesión actual persiste (RF-04.2): el orquestador NO toca
+        // la cookie; el recibo queda narrado por el propio componente.
+      },
+    });
+    void changer.render();
     return section;
   }
 
@@ -369,6 +401,34 @@ export function createUserPanelView(mountRoot, options = {}) {
     renounceDoor.addEventListener('click', () => { void requestRenounce(); });
     section.appendChild(renounceDoor);
 
+    return section;
+  }
+
+  /**
+   * Sección de la efigie para el linajado (Tarea 6.1): el slot de la
+   * FASE 5 ahora acoge al avatarPickerComponent real — rejilla del
+   * canon, subida propia y avisos solemnes; el repintado de la cabecera
+   * viaja POR EVENTO (panel:avatar-changed, plan §4.2).
+   */
+  function avatarSectionWithPicker(panel) {
+    const section = forge('article', { className: 'panel-section panel-section--avatar' });
+    section.appendChild(forge('h2', { text: 'Efigie' }));
+    const pickerRoot = forge('div', { className: 'panel-avatar-picker-slot' });
+    section.appendChild(pickerRoot);
+
+    const picker = createAvatarPickerComponent(pickerRoot, {
+      panelClient,
+      documentRef,
+      eventTarget,
+      onAvatarChanged: (detail) => {
+        // El evento del bus ya viajó por eventTarget; este canal directo
+        // queda para futuros consumidores del orquestador (Tarea 7.3).
+        void detail;
+      },
+    });
+    // La carga del canon es parte de la carga del panel (plan §4.1:
+    // una sola mirada); se dispara sin bloquear el resto de secciones.
+    void picker.render(panel.identity?.avatar ?? null);
     return section;
   }
 
@@ -411,16 +471,21 @@ export function createUserPanelView(mountRoot, options = {}) {
     return section;
   }
 
-  /** Sección de bitácora: la lente personal (RF-06, Tarea 6.3). */
+  /** Sección de bitácora: la lente personal (RF-06, Tarea 6.3).
+   *  El personalLedgerComponent real viste el slot: lista semántica,
+   *  paginación por cursor y leyenda de silencio (RF-06.3). */
   function ledgerSection() {
     const section = forge('article', { className: 'panel-section panel-section--ledger' });
     section.appendChild(forge('h2', { text: 'Bitácora personal' }));
-    // Tarea 6.3: el componente personalLedgerComponent se monta aquí
-    // como slot; la vista declara la cámara de la lente.
-    section.appendChild(forge('p', {
-      className: 'panel-section__slot',
-      text: 'La lente de la bitácora abre con el próximo sello de FASE 6.',
-    }));
+    const ledgerRoot = forge('div', { className: 'panel-ledger-slot' });
+    section.appendChild(ledgerRoot);
+
+    const ledger = createPersonalLedgerComponent(ledgerRoot, {
+      panelClient,
+      documentRef,
+      eventTarget,
+    });
+    void ledger.render();
     return section;
   }
 
@@ -586,17 +651,11 @@ export function createUserPanelView(mountRoot, options = {}) {
     if (convalescence !== null) sections.appendChild(convalescence);
 
     // Efigie: pendiente del peregrino (principio rector 3); para el
-    // linajado, el avatarPickerComponent (Tarea 6.1) montará su slot.
+    // linajado, el picker real de la Tarea 6.1 viste su cámara.
     if (isRestricted) {
       sections.appendChild(restrictedSection('avatar'));
     } else {
-      const avatarSection = forge('article', { className: 'panel-section panel-section--avatar' });
-      avatarSection.appendChild(forge('h2', { text: 'Efigie' }));
-      avatarSection.appendChild(forge('p', {
-        className: 'panel-section__slot',
-        text: 'La cámara de la efigie abre con el próximo sello de FASE 6.',
-      }));
-      sections.appendChild(avatarSection);
+      sections.appendChild(avatarSectionWithPicker(panel));
     }
 
     sections.appendChild(credentialsSection());

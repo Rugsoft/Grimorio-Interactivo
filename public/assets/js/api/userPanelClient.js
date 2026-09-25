@@ -9,6 +9,7 @@
  *   chooseAvatar(mode, payload)        POST   /api/v1/panel/avatar
  *   removeAvatar()                     DELETE /api/v1/panel/avatar
  *   changePassphrase(payload)          POST   /api/v1/panel/passphrase
+ *   fetchLedger(cursor)                GET    /api/v1/panel/ledger
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): fetch nativo; cero axios ni librerías
@@ -253,6 +254,24 @@ export function createUserPanelClient(options = {}) {
      * @param {string} newPassphraseRepeat Nueva frase (confirmación).
      * @returns {Promise<object>} Sobre con el veredicto del santuario.
      */
+    /**
+     * GET /panel/ledger?cursor={cursor} — la Lente de Bitácora Personal
+     * (RF-06.1/06.2, Tareas 4.1/4.2 del backend; plan §2.7).
+     *
+     * Pura lente de lectura: 20 asientos por página, cursor opaco, sin
+     * parámetro de identidad ajena (403 LEDGER_NOT_YOURS si se colara).
+     *
+     * @param {string|null} [cursor] Cursor opaco de la página anterior.
+     * @returns {Promise<object>} 200 con { entries, nextCursor };
+     *   401; 403 LEDGER_NOT_YOURS; 500 PANEL_UNAVAILABLE.
+     */
+    fetchLedger(cursor = null) {
+      const query = cursor !== null && cursor !== ''
+        ? `?cursor=${encodeURIComponent(String(cursor))}`
+        : '';
+      return requestJson(`${apiBase}/panel/ledger${query}`, { method: 'GET' });
+    },
+
     changePassphrase(currentPassphrase, newPassphrase, newPassphraseRepeat) {
       return requestJson(
         `${apiBase}/panel/passphrase`,
