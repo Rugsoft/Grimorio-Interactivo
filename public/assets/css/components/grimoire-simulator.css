@@ -286,6 +286,67 @@
 /* ---------------------------------------------------------------------
  * 5. Maniquí Arcano: barra de salud y distintivo de barrera (RF-02.1).
  * ------------------------------------------------------------------- */
+/* Rincón del gesto compartido (SPEC-11, H8b): margen del pergamino al
+   pie de la página iluminada, AJENO al dummy-host. Vivir dentro del
+   anfitrión del maniquí ensanchaba su caja flex y empujaba efigie y
+   halo fuera del centro. */
+.grimoire-simulator__tome-corner {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  z-index: 4; /* sobre el lienzo (z:2) y el aura (z:3); jamás roba foco al blanco */
+  max-width: min(40%, 240px); /* el rincón jamás invade el halo del blanco */
+  padding: var(--space-ink-2, 8px) var(--space-ink-3, 16px) var(--space-ink-3, 16px);
+  background-color: rgba(28, 25, 22, 0.55); /* velo del cuero sobre el pergamino */
+  border: 1px solid rgba(212, 169, 78, 0.28);
+  border-radius: var(--radius-seal, 12px);
+  pointer-events: auto; /* los gestos sí reciben clic; el host no los robaba */
+}
+
+/* Marco heráldico tenue: dos ángulos dorados en esquinas opuestas,
+   como hierro de encuadernación, sin disputar protagonismo al tomo. */
+.grimoire-simulator__tome-corner::before,
+.grimoire-simulator__tome-corner::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--color-gold-arcane-dim, #9c7b35);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.grimoire-simulator__tome-corner::before {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 6px;
+}
+.grimoire-simulator__tome-corner::after {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 6px;
+}
+
+/* Rótulo del rincón: versalitas de sello, oro apagado. Fuera del host
+   repintado: sobrevive a cada hojear sin repintarse. */
+.grimoire-simulator__tome-corner-title {
+  margin: 0 0 var(--space-ink-1, 4px);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small, 0.78rem);
+  letter-spacing: var(--letter-spacing-seal, 0.08em);
+  color: var(--color-gold-burnished, #aa8624);
+}
+
+.grimoire-simulator__tome-gestures {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-ink-2, 8px);
+}
+
 .combat-dummy__figure {
   position: relative;
   display: flex;

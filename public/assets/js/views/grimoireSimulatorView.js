@@ -293,10 +293,19 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
    * — hallazgo H8b): el mismo gesto del catálogo, montado con el estado
    * embebido del DTO de la página corriente. Repintada en cada cambio de
      * página por `renderTomeGestures()` (desde `handlePageChange`).
+   *
+   * Vive en el cameraSlot (no en el dummy-host): alojarla dentro del
+   * anfitrión del maniquí ensanchaba su caja flex y desplazaba la efigie
+   * y su halo de aura del centro de la Cámara. El rótulo «Actos del
+   * Adepto» vive FUERA del host repintado para sobrevivir a cada hojear.
    */
+  const tomeGestureCorner = elementFactory('div');
+  tomeGestureCorner.className = 'grimoire-simulator__tome-corner';
+  const tomeGestureTitle = createTextElement('p', 'grimoire-simulator__tome-corner-title', 'Actos del Adepto');
+  tomeGestureCorner.appendChild(tomeGestureTitle);
   const tomeGestureHost = elementFactory('div');
   tomeGestureHost.className = 'grimoire-simulator__tome-gestures';
-
+  tomeGestureCorner.appendChild(tomeGestureHost);
 
   const canvas = options.canvas ?? elementFactory('canvas');
   canvas.className = 'arcane-canvas';
@@ -306,7 +315,7 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
   const dummyHost = elementFactory('div');
   dummyHost.className = 'grimoire-simulator__dummy-host';
   cameraSlot.appendChild(dummyHost);
-  dummyHost.appendChild(tomeGestureHost);
+  cameraSlot.appendChild(tomeGestureCorner);
 
   // --- Bitácora de Pruebas (RF-05.3) ---
   const logbook = elementFactory('aside');
@@ -548,10 +557,16 @@ export function createGrimoireSimulatorView(mountRoot, options = {}) {
       for (const child of [...(tomeGestureHost.children ?? [])]) child.remove?.();
     }
 
+    // El rincón solo se exhibe cuando la página corriente declara actos
+    // del adepto: anónimo y DTO legado restauran la Cámara a su calma.
+    const hideCorner = () => tomeGestureCorner.setAttribute('hidden', '');
+    const showCorner = () => tomeGestureCorner.removeAttribute('hidden');
+
     const spell = state.currentSpell;
-    if (spell === null || spell === undefined) return;
+    if (spell === null || spell === undefined) { hideCorner(); return; }
     const adeptState = spell.adeptState;
-    if (adeptState === null || adeptState === undefined || typeof adeptState !== 'object') return;
+    if (adeptState === null || adeptState === undefined || typeof adeptState !== 'object') { hideCorner(); return; }
+    showCorner();
 
     const status = String(spell.status ?? '');
     const collected = adeptState.collected === true;
