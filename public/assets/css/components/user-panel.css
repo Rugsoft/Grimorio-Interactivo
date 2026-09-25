@@ -1,0 +1,220 @@
+/**
+ * user-panel.css — Hoja del Panel del Adepto (SPEC-12, Tarea 5.4).
+ *
+ * Constitución:
+ *   - RNF-07 (plan §7): esta hoja SOLO viste tokens del sistema de
+ *     diseño (SPEC-02); cero literales de color o tipografía fuera del
+ *     canon — la auditoría de literales (Tarea 8.2) la centinela.
+ *   - Artículo IV (Velo Arcano): pergamino, obsidiana y oro arcano.
+ *   - Artículo V: comentarios en noble castellano; clases kebab-case
+ *     semánticas (`.panel-*`).
+ */
+
+/* ------------------------------------------------------------------
+   El lienzo de la morada: fondo de obsidiana y tinta pergamino.
+   ------------------------------------------------------------------ */
+.user-panel {
+  display: grid;
+  gap: var(--space-ink-4);
+  max-width: var(--measure-parchment);
+  margin: 0 auto;
+  padding: var(--space-ink-4) var(--space-ink-3);
+  color: var(--color-text-primary);
+}
+
+/* ------------------------------------------------------------------
+   Jerarquía de encabezados (RNF-03): un solo h1 solemne, secciones
+   con h2 en tipografía de sello.
+   ------------------------------------------------------------------ */
+.user-panel h1 {
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  color: var(--color-gold-arcane);
+  letter-spacing: var(--letter-spacing-seal);
+  margin: 0 0 var(--space-ink-3);
+}
+
+.user-panel h2 {
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-large);
+  color: var(--color-gold-burnished);
+  margin: 0 0 var(--space-ink-2);
+}
+
+/* Región viva única (RNF-03, plan §4.3): reservada y silenciosa. */
+.panel-live-region {
+  min-height: 1.5em;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-ink-small);
+}
+
+/* ------------------------------------------------------------------
+   Secciones de la vitrina: tarjetas de pergamino oscuro.
+   ------------------------------------------------------------------ */
+.panel-section {
+  background: var(--color-parchment-surface);
+  border: var(--border-ink);
+  border-radius: var(--radius-seal);
+  padding: var(--space-ink-4);
+  box-shadow: var(--shadow-arcane-soft);
+}
+
+.panel-section h2 {
+  margin-top: 0;
+}
+
+/* Sección pendiente del peregrino (RF-01.3): vestida de espera noble. */
+.panel-section--restricted {
+  border-style: dashed;
+}
+
+.panel-section__pending {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.panel-section__slot {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-ink-small);
+}
+
+/* ------------------------------------------------------------------
+   Identidad y demás filas de datos: listas de definición semánticas.
+   ------------------------------------------------------------------ */
+.panel-identity dt,
+.panel-lineage dt,
+.panel-clan dt,
+.panel-session dt,
+.panel-works dt {
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-burnished);
+  margin-top: var(--space-ink-2);
+}
+
+.panel-identity dd,
+.panel-lineage dd,
+.panel-clan dd,
+.panel-session dd,
+.panel-works dd {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+/* ------------------------------------------------------------------
+   Botones de conducción y CTA (RNF-03: objetivo táctil de 44px).
+   ------------------------------------------------------------------ */
+.panel-cta,
+.panel-section__cta {
+  display: inline-block;
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-4);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-ink-seal);
+  background: var(--color-gold-arcane);
+  border: none;
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.panel-cta:hover,
+.panel-section__cta:hover {
+  filter: brightness(1.1);
+}
+
+.panel-cta:focus-visible,
+.panel-section__cta:focus-visible {
+  outline: 2px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.panel-cta--renounce {
+  background: var(--color-bronze-ceremonial);
+  color: var(--color-parchment);
+}
+
+/* ------------------------------------------------------------------
+   Diálogo solemne propio (Tarea 5.3): foco preso por el elemento
+   <dialog> nativo; la vista devuelve el foco a su origen al cerrar
+   (verificado por el arnés, RNF-03).
+   ------------------------------------------------------------------ */
+.panel-dialog {
+  background: var(--color-bg-obsidian-elevated);
+  color: var(--color-text-primary);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  box-shadow: var(--shadow-arcane);
+  padding: var(--space-ink-4);
+  max-width: min(90vw, 480px);
+}
+
+.panel-dialog::backdrop {
+  background: var(--veil-obsidian-backdrop);
+}
+
+.panel-dialog__confirm,
+.panel-dialog__cancel {
+  display: inline-block;
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  margin-right: var(--space-ink-2);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  border: none;
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.panel-dialog__confirm {
+  background: var(--color-bronze-ceremonial);
+  color: var(--color-parchment);
+}
+
+.panel-dialog__cancel {
+  background: var(--color-stone-disabled);
+  color: var(--color-stone-disabled-text);
+}
+
+.panel-dialog__confirm:hover,
+.panel-dialog__cancel:hover {
+  filter: brightness(1.1);
+}
+
+.panel-dialog__confirm:focus-visible,
+.panel-dialog__cancel:focus-visible {
+  outline: 2px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------
+   Estados solemnes: expiración (401) y velo (500) con reintento.
+   ------------------------------------------------------------------ */
+.user-panel--expired,
+.user-panel--unavailable {
+  text-align: center;
+  padding: var(--space-ink-6) var(--space-ink-3);
+}
+
+.user-panel--expired [role='alert'],
+.user-panel--unavailable p {
+  color: var(--color-text-secondary);
+}
+
+/* ------------------------------------------------------------------
+   Degradación noble (RNF-03): sin animaciones si el adepto las ha
+   vedado (prefers-reduced-motion del canon de la checklist manual 8).
+   ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .panel-cta,
+  .panel-section__cta,
+  .panel-dialog__confirm,
+  .panel-dialog__cancel {
+    transition: none;
+  }
+}

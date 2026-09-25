@@ -67,6 +67,7 @@ import {
   dissolve as apiDissolve,
   dissolveAll as apiDissolveAll,
   fetchAuditLog as apiFetchAuditLog,
+  renounceAccount as apiRenounceAccount,
 } from './api/authClient.js';
 import {
   retainRoute as apiRetainRoute,
@@ -74,6 +75,9 @@ import {
   sealOath as apiSealOath,} from './api/lineageOathClient.js';
 import { createVestibuleClient } from './api/vestibuleClient.js';
 import { createGrimoireCollectionClient, ceremonialLegendFor } from './api/grimoireCollectionClient.js';
+// El Panel del Adepto (SPEC-12, Tarea 5.1): la morada privada del vinculado.
+import { createUserPanelClient } from './api/userPanelClient.js';
+import { createUserPanelView } from './views/userPanelView.js';
 import { createCodexView } from './views/elementalCodexView.js';
 import { createElementalMatrixClient } from './api/elementalMatrixClient.js';
 import { createExperimentalHallView } from './views/experimentalHallView.js';
@@ -111,6 +115,10 @@ export const HASH_TO_VIEW_MAP = Object.freeze({
   // propia y deep-linkable; el peregrino sin linaje queda retenido por
   // el interceptor (SPEC-09) y el backend refuerza con 403.
   '#/grimorio': 'collection',
+  // Mi morada (SPEC-12, Tarea 5.1): el Panel del Adepto, ruta propia y
+  // deep-linkable; el peregrino sin linaje queda retenido por el
+  // interceptor (SPEC-09) — 'panel' NO entra en OATH_EXEMPT_VIEWS.
+  '#/morada': 'panel',
 });
 
 /** Mapeo canónico de vista a hash de URL. */
@@ -127,6 +135,7 @@ export const VIEW_TO_HASH_MAP = Object.freeze({
   juramento: '#/juramento',
   vestibule: '#/vestibulo',
   collection: '#/grimorio',
+  panel: '#/morada',
 });
 
 /**
@@ -169,6 +178,9 @@ export function createGrimoireApp(options = {}) {
       consecrate: apiConsecrate,
       dissolve: apiDissolve,
       dissolveAll: apiDissolveAll,
+      // La superficie canónica de la renuncia (SPEC-03 RF-09), puerta
+      // del Panel del Adepto (Tarea 5.3): el orquestador solo la cursa.
+      renounceAccount: apiRenounceAccount,
     },
     lineageOathClient = {
       retainRoute: apiRetainRoute,
@@ -185,6 +197,9 @@ export function createGrimoireApp(options = {}) {
     elementalMatrixClient = createElementalMatrixClient(),
     moderationClient = createModerationClient(),
     auditClient = { fetchAuditLog: apiFetchAuditLog },
+    // El Panel del Adepto (SPEC-12, Tarea 5.1): cliente inyectable para
+    // los arneses, patrón del cliente del tomo.
+    userPanelClient = createUserPanelClient(),
     windowRef = globalThis.window,
     documentRef = globalThis.document,
   } = options;
@@ -611,6 +626,46 @@ export function createGrimoireApp(options = {}) {
       });
       currentView = { name: 'collection', instance: collectionView };
       await collectionView.render();
+      return;
+    }
+
+    if (viewName === 'panel') {
+      // Mi morada (SPEC-12, Tarea 5.1): el Panel del Adepto. El peregrino
+      // sin linaje jamás llega aquí: el interceptor de retención lo desvía
+      // a «juramento» ('panel' NO está en OATH_EXEMPT_VIEWS). La vista
+      // emite `panel:restricted-section-activated` y el orquestador
+      // conducirá a la ceremonia en los retos de retención (Tarea 5.2);
+      // hoy la emisión queda observada sin desvío adicional.
+      const panelView = createUserPanelView(appRoot, {
+        panelClient: userPanelClient,
+        // Conducción del peregrino (Tarea 5.2, RF-01.3): toda sección
+        // sujeta al juramento lleva a la ceremonia con un solo gesto.
+        onRestrictedSectionActivated: () => {
+          void navigate('juramento');
+        },
+        // Puertas a las cámaras canónicas (Tarea 5.3, RF-08.2): el
+        // panel conduce, jamás duplica la gestión.
+        onNavigateToClanManagement: () => {
+          void navigate('vestibule');
+        },
+        onNavigateToTome: () => {
+          void navigate('collection');
+        },
+        // La renuncia se cursa en su superficie canónica (SPEC-03 RF-09,
+        // endpoint renounce-account): el diálogo del panel ya pidió la
+        // confirmación solemne; aquí el orquestador decide el curso.
+        onRenounceRequested: () => {
+          void authClient.renounceAccount?.().then(() => apiCheckSessionWrapper());
+        },
+        // RF-01.2: la vitrina 401 conduce al umbral para reautenticar.
+        onSessionExpired: () => {
+          void navigate('landing');
+        },
+        elementFactory,
+        documentRef,
+      });
+      currentView = { name: 'panel', instance: panelView };
+      await panelView.render();
       return;
     }
 

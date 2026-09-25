@@ -104,22 +104,22 @@
 
 ## FASE 5 — Frontend: la Vista del Panel
 
-- [ ] **Tarea 5.1 — Cliente API y esqueleto de la vista**
+- [x] **Tarea 5.1 — Cliente API y esqueleto de la vista**
   *Cubre:* RF-02.1, RNF-02.  
   *Alcance:* `public/assets/js/api/userPanelClient.js` (5 llamadas, sobre canónico de errores) y `public/assets/js/views/userPanelView.js` con secciones (vitrina, avatar, frase, convalecencia, bitácora, obras) renderizadas con `createElement`/`textContent` (innerHTML prohibido). Arnés `scratch/test_user_panel_view.mjs` fases [1,2].  
   **Hecho cuando:** el arnés mjs aserta la resolución de `#/morada → panel`, la renderización completa de la vitrina y el centinela de innerHTML en verde.
 
-- [ ] **Tarea 5.2 — Estados del peregrino en la vista**
+- [x] **Tarea 5.2 — Estados del peregrino en la vista**
   *Cubre:* RF-01.3, RF-08.2, principio rector 3.  
   *Alcance:* secciones vestidas como pendientes del juramento con conducción vía `panel:restricted-section-activated` → `navigate('juramento')`; credenciales plenamente operativas. Arnés fase [3].  
   **Hecho cuando:** el arnés mjs aserta que el peregrino ve las secciones pendientes, que activar el avatar emite el evento de conducción y que el formulario de frase queda operativo.
 
-- [ ] **Tarea 5.3 — Guardia de rótulos prohibidos (RF-03.4 de SPEC-09)**
+- [x] **Tarea 5.3 — Guardia de rótulos prohibidos (RF-03.4 de SPEC-09)**
   *Cubre:* RF-08.3.  
   *Alcance:* asertos de ausencia en el DOM del panel: jamás «Cambiar de linaje», jamás cambio de alias/correo, jamás baja (patrón de FASE 2 del arnés del distintivo); los enlaces de gestión (clan, tomo, renuncia) conducen, no duplican. Arnés fase [4].  
   **Hecho cuando:** el arnés mjs aserta la ausencia de los tres rótulos prohibidos y la presencia de las conducciones a las cámaras canónicas.
 
-- [ ] **Tarea 5.4 — Accesibilidad estructural de la vista**
+- [x] **Tarea 5.4 — Accesibilidad estructural de la vista**
   *Cubre:* RNF-03, RNF-07.  
   *Alcance:* jerarquía de encabezados, región viva única del panel, foco devuelto tras diálogos, hoja `user-panel.css` solo con tokens (auditoría de literales). Arnés fase [5] + verificación de literales.  
   **Hecho cuando:** el arnés mjs aserta la región viva única, la devolución de foco y la hoja sin literales de color fuera de tokens.

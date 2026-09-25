@@ -166,6 +166,20 @@ export async function checkSession() {
 }
 
 /**
+ * POST /api/v1/auth/renounce-account — Renuncia al Vínculo (RF-09.1,
+ * cierre de SPEC-03). Derecho al olvido del titular de la cookie: purga
+ * irreversible de datos personales con preservación del legado anónimo
+ * (ACC_LINK_RENOUNCED en la bitácora). El Panel del Adepto (SPEC-12,
+ * Tarea 5.3) conduce a esta superficie canónica tras su confirmación
+ * solemne propia: el panel muestra la puerta, jamás la palanca.
+ *
+ * @returns {Promise<object>} Sobre { success, status, data | error }.
+ */
+export async function renounceAccount() {
+  return requestJson(`${API_BASE}/auth/renounce-account`, { method: 'POST' });
+}
+
+/**
  * Serializa parámetros en query string (URLSearchParams nativo), omitiendo
  * valores vacíos o nulos.
  *

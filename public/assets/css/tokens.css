@@ -73,6 +73,9 @@
 
   /* Fondos del Santuario: obsidiana arcana y carbón profundo. */
   --color-bg-obsidian-deep: #0c0b0e;
+  /* Velo del backdrop de diálogos solemnes (SPEC-12): la obsidiana al
+     70% para que la cámara activa respire bajo la niebla del diálogo. */
+  --veil-obsidian-backdrop: rgba(12, 11, 14, 0.7);
   --color-bg-obsidian-surface: #141318;
   --color-bg-obsidian-elevated: #1b1922;
 
