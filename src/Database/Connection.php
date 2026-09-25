@@ -62,9 +62,20 @@ final class Connection
         // (deploy/infinityfree/env.php define GRIMORIO_DB_DSN vía `define`,
         // porque el sandbox de InfinityFree tiene `putenv` en
         // disable_functions y la vía de entorno muere en silencio) y,
-        // como fallback, el entorno clásico; si nada existe, SQLite en
-        // memoria (solo desarrollo).
-        $this->dsn         = (string) (defined('GRIMORIO_DB_DSN') ? constant('GRIMORIO_DB_DSN') : (getenv('GRIMORIO_DB_DSN') ?: 'sqlite::memory:'));
+        // como fallback, el entorno clásico; si nada existe, en SAPI web se
+        // busca una base persistente existente antes de caer en memoria.
+        $defaultDsn = 'sqlite::memory:';
+        if (PHP_SAPI !== 'cli') {
+            $projectRoot = dirname(__DIR__, 2);
+            $demoDb = $projectRoot . '/scratch/demo_live.sqlite';
+            $mainDb = $projectRoot . '/database/grimorio.db';
+            if (is_file($demoDb)) {
+                $defaultDsn = 'sqlite:' . $demoDb;
+            } elseif (is_file($mainDb)) {
+                $defaultDsn = 'sqlite:' . $mainDb;
+            }
+        }
+        $this->dsn         = (string) (defined('GRIMORIO_DB_DSN') ? constant('GRIMORIO_DB_DSN') : (getenv('GRIMORIO_DB_DSN') ?: $defaultDsn));
         $this->dbUser      = (string) (defined('GRIMORIO_DB_USER') ? constant('GRIMORIO_DB_USER') : getenv('GRIMORIO_DB_USER'));
         $this->dbPassword  = (string) (defined('GRIMORIO_DB_PASS') ? constant('GRIMORIO_DB_PASS') : getenv('GRIMORIO_DB_PASS'));
     }

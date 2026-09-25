@@ -414,7 +414,8 @@ function runSuite(string $scratchDir, string $suite): array
     }
 
     $runner = str_ends_with($suite, '.mjs') ? 'node' : escapeshellarg(PHP_BINARY);
-    $command = 'timeout 300 ' . $runner . ' ' . escapeshellarg($scratchDir . '/' . $suite) . ' 2>&1';
+    $prefix = DIRECTORY_SEPARATOR === '\\' ? '' : 'timeout 300 ';
+    $command = $prefix . $runner . ' ' . escapeshellarg($scratchDir . '/' . $suite) . ' 2>&1';
     exec($command, $lines, $exitCode);
     $output = implode("\n", $lines);
     $lines = [];

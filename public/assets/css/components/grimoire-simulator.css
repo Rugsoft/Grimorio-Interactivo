@@ -311,7 +311,7 @@
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 1px solid var(--color-gold-arcane-dim, #9c7b35);
+  border: 1px solid var(--color-gold-arcane-dim);
   opacity: 0.6;
   pointer-events: none;
 }
@@ -337,7 +337,7 @@
   font-family: var(--font-arcane-seal);
   font-size: var(--font-size-ink-small, 0.78rem);
   letter-spacing: var(--letter-spacing-seal, 0.08em);
-  color: var(--color-gold-burnished, #aa8624);
+  color: var(--color-gold-burnished);
 }
 
 .grimoire-simulator__tome-gestures {

@@ -159,6 +159,7 @@ export function createClanView(mountRoot, options = {}) {
     onSpellSelect = null,
     onMembershipChanged = null,
     onError = null,
+    onBack = null,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
   } = options;
@@ -467,6 +468,29 @@ export function createClanView(mountRoot, options = {}) {
     lineageNode.setAttribute('data-lineage', String(clan.lineageType ?? ''));
   }
 
+  /** Pinta la navegación de retorno al Salón de los Linajes. */
+  function paintBackNavigation(section) {
+    const nav = track(elementFactory('nav'));
+    nav.className = 'clan-view__navigation';
+    nav.setAttribute('aria-label', 'Retorno al Salón de Linajes');
+
+    const backButton = track(elementFactory('button'));
+    backButton.type = 'button';
+    backButton.className = 'clan-view__back-button button button--secondary';
+    backButton.textContent = '← Volver al Salón de Linajes';
+    backButton.setAttribute('aria-label', 'Volver al Salón de los Linajes');
+    backButton.addEventListener('click', () => {
+      if (typeof onBack === 'function') {
+        onBack();
+      } else if (typeof globalThis.location !== 'undefined') {
+        globalThis.location.hash = '#/linajes';
+      }
+    });
+
+    nav.appendChild(backButton);
+    section.appendChild(nav);
+  }
+
   /** Pinta el sello de Herencia Ancestral (RF-05.3, RF-05.4). */
   function paintHeritageSeal(section) {
     const seal = appendTextElement(section, 'p', 'clan-view__heritage-seal', HERITAGE_ANCESTRAL_SEAL);
@@ -765,6 +789,7 @@ export function createClanView(mountRoot, options = {}) {
     article.setAttribute('role', 'region');
     article.setAttribute('aria-labelledby', 'clanViewTitle');
 
+    paintBackNavigation(article);
     if (isArchived) paintHeritageSeal(article);
     paintHeraldry(article, clan);
     paintFacts(article, clan);

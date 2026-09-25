@@ -85,6 +85,22 @@ final class Request
         $questionMarkPosition = strpos($rawUri, '?');
         $path = $questionMarkPosition === false ? $rawUri : substr($rawUri, 0, $questionMarkPosition);
 
+        // Soporte de subdirectorios (Apache / XAMPP / proxies inversos):
+        // si SCRIPT_NAME apunta a un script PHP en una subcarpeta (ej. /sub/public/index.php),
+        // se extrae el prefijo de carpeta para que el Router reciba rutas limpias (/api/v1/...).
+        // En servidores empotrados (php -S con enrutador), SCRIPT_NAME refleja la URI solicitada
+        // y no termina en .php, por lo que no debe amputarse el sendero.
+        $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '');
+        if (str_ends_with(strtolower($scriptName), '.php')) {
+            $baseDir = str_replace('\\', '/', dirname($scriptName));
+            if ($baseDir !== '/' && $baseDir !== '.' && $baseDir !== '' && str_starts_with($path, $baseDir)) {
+                $path = substr($path, strlen($baseDir));
+                if (!str_starts_with($path, '/')) {
+                    $path = '/' . $path;
+                }
+            }
+        }
+
         // PHP ya parsea el query string en $_GET con codificación estándar.
         $queryParams = $_GET;
 

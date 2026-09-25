@@ -394,7 +394,8 @@ function runSuite(string $scratchDir, string $suite): array
     }
 
     $runner = str_ends_with($suite, '.mjs') ? 'node' : escapeshellarg(PHP_BINARY);
-    $command = 'timeout 300 ' . $runner . ' ' . escapeshellarg($scratchDir . '/' . $suite) . ' 2>&1';
+    $prefix = DIRECTORY_SEPARATOR === '\\' ? '' : 'timeout 300 ';
+    $command = $prefix . $runner . ' ' . escapeshellarg($scratchDir . '/' . $suite) . ' 2>&1';
     exec($command, $lines, $exitCode);
     $output = implode("\n", $lines);
     $lines = [];
@@ -430,8 +431,8 @@ $byDesignNonZero = [
     'test_spec08_closure.php',
     'test_spec09_closure.php',
     'test_spell_balance_bridge.php',
-    // Este mismo arnés: su EXITO es el final del proceso, no una suite más.
     'test_spec10_closure.php',
+    'test_spec11_closure.php',
 ];
 
 $totalAsserts = 0;

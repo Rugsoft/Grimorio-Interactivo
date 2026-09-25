@@ -1,0 +1,26 @@
+# =====================================================================
+# .htaccess — Front Controller del Grimorio Interactivo para Apache / XAMPP
+#
+# Constitución:
+#   - Artículo I (Dogma Vanilla): reescritura nativa Apache sin frameworks.
+#   - AGENTS.md 2.1: Front Controller único en public/index.php.
+#   - El shell de la SPA (index.html) y recursos estáticos (assets/, img/)
+#     se sirven directamente sin pasar por PHP.
+# =====================================================================
+
+DirectoryIndex index.html index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # La raíz sirve el shell de la SPA (index.html)
+    RewriteRule ^$ index.html [L]
+
+    # Los ficheros y directorios estáticos reales se entregan directamente
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Todas las demás peticiones (API /api/v1/...) viajan al Front Controller
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>

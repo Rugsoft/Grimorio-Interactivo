@@ -86,21 +86,22 @@ $pdo->exec(
    ───────────────────────────────────────────────────────────────────── */
 
 $users = [
-    ['usr_marea_pat', 'Alta Marea', 'marea@primordialis.arc', 'master', 'cln_mares'],
-    ['usr_marea_adept', 'Brisa de Sal', 'brisa@primordialis.arc', 'editor', 'cln_mares'],
-    ['usr_tempestad_pat', 'Trueno Errante', 'trueno@primordialis.arc', 'master', 'cln_tempestad'],
-    ['usr_tempestad_adept', 'Élitro de Ámbar', 'elitro@primordialis.arc', 'master', 'cln_tempestad'],
+    ['usr_marea_pat', 'Alta Marea', 'marea@primordialis.arc', 'master', 'cln_mares', 'celestialTides'],
+    ['usr_marea_adept', 'Brisa de Sal', 'brisa@primordialis.arc', 'editor', 'cln_mares', 'celestialTides'],
+    ['usr_tempestad_pat', 'Trueno Errante', 'trueno@primordialis.arc', 'master', 'cln_tempestad', 'eternalTempest'],
+    ['usr_tempestad_adept', 'Élitro de Ámbar', 'elitro@primordialis.arc', 'master', 'cln_tempestad', 'eternalTempest'],
 ];
 
 $insertUser = $pdo->prepare(
-    'INSERT INTO users (id, alias, email, password_hash, role, clan_id, created_at, updated_at)
-     VALUES (:id, :alias, :email, :hash, :role, :clanId, :createdAt, :createdAt)'
+    'INSERT INTO users (id, alias, email, password_hash, role, clan_id, lineage, created_at, updated_at)
+     VALUES (:id, :alias, :email, :hash, :role, :clanId, :lineage, :createdAt, :createdAt)'
 );
 
-foreach ($users as [$id, $alias, $email, $role, $clanId]) {
+foreach ($users as [$id, $alias, $email, $role, $clanId, $lineage]) {
     $insertUser->execute([
         ':id' => $id, ':alias' => $alias, ':email' => $email,
         ':hash' => 'x', ':role' => $role, ':clanId' => $clanId,
+        ':lineage' => $lineage,
         ':createdAt' => '2026-02-01T00:00:00Z',
     ]);
 }

@@ -473,6 +473,8 @@ sort($mjsSuites);
 $byDesignNonZero = [
     'test_spec07_closure.php',
     'test_spec08_closure.php',
+    'test_spec10_closure.php',
+    'test_spec11_closure.php',
     'test_spell_balance_bridge.php',
 ];
 

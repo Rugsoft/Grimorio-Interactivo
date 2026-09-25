@@ -390,9 +390,16 @@ export function createGrimoireApp(options = {}) {
       // Ficha de la hermandad y su legado ancestral (SPEC-07, Tarea 6.4).
       // Contemplación pública: el visitante anónimo ve la casa entera y, si
       // quiere postular, el gesto conduce al umbral de acceso.
+      const targetClanId = String(navigateOptions.clanId ?? '');
+      if (windowRef?.location && targetClanId !== '') {
+        const expectedHash = `#/clan/${encodeURIComponent(targetClanId)}`;
+        if (windowRef.location.hash !== expectedHash) {
+          windowRef.location.hash = expectedHash;
+        }
+      }
       const clanView = createClanView(appRoot, {
         clanClient,
-        clanId: String(navigateOptions.clanId ?? ''),
+        clanId: targetClanId,
         store,
         dominionClient,
         onReservedAction: handleReservedAction,
@@ -401,11 +408,14 @@ export function createGrimoireApp(options = {}) {
           // El vínculo del mago mudó: la cabecera y el aviso se resincronizan.
           void apiCheckSessionWrapper();
         },
+        onBack: () => {
+          void navigate('clans');
+        },
         elementFactory,
         // El sello de la casa se forja en el documento del orquestador.
         documentRef,
       });
-      currentView = { name: effectiveView, instance: clanView };
+      currentView = { name: effectiveView, instance: clanView, clanId: targetClanId };
       await clanView.render();
       return;
     }
@@ -589,6 +599,7 @@ export function createGrimoireApp(options = {}) {
         onNavigateToLibrary: (hash) => {
           void navigate('library');
         },
+        onReservedAction: handleReservedAction,
         // CONVOCATORIA DESDE EL TOMO (SPEC-11, RF-03.1, Tarea 5.4): una
         // entrada viva abre el Simulador con su página ya iluminada. La
         // vista del tomo solo emite este gesto con `tomeMark` 'living'.
@@ -1278,29 +1289,48 @@ export function createGrimoireApp(options = {}) {
       if (typeof rawHash !== 'string') return null;
       const hash = rawHash.trim();
       if (hash.startsWith(SPELL_HASH_PREFIX)) return null;
+      if (hash.startsWith('#/clan/')) {
+        const clanId = decodeURIComponent(hash.slice('#/clan/'.length).trim());
+        if (clanId) {
+          return { view: 'clan', clanId };
+        }
+      }
       return HASH_TO_VIEW_MAP[hash] ?? null;
     }
 
     // Escucha activa de navegación por hash en la ventana (Atrás/Adelante y enlaces directos).
     windowHashListener = function handleWindowHashChange() {
-      const targetView = resolveViewFromHash(windowRef?.location?.hash);
-      if (targetView !== null && targetView !== currentView.name) {
-        void navigate(targetView);
+      const resolved = resolveViewFromHash(windowRef?.location?.hash);
+      if (resolved !== null) {
+        if (typeof resolved === 'object' && resolved.view === 'clan') {
+          if (currentView.name !== 'clan' || currentView.clanId !== resolved.clanId) {
+            void navigate('clan', { clanId: resolved.clanId });
+          }
+        } else if (resolved !== currentView.name) {
+          void navigate(resolved);
+        }
       }
     };
     windowRef?.addEventListener?.('hashchange', windowHashListener);
 
     // Enrutado inicial: la ruta por defecto del santuario es la portada,
-    // salvo que la URL porte un hash de vista válido (#/biblioteca, #/atrio, #/torre, #/codex, #/bitacora).
+    // salvo que la URL porte un hash de vista válido (#/biblioteca, #/atrio, #/torre, #/codex, #/bitacora, #/clan/...).
     // Un hash directo #hechizo-slug montará la portada de fondo mientras el
     // historyManager (resolveInitialHash) despliega la ficha por su cuenta (plan 4.3).
-    const initialViewFromHash = resolveViewFromHash(windowRef?.location?.hash);
+    const initialResolved = resolveViewFromHash(windowRef?.location?.hash);
+    const initialViewName = typeof initialResolved === 'object' && initialResolved !== null
+      ? initialResolved.view
+      : initialResolved;
     // La puerta solo se cierra ante un enlace directo a una vista de gestión
     // (no exenta): es el único caso en que la identidad decide el desvío.
-    if (initialViewFromHash !== null && !OATH_EXEMPT_VIEWS.includes(initialViewFromHash)) {
+    if (initialViewName !== null && !OATH_EXEMPT_VIEWS.includes(initialViewName)) {
       await sessionGate;
     }
-    await navigate(initialViewFromHash ?? 'landing');
+    if (typeof initialResolved === 'object' && initialResolved !== null && initialResolved.view === 'clan') {
+      await navigate('clan', { clanId: initialResolved.clanId });
+    } else {
+      await navigate(initialViewName ?? 'landing');
+    }
   }
 
   /**

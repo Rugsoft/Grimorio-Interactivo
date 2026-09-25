@@ -109,6 +109,7 @@ export function createGrimoireCollectionView(mountRoot, options = {}) {
   const {
     collectionClient,
     onNavigateToLibrary,
+    onReservedAction,
     documentRef = globalThis.document,
   } = options;
 
@@ -141,6 +142,7 @@ export function createGrimoireCollectionView(mountRoot, options = {}) {
   let paginationHost = null;
   let emptyStateBox = null;
   let sessionExpiredBox = null;
+  let accessButton = null;
   let liveRegion = null;
   let discardModal = null;
 
@@ -184,6 +186,7 @@ export function createGrimoireCollectionView(mountRoot, options = {}) {
     // (título, entradas, filtro y paginación) permanece íntegra.
     const gestures = findDescendants(viewRoot, (node) => node.tagName === 'BUTTON');
     for (const gesture of gestures) {
+      if (gesture === accessButton) continue;
       gesture.disabled = true;
       gesture.setAttribute('aria-disabled', 'true');
     }
@@ -523,6 +526,22 @@ export function createGrimoireCollectionView(mountRoot, options = {}) {
     expiredLegend.className = 'collection-view__expired-legend';
     expiredLegend.textContent = GRIMOIRE_COLLECTION_EXPIRED_LEGEND;
     sessionExpiredBox.appendChild(expiredLegend);
+
+    accessButton = elementFactory('button');
+    accessButton.type = 'button';
+    accessButton.className = 'collection-view__access-btn button button--primary';
+    accessButton.textContent = 'Cruzar el Umbral';
+    accessButton.setAttribute('aria-label', 'Cruzar el Umbral: renovar vínculo o consagrarse');
+    accessButton.addEventListener('click', () => {
+      if (typeof onReservedAction === 'function') {
+        onReservedAction('openGrimoire');
+      } else {
+        const thresholdBtn = documentRef?.getElementById?.('navCrossThreshold');
+        thresholdBtn?.click?.();
+      }
+    });
+    sessionExpiredBox.appendChild(accessButton);
+
     viewRoot.appendChild(sessionExpiredBox);
 
     // Filtro por afinidad con conteo (RF-02.3).

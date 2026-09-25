@@ -390,7 +390,8 @@ function runSuite(string $scratchDir, string $suite): array
     }
 
     $runner = str_ends_with($suite, '.mjs') ? 'node' : escapeshellarg(PHP_BINARY);
-    $command = 'timeout 300 ' . $runner . ' ' . escapeshellarg($scratchDir . '/' . $suite) . ' 2>&1';
+    $prefix = DIRECTORY_SEPARATOR === '\\' ? '' : 'timeout 300 ';
+    $command = $prefix . $runner . ' ' . escapeshellarg($scratchDir . '/' . $suite) . ' 2>&1';
     exec($command, $lines, $exitCode);
     $output = implode("\n", $lines);
     $lines = [];
@@ -420,8 +421,13 @@ $mjsSuites = array_map('basename', glob($scratchDir . '/test_*.mjs') ?: []);
 sort($phpSuites);
 sort($mjsSuites);
 
-/** Salidas no-cero que el repositorio declara deliberadas. */
-$byDesignNonZero = ['test_spec07_closure.php', 'test_spec08_closure.php', 'test_spell_balance_bridge.php'];
+$byDesignNonZero = [
+    'test_spec07_closure.php',
+    'test_spec08_closure.php',
+    'test_spec10_closure.php',
+    'test_spec11_closure.php',
+    'test_spell_balance_bridge.php',
+];
 
 $totalAsserts = 0;
 $redSuites = [];
