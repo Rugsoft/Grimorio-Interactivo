@@ -11,15 +11,20 @@
  *   por el distintivo del usuario y su clan con opción de disolución
  *   individual y global.
  *
- * Contratos verificados (RF-02.4, RF-07.1, plan 2.2):
+ * Contratos verificados (RF-02.4, RF-07.1, plan 2.2; ampliación auditoría
+ * de usabilidad — SPEC-09 RF-03.4 y RNF-03/RNF-05):
  *   - Modo anónimo: el componente muestra el botón «Cruzar el Umbral» que
  *     delega onCrossThreshold() (interceptación del orquestador).
  *   - Modo autenticado (setUser con el sobre data.user de la Tarea 4.1):
  *     el distintivo porta alias y clan (RF-07.1) y el menú desplegable
- *     arcano ofrece ver el libro personal, cambiar de clan en tregua y
- *     disolver el vínculo individual o globalmente (RF-02.4).
- *   - Accesibilidad: aria-expanded/aria-haspopup/aria-label, cierre con
- *     Escape, foco confinado al abrir.
+ *     arcano ofrece ver el libro personal y disolver el vínculo individual
+ *     o globalmente (RF-02.4). JAMÁS ofrece cambio de linaje (SPEC-09,
+ *     RF-03.4: el juramento es perpetuo).
+ *   - Accesibilidad: aria-expanded/aria-haspopup/aria-controls/aria-label
+ *     con oficio solemne del vinculado, semántica role=menu/menuitem,
+ *     cierre con Escape y clic externo, foco a la primera opción al abrir,
+ *     teclado de menú (flechas circulares, Inicio/Fin, Tab repliega) y
+ *     sello heráldico aria-hidden (sin doble anuncio del linaje).
  *   - Art. I: DOM nativo (innerHTML prohibido); Art. IV/V: leyendas
  *     solemnes en castellano, identificadores camelCase.
  *
@@ -110,6 +115,15 @@ function findByText(node, needle, found = []) {
   return found;
 }
 
+/** Búsqueda recursiva de descendientes que porten un atributo concreto. */
+function queryByAttribute(node, name, value, found = []) {
+  for (const child of node.children) {
+    if (child.getAttribute(name) === value) found.push(child);
+    queryByAttribute(child, name, value, found);
+  }
+  return found;
+}
+
 /** Enlace real del shell: el botón «Cruzar el Umbral» (Tarea 4.1 TASKS-01). */
 function buildBadgeRoot() {
   const badgeRoot = createFakeElement('div');
@@ -121,7 +135,11 @@ function buildBadgeRoot() {
   thresholdButton.textContent = 'Cruzar el Umbral';
   badgeRoot.appendChild(thresholdButton);
 
-  const documentSim = { createElement: (tag) => createFakeElement(tag) };
+  const documentSim = {
+    createElement: (tag) => createFakeElement(tag),
+    // El sello heráldico (runeSealComponent) forja su SVG con createElementNS.
+    createElementNS: (_namespace, tag) => createFakeElement(tag),
+  };
   return { badgeRoot, thresholdButton, documentSim };
 }
 
@@ -290,6 +308,99 @@ try {
   destroyInert = false;
 }
 assertCondition(destroyInert, 'Tras destroy(), setUser es inerte (sin fugas)');
+
+// --- FASE 6: Usabilidad y accesibilidad plena del menú (auditoría) ---
+console.log('\nFASE 6: Semántica de menú, teclado, clic externo e identidad accesible');
+
+{
+  const shell6 = buildBadgeRoot();
+  const badge6 = createMemoryBadgeRoot(shell6.badgeRoot, {
+    documentRef: shell6.documentSim,
+    onOpenGrimoire: () => { menuCallbacks.grimoire++; },
+  });
+  badge6.setUser(AUTHED_USER);
+  const badgeButton6 = byId(shell6.badgeRoot, 'userProfileToggle');
+  const menu6 = byId(shell6.badgeRoot, 'userProfileMenu');
+  const options6 = menu6.children;
+
+  // Semántica ARIA de menú (WCAG/APG).
+  assertCondition(menu6.getAttribute('role') === 'menu', 'El desplegable declara role=menu (semántica de menú)');
+  assertCondition(options6.every((li) => li.getAttribute('role') === 'none'), 'Cada li declara role=none (el rol menuitem vive en el botón)');
+  assertCondition(
+    options6.every((li) => li.children[0]?.getAttribute('role') === 'menuitem'),
+    'Cada opción declara role=menuitem (anuncio correcto a lectores de pantalla)',
+  );
+  assertCondition(badgeButton6.getAttribute('aria-controls') === 'userProfileMenu', 'El distintivo declara aria-controls hacia el menú');
+
+  // El sello heráldico es decorativo: jamás se anuncia dos veces.
+  // (AUTHED_USER no porta lineage, así que aquí no hay sello; la FASE 7
+  // ejercita un linaje jurado y aserta su aria-hidden allí.)
+
+  // Apertura: el foco cae en la PRIMERA OPCIÓN (botón), no en el li.
+  badgeButton6.dispatch('click');
+  assertCondition(options6[0]?.children[0]?.focusCount === 1, 'Al abrir, el foco cae en la primera opción (botón)');
+
+  // Teclado de menú: flechas circulan, Inicio/Fin saltan a los extremos.
+  shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[0].children[0] });
+  assertCondition(options6[1].children[0].focusCount === 1, 'Flecha abajo avanza a la segunda opción');
+  shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[1].children[0] });
+  assertCondition(options6[2].children[0].focusCount === 1, 'Flecha abajo avanza a la tercera opción');
+  shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[2].children[0] });
+  assertCondition(options6[0].children[0].focusCount === 2, 'La flecha abajo CIRCULA: tras la última vuelve a la primera');
+  shell6.badgeRoot.dispatch('keydown', { key: 'ArrowUp', target: options6[0].children[0] });
+  assertCondition(options6[2].children[0].focusCount === 2, 'Flecha arriba circula hacia atrás (a la última opción)');
+  shell6.badgeRoot.dispatch('keydown', { key: 'End', target: options6[0].children[0] });
+  assertCondition(options6[2].children[0].focusCount === 3, 'Fin salta a la última opción');
+  shell6.badgeRoot.dispatch('keydown', { key: 'Home', target: options6[2].children[0] });
+  assertCondition(options6[0].children[0].focusCount === 3, 'Inicio salta a la primera opción');
+
+  // Tab abandona el menú repliegándolo (sin foco perdido en menú abierto).
+  shell6.badgeRoot.dispatch('keydown', { key: 'Tab', target: options6[0].children[0] });
+  assertCondition(badgeButton6.getAttribute('aria-expanded') === 'false', 'Tab repliega el menú (sin foco perdido en desplegable abierto)');
+
+  // Clic externo: reabrir y hacer clic fuera del distintivo.
+  badgeButton6.dispatch('click');
+  assertCondition(badgeButton6.getAttribute('aria-expanded') === 'true', 'El menú reabre para probar el clic externo');
+  const stranger = createFakeElement('main');
+  shell6.badgeRoot.dispatch('click', { target: stranger });
+  assertCondition(badgeButton6.getAttribute('aria-expanded') === 'false', 'Un clic FUERA del distintivo repliega el menú (usabilidad)');
+
+  // Un clic DENTRO del distintivo (sobre una opción) no cierra por el camino externo:
+  // el flujo de selección es el que repliega (ya verificado en FASE 2).
+  badgeButton6.dispatch('click');
+  shell6.badgeRoot.dispatch('click', { target: badgeButton6 });
+  assertCondition(badgeButton6.getAttribute('aria-expanded') === 'true', 'Un clic dentro del distintivo NO lo repliega por el camino externo');
+
+  badge6.destroy();
+  assertCondition(menuCallbacks.grimoire === 1, 'destroy() tras la auditoría no altera el comportamiento previo');
+}
+
+// --- FASE 7: Identidad accesible por rol (rótulo AT, jamás visible) ---
+console.log('\nFASE 7: El nombre accesible declara el oficio del vinculado');
+
+{
+  const shell7 = buildBadgeRoot();
+  const badge7 = createMemoryBadgeRoot(shell7.badgeRoot, { documentRef: shell7.documentSim });
+  // El documento simulado necesita createElementNS para forjar el sello
+  // heráldico del linaje jurado (brecha destapada por esta fase: ningún
+  // aserto anterior ejercitaba un usuario CON linaje).
+  badge7.setUser({ id: 'usr_m', alias: 'MaestraFlora', role: 'master', clanId: '', clanName: '', lineage: 'worldRoots' });
+  const label7 = byId(shell7.badgeRoot, 'userProfileToggle').getAttribute('aria-label') ?? '';
+  assertCondition(label7.includes('MaestraFlora') && label7.includes('Maestro del Códice'), 'Una Maestra lee su oficio («Maestro del Códice») en el nombre accesible');
+  assertCondition(label7.includes('facultado para moderar'), 'El oficio de moderación se anuncia a los lectores de pantalla (RF-08.2)');
+  const seal7 = queryByAttribute(shell7.badgeRoot, 'class', 'user-profile__seal')[0] ?? null;
+  assertCondition(seal7 !== null && seal7.getAttribute('aria-hidden') === 'true', 'El sello heráldico es aria-hidden (sin doble anuncio del linaje)');
+
+  badge7.setUser({ id: 'usr_e', alias: 'Novato', role: 'editor', clanId: '', clanName: '' });
+  const labelEditor = byId(shell7.badgeRoot, 'userProfileToggle').getAttribute('aria-label') ?? '';
+  assertCondition(labelEditor.includes('Adepto') && !labelEditor.includes('facultado para moderar'), 'Un Adepto lee su oficio sin anuncio de moderación');
+
+  badge7.setUser({ id: 'usr_r', alias: 'Lectora', role: 'reader', clanId: '', clanName: '' });
+  const labelReader = byId(shell7.badgeRoot, 'userProfileToggle').getAttribute('aria-label') ?? '';
+  assertCondition(labelReader.includes('Lector'), 'Un Lector lee su oficio solemne');
+  assertCondition(!findByText(shell7.badgeRoot, 'master')[0], 'El rol técnico (inglés) jamás se imprime en el rótulo visible (Art. V)');
+  badge7.destroy();
+}
 
 // --- Centinela y resumen ---
 console.log('\n== CENTINELA DE CONSOLA ==');

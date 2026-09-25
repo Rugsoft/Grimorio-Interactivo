@@ -71,6 +71,28 @@ const PILGRIM_LEGEND = 'Peregrino sin Linaje';
 /** Rótulo neutro ante un linaje ajeno al catálogo local (degradación). */
 const UNKNOWN_LINEAGE_LEGEND = 'Linaje jurado';
 
+/** Roles con potestad de moderación, para el contador de sesión (RF-08.2). */
+const MODERATION_ROLES = Object.freeze(new Set(['master', 'supremeAdmin']));
+
+/**
+ * Leyenda accesible del rol del vinculado, en noble castellano (Artículo V).
+ *
+ * @param {string} role Rol técnico de la sesión.
+ * @returns {string} Nombre solemne del oficio.
+ */
+function roleLegend(role) {
+  switch (role) {
+    case 'editor':
+      return 'Adepto';
+    case 'master':
+      return 'Maestro del Códice';
+    case 'supremeAdmin':
+      return 'Admin Supremo';
+    default:
+      return 'Lector';
+  }
+}
+
 /**
  * Búsqueda recursiva de un descendiente por atributo id (compatible con
  * el DOM simulado del arnés).
@@ -171,13 +193,37 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     if (menuElement) menuElement.setAttribute('aria-hidden', 'true');
   }
 
+  /** ¿Vive el nodo dentro del distintivo? Recorrido de padres que funciona
+   *  tanto en el DOM real (parentNode) como en los DOM simulados de los
+   *  arneses (parentElement), sin depender de Element.contains. */
+  function isInsideBadge(node) {
+    if (node === null || node === undefined) return false;
+    if (node === badgeElement) return true;
+    let current = node.parentNode ?? node.parentElement ?? null;
+    while (current !== null && current !== undefined) {
+      if (current === badgeElement) return true;
+      current = current.parentNode ?? current.parentElement ?? null;
+    }
+    return false;
+  }
+
+  /** Cierre por clic externo (usabilidad): un gesto fuera del distintivo
+   *  repliega el menú, como espera cualquier menú desplegable. El listener
+   *  vive en el contenedor raíz (badgeRoot) para no fugar listeners globales
+   *  y se retira junto al resto en destroy(). */
+  function handleOutsideClick(event) {
+    if (!menuIsOpen) return;
+    if (isInsideBadge(event.target)) return;
+    closeMenu();
+  }
+
   /** Despliega el menú con gestión de foco accesible. */
   function openMenu() {
     menuIsOpen = true;
     toggleButton?.setAttribute('aria-expanded', 'true');
     if (menuElement) {
       menuElement.removeAttribute('aria-hidden');
-      const firstOption = menuElement.children?.[0];
+      const firstOption = menuElement.children?.[0]?.children?.[0] ?? menuElement.children?.[0];
       if (firstOption) firstOption.focus();
     }
   }
@@ -198,6 +244,29 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     if (event.key === 'Escape' && menuIsOpen) {
       closeMenu();
       toggleButton?.focus();
+      return;
+    }
+    // Navegación de menú (RNF-03, WCAG): flechas circulan por las opciones,
+    // Inicio/Fin saltan a los extremos y Tab abandona el menú repliegándolo.
+    if (!menuIsOpen || !menuElement) return;
+    const optionButtons = (menuElement.children ?? [])
+      .map((optionItem) => optionItem.children?.[0])
+      .filter((child) => child !== null && child !== undefined);
+    const currentIndex = optionButtons.indexOf(event.target);
+    if (currentIndex < 0) return;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault?.();
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex = (currentIndex + step + optionButtons.length) % optionButtons.length;
+      optionButtons[nextIndex]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault?.();
+      optionButtons[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault?.();
+      optionButtons[optionButtons.length - 1]?.focus();
+    } else if (event.key === 'Tab') {
+      closeMenu();
     }
   }
 
@@ -207,6 +276,14 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     if (keydownBound) return;
     keydownBound = true;
     badgeRoot.addEventListener('keydown', handleKeydown);
+  }
+
+  /** Cablea (una sola vez) el listener de clic externo sobre el contenedor. */
+  let outsideClickBound = false;
+  function bindOutsideClick() {
+    if (outsideClickBound) return;
+    outsideClickBound = true;
+    badgeRoot.addEventListener('click', handleOutsideClick);
   }
 
   /**
@@ -234,14 +311,22 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     toggleButton.setAttribute('type', 'button');
     toggleButton.setAttribute('aria-haspopup', 'true');
     toggleButton.setAttribute('aria-expanded', 'false');
+    toggleButton.setAttribute('aria-controls', 'userProfileMenu');
     const hasClan = user.clanId !== '' && typeof user.clanName === 'string' && user.clanName !== '';
     // El rótulo visible: alias + clan (SPEC-07), o alias + estado solemne.
+    // El sufijo « — menú» del nombre accesible anuncia el desplegable SIN
+    // contaminar el rótulo visible ( WCAG: el contenido del aria-label
+    // debe contener el texto visible del botón).
     const displayLegend = hasClan
       ? `${user.alias} — ${user.clanName}`
       : oathLineage !== null
         ? `${user.alias} — ${lineageProfile?.name ?? UNKNOWN_LINEAGE_LEGEND}`
         : `${user.alias} — ${PILGRIM_LEGEND}`;
-    const ariaLabel = `${displayLegend}. Abrir el menú arcano`;
+    // Identidad accesible completa (nombre accesible + oficio + convo);
+    // el rol técnico jamás se imprime en el rótulo visible (Art. V).
+    const ariaLabel = `${displayLegend} — ${roleLegend(String(user.role ?? ''))}${
+      MODERATION_ROLES.has(String(user.role ?? '')) ? ' (facultado para moderar)' : ''
+    }. Abrir el menú arcano`;
     toggleButton.setAttribute('aria-label', ariaLabel);
     toggleButton.textContent = displayLegend;
     toggleButton.addEventListener('click', toggleMenu);
@@ -249,6 +334,8 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
 
     // La heráldica del linaje jurado (SPEC-09, RF-04.3): el MISMO sello
     // forjado por SPEC-07 para la ficha del linaje (role: 'lineage').
+    // El sello es decorativo: el nombre accesible del distintivo ya declara
+    // el linaje, así que aria-hidden evita el doble anuncio a los lectores.
     if (oathLineage !== null) {
       const seal = createRuneSeal({
         houseName: String(user.alias ?? ''),
@@ -260,22 +347,29 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
         document: documentRef,
       });
       seal.setAttribute('class', 'user-profile__seal');
+      seal.setAttribute('aria-hidden', 'true');
       badgeElement.appendChild(seal);
     }
 
     // Menú desplegable arcano con las opciones canónicas (RF-02.4).
+    // Semántica de menú (WCAG/APG): role=menu en el desplegable y role=none
+    // en los li porta-botones (el rol menuitem vive en el propio botón).
     menuElement = documentRef.createElement?.('ul');
     menuElement.setAttribute('id', 'userProfileMenu');
+    menuElement.setAttribute('role', 'menu');
     menuElement.setAttribute('aria-hidden', 'true');
     badgeElement.appendChild(menuElement);
 
     for (const menuOption of MENU_OPTIONS) {
       const optionItem = documentRef.createElement?.('li');
       if (!optionItem) continue;
+      optionItem.setAttribute('role', 'none');
       const optionButton = documentRef.createElement?.('button');
       if (!optionButton) continue;
       optionButton.setAttribute('type', 'button');
+      optionButton.setAttribute('role', 'menuitem');
       optionButton.setAttribute('data-action', menuOption.action);
+      optionButton.setAttribute('tabindex', '-1');
       optionButton.textContent = menuOption.label;
       optionButton.addEventListener('click', () => {
         // Cada opción delega en el orquestador y repliega el menú.
@@ -293,8 +387,10 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
       menuElement.appendChild(optionItem);
     }
 
-    // Escape repliega el menú (listener sobre el contenedor: burbujeo).
+    // Escape y clic externo repliegan el menú; el keydown de teclado de menú
+    // burbujea desde la opción enfocada (listeners sobre el contenedor).
     bindKeydown();
+    bindOutsideClick();
   }
 
   /**
@@ -333,6 +429,8 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     isDestroyed = true;
     badgeRoot.removeEventListener('keydown', handleKeydown);
     keydownBound = false;
+    badgeRoot.removeEventListener('click', handleOutsideClick);
+    outsideClickBound = false;
     removeBadgeNodes();
     // El botón del umbral del shell se restaura para dejar la cabecera
     // tal y como estaba antes de montar el componente.
