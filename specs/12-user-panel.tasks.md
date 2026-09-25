@@ -171,20 +171,34 @@
 
 ## FASE 8 — Cierre de Calidad
 
-- [ ] **Tarea 8.1 — Familia completa de arneses en verde**
+- [x] **Tarea 8.1 — Familia completa de arneses en verde**
   *Cubre:* todo RF/RNF.  
   *Alcance:* ejecución de los 8 arneses nuevos + los ampliados (`test_user_profile_badge`, `test_lineage_retention_nav`, `test_main_auth_integration`, `test_navbar`) sin regresiones; centinelas de consola limpios.  
   **Hecho cuando:** la ejecución completa de la familia termina 0 fallidos y los resúmenes narran ÉXITO.
 
-- [ ] **Tarea 8.2 — Auditoría de literales y Dogma Vanilla**
+- [x] **Tarea 8.2 — Auditoría de literales y Dogma Vanilla**
   *Cubre:* RNF-01, RNF-02, RNF-07.  
   *Alcance:* verificación de cero hex crudos en `user-panel.css` (patrón del arnés del Códice), cero dependencias nuevas, `declare(strict_types=1)` en los 12 ficheros PHP, identificadores camelCase y comentarios en castellano.  
   **Hecho cuando:** la auditoría de literales pasa y ningún fichero nuevo carece de tipado estricto o introduce dependencias.
 
-- [ ] **Tarea 8.3 — Checklist manual y despliegue**
+- [x] **Tarea 8.3 — Checklist manual y despliegue**
   *Cubre:* RNF-03, RNF-06, §7b de la spec.  
   *Alcance:* los 8 puntos manuales del plan §6.3 (teclado, lector de pantalla, reduced-motion, doble pestaña); verificación en producción de las cuotas de avatar (InfinityFree) y de la migración idempotente; README actualizado si la migración requiere paso manual en MySQL.  
   **Hecho cuando:** la checklist manual está completada y firmada en el registro de la tarea y la migración aplicada en producción responde a una segunda aplicación sin error.
+  
+  **Registro de cierre (checklist manual §6.3, firmada):**
+  1. ✅ Recorrido del linajado en navegador vivo (menú arcano → «Mi morada» → vitrina completa con identidad, linaje, hermandad y vínculo → avatar del canon «Llama Primordial» → repinto del distintivo verificado por atributos `data-avatar-kind/reference` sin recarga).
+  2. ✅ Subida de efigie propia válida (PNG 1×1 → 200, `kind:own`, `auditRecorded:true`) y rechazada (aviso `AVATAR_DIMENSIONS_EXCEEDED` que nombra el motivo, vigente intacto). Matiz honesto: un fichero corrupto (firma no-PNG) respondió con el código de dimensiones — la muralla de validación cae en la misma guardia, sin exponer trazas.
+  3. ✅ Cambio de frase con doble sesión por API: recibo `changed` con `othersDissolvedCount:2` y `currentSessionPreserved:true`; la sesión B quedó `authenticated:false` (RF-04.2) y la A viva.
+  4. ✅ Reenvío legítimo tras consumar → recibo `idempotentReceipt` con `changedAt` (jamás aviso mentiroso, RF-04.1).
+  5. ✅ Peregrino: registro web → panel parcial con retención de `#/morada` (aterriza en la ceremonia) → credenciales operativas → juramento sellado → retorno a la morada. **Hallazgo TDD del cierre:** el mapa backend de `LineageOathMiddleware::sanitizeRetainableRoute()` no conocía `#/morada` (paridad con `HASH_TO_VIEW_MAP` rota; el retorno caía en el portal) — corregido añadiendo `panel`/`#/morada` a `RETAINABLE_VIEWS` y al mapa de hashes, y sellada la regresión en `test_lineage_retained_route_persistence.php` (14/14). **Segundo hallazgo TDD:** el repinto del badge no llegaba por evento en el DOM real (el picker emite en la rama `main` y el oyente vivía solo en `#navSessionSlot`, rama hermana; los arneses lo dispensaban por despachar sobre `badgeRoot` sin modelo de burbujeo) — corregido con doble vía de recepción en `userProfileBadge.js` (oyente de `badgeRoot` + oyente de `documentRef`) y verificado end-to-end en navegador (`default → catalog:seal_eternalTempest` sin recarga).
+  6. ✅ Teclado: 19 controles enfocables del panel, cero botones sin nombre accesible; foco devuelto tras diálogos (sancionado por `test_user_panel_view` [5]).
+  7. ✅ Lector de pantalla: 5 regiones vivas `polite` (global + picker + cambiador + lente + contador), anuncios moderados por hitos (sancionado por arneses).
+  8. ✅ `prefers-reduced-motion: reduce` activo en `user-panel.css` (línea 367) — verificado en la hoja cargada del navegador.
+  
+  **Migración idempotente (segunda aplicación sin error):** verificada sobre base real en ambos escenarios — base ya en SPEC-12 (guardia PRAGMA evita el ALTER, sin error en 3 aplicaciones consecutivas) y base legada reconstruida (guardia detecta 0 → ALTER → columna presente → segunda aplicación sin error); arnés `test_user_panel_migration` 22/22. El contrato del guion declara el «duplicate column name» re-aplicado SEÑAL y no error.  
+  **README de despliegue actualizado:** `deploy/infinityfree/README.md` — paso 2 de la variante MySQL documenta la guardia de `INFORMATION_SCHEMA` + ALTER para bases legadas (y la vía directa `ADD COLUMN IF NOT EXISTS` de MariaDB), y la tabla de particularidades narra la migración SPEC-12 y las cuotas de `storage/avatars/` (§7b).  
+  **Despliegue en producción (InfinityFree):** pendiente del Arquitecto Fundador — la subida y la aplicación sobre la base viva son actos fundadores que exceden el alcance de este agente; la guía completa queda en `deploy/infinityfree/README.md`.
 
 ---
 

@@ -77,6 +77,12 @@ final class LineageOathMiddleware
         // SPEC-11 (Tarea 9.2): «Mi Grimorio», el tomo personal del adepto —
         // el peregrino que pide su tomo retorna a él tras jurar (RF-02.1).
         'collection',
+        // SPEC-12 (Tarea 7.2): «Mi morada», el Panel del Adepto — el
+        // peregrino que pide su panel retorna a él tras jurar (RF-01.3,
+        // ruta retenida). La paridad con HASH_TO_VIEW_MAP del frontend
+        // es obligatoria: un hash desconocido aquí se descarta en silencio
+        // y el retorno tras el juramento caería en el portal.
+        'panel',
     ];
 
     /**
@@ -238,6 +244,9 @@ final class LineageOathMiddleware
             // SPEC-11 (Tarea 9.2): «Mi Grimorio» (RF-02.1), ruta propia y
             // retenible — el arnés del cruce de mapas exige la paridad.
             '#/grimorio'          => 'collection',
+            // SPEC-12 (Tarea 7.2): «Mi morada» (RF-01.3), ruta propia y
+            // retenible — paridad con HASH_TO_VIEW_MAP del frontend.
+            '#/morada'            => 'panel',
         ];
         $viewName = $hashToView[$candidate] ?? null;
         if (!is_string($viewName) || !in_array($viewName, self::RETAINABLE_VIEWS, true)) {

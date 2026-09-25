@@ -243,8 +243,9 @@ assertCondition(
     Grimorio\Middleware\LineageOathMiddleware::sanitizeRetainableRoute('https://malvado.example.com') === null
     && Grimorio\Middleware\LineageOathMiddleware::sanitizeRetainableRoute('#/clave-inexistente') === null
     && Grimorio\Middleware\LineageOathMiddleware::sanitizeRetainableRoute('#/grimorio') === '#/grimorio'
+    && Grimorio\Middleware\LineageOathMiddleware::sanitizeRetainableRoute('#/morada') === '#/morada'
     && Grimorio\Middleware\LineageOathMiddleware::sanitizeRetainableRoute('#/juramento') === null,
-    'El saneamiento ÚNICO acepta vistas retenibles (incluido «Mi Grimorio») y descarta externas, hashes desconocidos y la ceremonia',
+    'El saneamiento ÚNICO acepta vistas retenibles (incluidos «Mi Grimorio» y «Mi morada» de SPEC-12 — paridad con HASH_TO_VIEW_MAP, hallazgo del cierre manual: el descarte silencioso hacía aterrizar el retorno tras jurar en el portal) y descarta externas, hashes desconocidos y la ceremonia',
 );
 
 $sessionManager->retainRoute($sessionId, '#/biblioteca');

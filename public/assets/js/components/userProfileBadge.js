@@ -162,6 +162,8 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   let isDestroyed = false;
   /** El oyente del bus de la efigie (una sola vez, sin fugas). */
   let avatarListenerBound = false;
+  /** Bandera del oyente de documento (burbujeo real, cierre SPEC-12). */
+  let documentAvatarListenerBound = false;
 
   /**
    * Retira el distintivo del árbol (los nodos forjados no vuelven a usarse).
@@ -451,6 +453,15 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   function bindAvatarListener() {
     if (avatarListenerBound || typeof badgeRoot.addEventListener !== 'function') return;
     badgeRoot.addEventListener('panel:avatar-changed', handleAvatarChanged);
+    // Doble vía de recepción (hallazgo del cierre manual, Tarea 7.3):
+    // en el DOM vivo el picker emite sobre la vista del panel (rama
+    // `main`) y el evento BURBUJEA hasta `document` — jamás alcanza a
+    // `badgeRoot` (cabecera, rama hermana). El oyente de documento
+    // recoge el repinto real; el de `badgeRoot` conserva el contrato
+    // directo del arnés. `documentRef` es inyectable (tests) y puede
+    // carecer de addEventListener en los shims: guardia defensiva.
+    documentRef?.addEventListener?.('panel:avatar-changed', handleAvatarChanged);
+    documentAvatarListenerBound = true;
     avatarListenerBound = true;
   }
 
@@ -490,6 +501,10 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     if (avatarListenerBound) {
       badgeRoot.removeEventListener('panel:avatar-changed', handleAvatarChanged);
       avatarListenerBound = false;
+    }
+    if (documentAvatarListenerBound) {
+      documentRef?.removeEventListener?.('panel:avatar-changed', handleAvatarChanged);
+      documentAvatarListenerBound = false;
     }
     removeBadgeNodes();
     // El botón del umbral del shell se restaura para dejar la cabecera

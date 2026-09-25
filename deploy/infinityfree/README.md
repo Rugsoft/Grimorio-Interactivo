@@ -188,6 +188,25 @@ simple: nada de credenciales ni de importar el esquema a mano.
 
    (Verifica al final que `spells`, `users` y `clans` existen y que las
    semillas se asentaron.)
+
+   **Bases LEGADAS a SPEC-12 (Panel del Adepto):** si tu base fue creada
+   con un `schema.sql` anterior a la columna `users.avatar`, ejecuta
+   también en phpMyAdmin la guardia y, si falta, el ALTER de
+   `sql/12_user_panel.sql`:
+
+   ```sql
+   -- Guardia previa (MySQL 8): ¿ya porta la columna?
+   SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME   = 'users'
+     AND COLUMN_NAME  = 'avatar';
+   -- Conteo 0 → aplicar: ALTER TABLE users ADD COLUMN avatar TEXT NULL;
+   -- Conteo 1 → la base ya viste SPEC-12: no ejecutar nada.
+   ```
+
+   En MariaDB 10.4+ basta la vía directa:
+   `ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NULL;`
+   (aplicarla DOS veces no muta fila alguna ni produce error).
 3. **Edita `public/env.php`**: sustituye el bloque del DSN SQLite por el
    trío MySQL (el resto del fichero, el guard de 403 y `$projectRoot`, no
    hace falta tocarlo):
@@ -214,6 +233,6 @@ simple: nada de credenciales ni de importar el esquema a mano.
 | Aspecto | Detalle |
 |---|---|
 | Sesiones | Siguen siendo ficheros PHP nativos del hosting — no cambian con el motor de la base. |
-| Migraciones nuevas | Las guiones de ascensión posteriores (`sql/*.sql`) son idempotentes en SQLite; en MySQL ejecútalos también en phpMyAdmin cuando el santuario crezca. |
+| Migraciones nuevas | Las guiones de ascensión posteriores (`sql/*.sql`) son idempotentes en SQLite; en MySQL ejecútalos también en phpMyAdmin cuando el santuario crezca. SPEC-12 añadió `users.avatar` (Panel del Adepto): sobre bases legadas aplícala con la guardia de `INFORMATION_SCHEMA` del paso 2; sobre bases nuevas de `schema.sql` vigente no hace falta. Los avatares propios viven en `storage/avatars/` con nombre aleatorio NO derivado del alias; vigila la cuota de ficheros del plan gratuito (limitación declarada en SPEC-12 §7b). |
 | `PRAGMA foreign_keys` | No aplica; MySQL con InnoDB aplica las claves foráneas por defecto (ya lo documenta `schema.sql`). |
 | Contraseña en el fichero | `env.php` vive en `public/` pero el funnel la protege; el guard de 403 impide servirla como URL. La contraseña de la base es la del plan gratuito — regénérala desde el panel si acaso. |
