@@ -48,7 +48,13 @@ const LINEAGE_INDEX = new Map(Object.entries({
   aetherWeavers: { name: 'Linaje de los Tejedores del Éter', rulingElement: 'pureArcane' },
 }));
 
-/** Opciones canónicas del menú desplegable arcano (RF-02.4, RF-07.1).
+/** Opciones canónicas del menú desplegable arcano (RF-02.4, RF-07.1,
+ *  RF-08.1 de SPEC-12).
+ *
+ * SPEC-12 (Tarea 7.1, RF-08.1): la opción «Mi morada» abre el Panel del
+ * Adepto — la cámara privada de la identidad íntegra — con un solo
+ * gesto y SIN nueva ceremonia ni llaves adicionales. Las tres opciones
+ * ya ratificadas quedan INTACTAS en su orden y rótulos.
  *
  * SPEC-09 (RF-03.4, exclusión 2): la opción «Cambiar de linaje» quedó
  * RETIRADA de este menú. El juramento de linaje es perpetuo e irrevocable —
@@ -60,6 +66,7 @@ const LINEAGE_INDEX = new Map(Object.entries({
  * dissolveAll) son cierre de credenciales, jamás mutación del linaje.
  */
 const MENU_OPTIONS = Object.freeze([
+  { action: 'openPanel', label: 'Mi morada' },
   { action: 'openGrimoire', label: 'Ver mi libro personal' },
   { action: 'dissolve', label: 'Disolver este vínculo' },
   { action: 'dissolveAll', label: 'Disolver todos mis vínculos' },
@@ -107,12 +114,16 @@ function findDescendantById(root, elementId) {
 }
 
 /**
- * Búsqueda recursiva de descendientes que porten una clase (compatible con
- * el DOM simulado del arnés).
+ * Búsqueda recursiva de descendientes que porten una clase (compatible
+ * con el DOM simulado del arnés: doble vía classList y atributo class).
  */
 function findDescendantsByClass(root, className, found = []) {
   for (const child of root.children ?? []) {
-    if (child.classList?.contains?.(className)) found.push(child);
+    if (
+      child.classList?.contains?.(className)
+      || (typeof child.getAttribute === 'function'
+        && String(child.getAttribute('class') ?? '').split(/\s+/).includes(className))
+    ) found.push(child);
     findDescendantsByClass(child, className, found);
   }
   return found;
@@ -125,6 +136,9 @@ function findDescendantsByClass(root, className, found = []) {
  *        (aloja el botón «Cruzar el Umbral» del shell).
  * @param {Object} options
  * @param {() => void} [options.onCrossThreshold] Activación del umbral (anónimo).
+ * @param {() => void} [options.onOpenPanel] Abrir «Mi morada», el Panel del
+ *        Adepto (Tarea 7.1, RF-08.1 de SPEC-12): un solo gesto, sin
+ *        nueva ceremonia ni llaves adicionales.
  * @param {() => void} [options.onOpenGrimoire] Ver el libro personal (RF-07.1).
  * @param {() => void} [options.onDissolve] Disolver el vínculo actual (RF-02.4).
  * @param {() => void} [options.onDissolveAll] Disolver todos los vínculos (RF-02.4).
@@ -146,6 +160,8 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   let toggleButton = null;
   let menuIsOpen = false;
   let isDestroyed = false;
+  /** El oyente del bus de la efigie (una sola vez, sin fugas). */
+  let avatarListenerBound = false;
 
   /**
    * Retira el distintivo del árbol (los nodos forjados no vuelven a usarse).
@@ -332,6 +348,17 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     toggleButton.addEventListener('click', toggleMenu);
     badgeElement.appendChild(toggleButton);
 
+    // La efigie del vínculo (SPEC-12, Tarea 7.3, RF-03.3): el avatar
+    // propio se proyecta SOLO en la cabecera del propio adepto (jamás
+    // ante terceros, exclusión 5). Nace con la marca de la sesión
+    // hidratada y RE-PINTA por evento sin recarga de página.
+    const avatarNode = documentRef.createElement?.('span');
+    avatarNode.setAttribute('class', 'user-profile__avatar');
+    avatarNode.setAttribute('data-avatar-kind', String(user.avatarKind ?? 'default'));
+    avatarNode.setAttribute('data-avatar-reference', String(user.avatarReference ?? ''));
+    avatarNode.setAttribute('aria-hidden', 'true'); // decorativa: el nombre accesible ya declara la identidad
+    badgeElement.appendChild(avatarNode);
+
     // La heráldica del linaje jurado (SPEC-09, RF-04.3): el MISMO sello
     // forjado por SPEC-07 para la ficha del linaje (role: 'lineage').
     // El sello es decorativo: el nombre accesible del distintivo ya declara
@@ -374,6 +401,7 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
       optionButton.addEventListener('click', () => {
         // Cada opción delega en el orquestador y repliega el menú.
         const callbackMap = {
+          openPanel: options.onOpenPanel,
           openGrimoire: options.onOpenGrimoire,
           dissolve: options.onDissolve,
           dissolveAll: options.onDissolveAll,
@@ -399,6 +427,33 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
    *
    * @param {object|null} user Sobre data.user del authClient (Tarea 4.1).
    */
+  /**
+   * Repinta de efigie POR EVENTO (SPEC-12, Tarea 7.3, RF-03.4, plan
+   * §4.2): la vista del panel emite `panel:avatar-changed` tras cada
+   * alta/retiro y el distintivo re-viste su nodo SIN recarga de página
+   * ni sondeo. Jamás muta el store: la sesión hidratada manda en el
+   * siguiente checkSession (caso límite 19: sin sincronismo vivo).
+   *
+   * @param {CustomEvent} event Evento del bus con { kind, reference }.
+   */
+  function handleAvatarChanged(event) {
+    if (isDestroyed || currentUser === null) return;
+    const detail = event?.detail ?? {};
+    const avatarNode = findDescendantsByClass(badgeRoot, 'user-profile__avatar')[0] ?? null;
+    if (!avatarNode) return;
+    const kind = String(detail.kind ?? 'default');
+    const reference = String(detail.reference ?? '');
+    avatarNode.setAttribute('data-avatar-kind', kind);
+    avatarNode.setAttribute('data-avatar-reference', reference);
+  }
+
+  /** Liga el oyente del bus UNA sola vez (sin fugas por re-render). */
+  function bindAvatarListener() {
+    if (avatarListenerBound || typeof badgeRoot.addEventListener !== 'function') return;
+    badgeRoot.addEventListener('panel:avatar-changed', handleAvatarChanged);
+    avatarListenerBound = true;
+  }
+
   function setUser(user) {
     if (isDestroyed) return;
     const sessionUser = user !== null && typeof user === 'object' ? user : null;
@@ -431,6 +486,11 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     keydownBound = false;
     badgeRoot.removeEventListener('click', handleOutsideClick);
     outsideClickBound = false;
+    // El oyente del bus de la efigie se retira con el componente (sin fugas).
+    if (avatarListenerBound) {
+      badgeRoot.removeEventListener('panel:avatar-changed', handleAvatarChanged);
+      avatarListenerBound = false;
+    }
     removeBadgeNodes();
     // El botón del umbral del shell se restaura para dejar la cabecera
     // tal y como estaba antes de montar el componente.
@@ -439,7 +499,10 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   }
 
   // Estado inicial: se asume visitante anónimo (el shell trae el umbral).
+  // El oyente del bus de la efigie se liga aquí: UNA vez por componente,
+  // independiente de los re-renders del distintivo (sin fugas).
   restoreThresholdButton();
+  bindAvatarListener();
 
   return {
     setUser,

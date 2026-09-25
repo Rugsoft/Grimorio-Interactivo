@@ -1252,6 +1252,9 @@ export function createGrimoireApp(options = {}) {
     sessionBadge = badgeRoot !== null && badgeRoot !== undefined
       ? createMemoryBadgeRoot(badgeRoot, {
           onCrossThreshold: () => handleReservedAction('crossThreshold'),
+          // Mi morada (SPEC-12, Tarea 7.1, RF-08.1): el Panel del Adepto
+          // abre con un solo gesto, sin nueva ceremonia ni llaves nuevas.
+          onOpenPanel: () => navigate('panel'),
           onOpenGrimoire: () => handleOpenGrimoire(),
           onDissolve: () => handleDissolve('dissolve'),
           onDissolveAll: () => handleDissolve('dissolveAll'),

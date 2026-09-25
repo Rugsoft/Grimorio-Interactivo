@@ -217,8 +217,14 @@ const silentOk = async () => ({ success: true, data: null });
 
 // --- Montaje de la SPA real ---
 let app = null;
+/** Los mapas canónicos del enrutador (Tarea 7.2): la FASE F los aserta. */
+let HASH_TO_VIEW_MAP = null;
+let VIEW_TO_HASH_MAP = null;
 try {
-  const { createGrimoireApp } = await import('../public/assets/js/main.js');
+  const mainModule = await import('../public/assets/js/main.js');
+  const createGrimoireApp = mainModule.createGrimoireApp;
+  HASH_TO_VIEW_MAP = mainModule.HASH_TO_VIEW_MAP;
+  VIEW_TO_HASH_MAP = mainModule.VIEW_TO_HASH_MAP;
   app = createGrimoireApp({
     appRoot,
     navRoot,
@@ -446,6 +452,60 @@ if (sessionBadgeRoot !== null) {
     'El oath:sealed promueve la identidad al instante: sello con la carga del Sol (RF-01.7)',
   );
 }
+
+// --- FASE F: «Mi morada» bajo el interceptor (SPEC-12, Tarea 7.2, RF-01.2/01.3) ---
+console.log('\nFASE F: #/morada resuelve la vista panel y el peregrino queda retenido\n');
+
+// La ruta existe y es deep-linkable con su reverso (mapeos canónicos).
+assertCondition(HASH_TO_VIEW_MAP['#/morada'] === 'panel', "La ruta '#/morada' resuelve la vista 'panel' en HASH_TO_VIEW_MAP (RNF-06: ruta propia)");
+assertCondition(VIEW_TO_HASH_MAP.panel === '#/morada', "La vista 'panel' retorna a '#/morada' (deep-linkable)");
+
+// 1) El peregrino que pide #/morada aterriza en la ceremonia (retención).
+// El interceptor lee el STORE vivo (decisión local, RNF-04): se hidrata
+// como peregrina exactamente como las fases previas del arnés.
+store.setSession({ id: 'usr_peregrina', alias: 'Peregrina del Velo', role: 'editor', lineage: null });
+retainedRoutes.length = 0;
+await app.navigate('panel');
+await new Promise((resolve) => setTimeout(resolve, 0));
+assertCondition(
+  retainedRoutes.includes('#/morada'),
+  'La ruta solicitada #/morada fue retenida vía API (RF-05.3 de SPEC-09)',
+);
+assertCondition(
+  store.getState().currentView === 'juramento',
+  'El peregrino que pide #/morada aterriza en la CEREMONIA: jamás pisa la morada ajena al juramento (RF-01.3)',
+);
+// La ruta de retorno es la propia morada: tras jurar, el panel le espera.
+assertCondition(
+  retainedRoutes.includes('#/morada') && retainedRoutes.every((route) => route === '#/morada'),
+  'La retención conserva la INTENCIÓN de retorno exacta: #/morada (RF-05.3)',
+);
+
+// 2) El linajado accede libre: sin retención, pisa su morada.
+store.setSession({ id: 'usr_jurada', alias: 'Jurada de la Marea', role: 'editor', lineage: 'celestialTides' });
+retainedRoutes.length = 0;
+await app.navigate('panel');
+await new Promise((resolve) => setTimeout(resolve, 0));
+assertCondition(
+  retainedRoutes.length === 0 && store.getState().currentView === 'panel',
+  'El linajado accede a su morada SIN un solo round-trip de retención (criterio 3)',
+);
+
+// 3) El Supremo sin linaje accede exento (RF-01.5).
+store.setSession({ id: 'usr_supremo', alias: 'El Supremo', role: 'supremeAdmin', lineage: null });
+retainedRoutes.length = 0;
+await app.navigate('panel');
+await new Promise((resolve) => setTimeout(resolve, 0));
+assertCondition(
+  retainedRoutes.length === 0 && store.getState().currentView === 'panel',
+  'El Supremo SIN linaje accede exento: la morada le abre sin ceremonia (RF-01.5)',
+);
+
+// La vista panel JAMÁS entra en la lista blanca: el interceptor decide.
+assertCondition(
+  !['landing', 'juramento', 'error'].includes('panel'),
+  "'panel' NO está en OATH_EXEMPT_VIEWS: la retención es de interceptor y el backend refrenda (RNF-06)",
+);
 
 assertCondition(uncaughtErrors === 0, `Ninguna excepción escapó sin control (${uncaughtErrors} cazadas)`);
 

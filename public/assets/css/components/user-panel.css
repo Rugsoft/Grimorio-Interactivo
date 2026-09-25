@@ -266,6 +266,32 @@
 }
 
 /* ------------------------------------------------------------------
+   La efigie en el distintivo de cabecera (Tarea 7.3): proyección
+   ÍNTIMA del avatar propio — vive solo en la cabecera del propio
+   adepto, jamás ante terceros (exclusión 5). Repinta por evento,
+   sin recarga (plan §4.2).
+   ------------------------------------------------------------------ */
+.user-profile__avatar {
+  display: inline-block;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  border-radius: var(--radius-seal);
+  border: var(--border-ink);
+  background-color: var(--color-parchment-surface);
+  background-size: cover;
+  background-position: center;
+}
+
+.user-profile__avatar[data-avatar-kind='own'] {
+  background-image: var(--avatar-image);
+}
+
+.user-profile__avatar[data-avatar-kind='catalog'],
+.user-profile__avatar[data-avatar-kind='default'] {
+  border-color: var(--color-parchment-border);
+}
+
+/* ------------------------------------------------------------------
    Diálogo solemne propio (Tarea 5.3): foco preso por el elemento
    <dialog> nativo; la vista devuelve el foco a su origen al cerrar
    (verificado por el arnés, RNF-03).

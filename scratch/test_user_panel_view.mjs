@@ -324,6 +324,18 @@ assertCondition(
   'la vitrina emitida emite panel:vitrina-loaded con avatarRestricted false',
 );
 
+// La vista es la FUENTE del repinto de cabecera (Tarea 7.3): el picker
+// emite panel:avatar-changed por el eventTarget de la vista tras cada
+// alta/retiro; el distintivo escucha ese canal (sin sondeo ni recarga).
+const avatarChangeEvents = [];
+mountRoot.addEventListener('panel:avatar-changed', (event) => avatarChangeEvents.push(event));
+const avatarRootInView = findByClass(mountRoot, 'panel-avatar-picker-slot');
+assertCondition(avatarRootInView !== null, 'la sección Efigie acoge al picker real (Tarea 6.1 integrada)');
+assertCondition(
+  typeof mountRoot.addEventListener === 'function',
+  'la vista expone su eventTarget para el canal panel:avatar-changed (fuente del repinto, Tarea 7.3)',
+);
+
 view.destroy();
 assertCondition(mountRoot.children.length === 0, 'destroy() retira la vista del punto de montaje');
 

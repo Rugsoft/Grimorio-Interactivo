@@ -340,18 +340,21 @@ console.log('\nFASE 6: Semántica de menú, teclado, clic externo e identidad ac
   badgeButton6.dispatch('click');
   assertCondition(options6[0]?.children[0]?.focusCount === 1, 'Al abrir, el foco cae en la primera opción (botón)');
 
-  // Teclado de menú: flechas circulan, Inicio/Fin saltan a los extremos.
+  // Teclado de menú: flechas circulan, Inicio/Fin saltan a los extremos
+  // (4 opciones desde la Tarea 7.1: mi morada, libro, disoluciones ×2).
   shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[0].children[0] });
   assertCondition(options6[1].children[0].focusCount === 1, 'Flecha abajo avanza a la segunda opción');
   shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[1].children[0] });
   assertCondition(options6[2].children[0].focusCount === 1, 'Flecha abajo avanza a la tercera opción');
   shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[2].children[0] });
+  assertCondition(options6[3].children[0].focusCount === 1, 'Flecha abajo avanza a la cuarta opción');
+  shell6.badgeRoot.dispatch('keydown', { key: 'ArrowDown', target: options6[3].children[0] });
   assertCondition(options6[0].children[0].focusCount === 2, 'La flecha abajo CIRCULA: tras la última vuelve a la primera');
   shell6.badgeRoot.dispatch('keydown', { key: 'ArrowUp', target: options6[0].children[0] });
-  assertCondition(options6[2].children[0].focusCount === 2, 'Flecha arriba circula hacia atrás (a la última opción)');
+  assertCondition(options6[3].children[0].focusCount === 2, 'Flecha arriba circula hacia atrás (a la última opción)');
   shell6.badgeRoot.dispatch('keydown', { key: 'End', target: options6[0].children[0] });
-  assertCondition(options6[2].children[0].focusCount === 3, 'Fin salta a la última opción');
-  shell6.badgeRoot.dispatch('keydown', { key: 'Home', target: options6[2].children[0] });
+  assertCondition(options6[3].children[0].focusCount === 3, 'Fin salta a la última opción');
+  shell6.badgeRoot.dispatch('keydown', { key: 'Home', target: options6[3].children[0] });
   assertCondition(options6[0].children[0].focusCount === 3, 'Inicio salta a la primera opción');
 
   // Tab abandona el menú repliegándolo (sin foco perdido en menú abierto).
@@ -401,6 +404,112 @@ console.log('\nFASE 7: El nombre accesible declara el oficio del vinculado');
   assertCondition(!findByText(shell7.badgeRoot, 'master')[0], 'El rol técnico (inglés) jamás se imprime en el rótulo visible (Art. V)');
   badge7.destroy();
 }
+
+// --- FASE 8: «Mi morada» en el menú (SPEC-12, Tarea 7.1, RF-08.1) ---
+console.log('\nFASE 8: La nueva opción «Mi morada» con las ratificadas intactas');
+
+// La opción nueva existe como menuitem de primera posición.
+const menuCallbacks8 = { panel: 0, grimoire: 0, dissolve: 0, dissolveAll: 0 };
+const shell8 = buildBadgeRoot();
+const badge8 = createMemoryBadgeRoot(shell8.badgeRoot, {
+  documentRef: shell8.documentSim,
+  onOpenPanel: () => { menuCallbacks8.panel++; },
+  onOpenGrimoire: () => { menuCallbacks8.grimoire++; },
+  onDissolve: () => { menuCallbacks8.dissolve++; },
+  onDissolveAll: () => { menuCallbacks8.dissolveAll++; },
+});
+badge8.setUser(AUTHED_USER);
+const badgeButton8 = byId(shell8.badgeRoot, 'userProfileToggle');
+badgeButton8.dispatch('click');
+
+const panelOption = byAction(shell8.badgeRoot, 'openPanel');
+assertCondition(panelOption !== null, 'El menú ofrece «Mi morada» (openPanel) — RF-08.1 de SPEC-12');
+assertCondition(
+  panelOption.getAttribute('role') === 'menuitem' && panelOption.textContent === 'Mi morada',
+  'La nueva opción declara role=menuitem con su rótulo castellano solemne (Art. V)',
+);
+
+// Las tres opciones ratificadas sobreviven INTACTAS en rótulo y orden relativo.
+const menuItems8 = (byId(shell8.badgeRoot, 'userProfileMenu')?.children ?? [])
+  .map((li) => li.children[0]?.getAttribute('data-action'));
+assertCondition(
+  menuItems8[0] === 'openPanel' && menuItems8[1] === 'openGrimoire'
+    && menuItems8[2] === 'dissolve' && menuItems8[3] === 'dissolveAll',
+  'Las tres opciones ratificadas quedan INTACTAS tras la nueva cabeza (orden y rótulos, plan §6.1)',
+);
+
+// El gesto notifica al orquestador (que navegará a #/morada).
+panelOption.dispatch('click');
+assertCondition(menuCallbacks8.panel === 1, 'La opción notifica onOpenPanel al orquestador (navigate(panel), un solo gesto)');
+assertCondition(
+  menuCallbacks8.grimoire === 0 && menuCallbacks8.dissolve === 0 && menuCallbacks8.dissolveAll === 0,
+  'La opción nueva JAMÁS dispara las callbacks ratificadas (sin duplicar conductas)',
+);
+
+// Las ratificadas siguen funcionando sobre el mismo menú ampliado.
+const grimoireOption8 = byAction(shell8.badgeRoot, 'openGrimoire');
+grimoireOption8?.dispatch('click');
+assertCondition(menuCallbacks8.grimoire === 1, 'La opción del libro sigue notificando tras la ampliación (sin regresión)');
+
+// Guard RF-03.4 (patrón de FASE 2): la ampliación no reabre la puerta vedada.
+assertCondition(byAction(shell8.badgeRoot, 'changeClan') === null, 'El menú JAMÁS ofrece «Cambiar de linaje» (SPEC-09 RF-03.4, guard intacto tras la ampliación)');
+assertCondition(findByText(shell8.badgeRoot, 'Cambiar de linaje')[0] === undefined, 'El rótulo vedado sigue ausente del menú ampliado');
+
+// La opción nueva también vive en el modo anónimo→autenticado de la
+// FASE 1: el badge con sesión viva la ofrece sin ceremonia adicional.
+const shellAnon8 = buildBadgeRoot();
+const badgeAnon8 = createMemoryBadgeRoot(shellAnon8.badgeRoot, { documentRef: shellAnon8.documentSim, onOpenPanel: () => {} });
+assertCondition(byAction(shellAnon8.badgeRoot, 'openPanel') === null, 'En modo anónimo la opción no existe: el umbral manda (sin accesos fantasmas)');
+badgeAnon8.setUser(AUTHED_USER);
+assertCondition(byAction(shellAnon8.badgeRoot, 'openPanel') !== null, 'Con vínculo vivo, «Mi morada» nace con el distintivo (sin ceremonia ni llaves nuevas)');
+
+badge8.destroy();
+badgeAnon8.destroy();
+
+// --- FASE 9: Repinta de efigie por evento (SPEC-12, Tarea 7.3, RF-03.4) ---
+console.log('\nFASE 9: La efigie del distintivo repinta sin recarga (panel:avatar-changed)');
+
+const shell9 = buildBadgeRoot();
+const badge9 = createMemoryBadgeRoot(shell9.badgeRoot, { documentRef: shell9.documentSim });
+// Sesión hidratada CON la marca de efigie (checkSession porta avatarKind/Reference).
+badge9.setUser({ ...AUTHED_USER, avatarKind: 'catalog', avatarReference: 'seal_primordialFlame' });
+
+const avatarNode9 = queryByAttribute(shell9.badgeRoot, 'data-avatar-kind', 'catalog')[0] ?? null;
+assertCondition(avatarNode9 !== null, 'El distintivo forja su nodo de efigie (user-profile__avatar)');
+assertCondition(
+  avatarNode9.getAttribute('data-avatar-kind') === 'catalog'
+    && avatarNode9.getAttribute('data-avatar-reference') === 'seal_primordialFlame',
+  'El nodo nace con la marca de la efigie de la sesión hidratada (RF-03.3)',
+);
+assertCondition(avatarNode9.getAttribute('aria-hidden') === 'true', 'La efigie es decorativa: el nombre accesible ya declara la identidad (sin doble anuncio)');
+
+// El evento del bus (emitido por la vista del panel tras el alta) RE-PINTA
+// el nodo SIN recarga y SIN mutar el store (caso límite 19).
+shell9.badgeRoot.dispatch('panel:avatar-changed', { detail: { kind: 'own', reference: 'a1b2c3d4' } });
+assertCondition(
+  avatarNode9.getAttribute('data-avatar-kind') === 'own'
+    && avatarNode9.getAttribute('data-avatar-reference') === 'a1b2c3d4',
+  'Tras el alta de efigie propia, el evento RE-PINTA la efigie SIN recarga (RF-03.4, plan §4.2)',
+);
+
+// Un retiro (kind default) también repinta: la efigie vuelve al canónico.
+shell9.badgeRoot.dispatch('panel:avatar-changed', { detail: { kind: 'default', reference: '' } });
+assertCondition(
+  avatarNode9.getAttribute('data-avatar-kind') === 'default'
+    && avatarNode9.getAttribute('data-avatar-reference') === '',
+  'Tras el retiro, el distintivo vuelve a la efigie canónica (RF-03.5, sin recarga)',
+);
+
+// En modo anónimo el evento es inocuo (sin identidad que revestir).
+badge9.clearUser();
+shell9.badgeRoot.dispatch('panel:avatar-changed', { detail: { kind: 'own', reference: 'hack' } });
+assertCondition(
+  queryByAttribute(shell9.badgeRoot, 'data-avatar-kind', 'own').length === 0
+    && queryByAttribute(shell9.badgeRoot, 'data-avatar-kind', 'default').length === 0,
+  'Sin vínculo vivo, el evento NO forja identidad fantasma alguna (RF-01.2)',
+);
+
+badge9.destroy();
 
 // --- Centinela y resumen ---
 console.log('\n== CENTINELA DE CONSOLA ==');

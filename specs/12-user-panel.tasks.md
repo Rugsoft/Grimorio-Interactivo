@@ -152,17 +152,17 @@
 
 ## FASE 7 — Integración de Cabecera y Enrutador
 
-- [ ] **Tarea 7.1 — Opción «Mi morada» en el distintivo**
+- [x] **Tarea 7.1 — Opción «Mi morada» en el distintivo**
   *Cubre:* RF-08.1.  
   *Alcance:* `userProfileBadge.js`: nueva entrada `{ action: 'openPanel', label: 'Mi morada' }` en `MENU_OPTIONS` con su callback `onOpenPanel` y su cableado en `main.js` (`navigate('panel')`), SIN tocar las tres opciones ratificadas; ampliación de `scratch/test_user_profile_badge.mjs` (la opción presente, las ratificadas intactas, `role=menuitem`).  
   **Hecho cuando:** el arnés del distintivo ampliado aserta la nueva opción, la intacta supervivencia de las tres canónicas y el guard RF-03.4 (sin cambio de linaje).
 
-- [ ] **Tarea 7.2 — Ruta `#/morada` y retención del peregrino**
+- [x] **Tarea 7.2 — Ruta `#/morada` y retención del peregrino**
   *Cubre:* RF-01.2, RF-01.3, RNF-06.  
   *Alcance:* `HASH_TO_VIEW_MAP` con `#/morada → panel`, registro de la vista en el orquestador; `panel` NO entra en `OATH_EXEMPT_VIEWS` (el interceptor existente retiene al peregrino); ampliación de `scratch/test_lineage_retention_nav.mjs` (el peregrino que pide `#/morada` aterriza en la ceremonia).  
   **Hecho cuando:** el arnés de retención ampliado aserta el desvío del peregrino a `juramento` ante `#/morada` y el acceso libre del linajado y del Supremo.
 
-- [ ] **Tarea 7.3 — Repinta de cabecera por eventos**
+- [x] **Tarea 7.3 — Repinta de cabecera por eventos**
   *Cubre:* RF-03.3, RF-03.4 (efecto inmediato), caso límite 19 (pestañas: reflejo en siguiente interacción, sin sincronismo vivo).  
   *Alcance:* el distintivo escucha `panel:avatar-changed` y repinta su efigie sin recarga; la vista del panel emite tras cada alta/retiro. Asertos en `test_user_panel_view.mjs` y en el arnés del distintivo.  
   **Hecho cuando:** el arnés aserta que tras el evento el distintivo muestra la nueva efigie sin recarga de página.
