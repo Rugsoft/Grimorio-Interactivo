@@ -430,6 +430,20 @@ CREATE TABLE IF NOT EXISTS users (
                       'primordialFlame', 'celestialTides', 'eternalTempest', 'worldRoots',
                       'dawnWinds', 'solarCrown', 'abyssalShadows', 'aetherWeavers'
                   )),
+    -- LA EFIGIE DEL ADEPTO [SPEC-12, Tarea 1.1 — RF-03.1…RF-03.5].
+    -- ANULABLE a propósito: NULL significa «avatar canónico por defecto
+    -- del santuario» (RF-03.5: la identidad jamás queda sin efigie).
+    -- Semántica cerrada de valores (plan §2.1): NULL → canónico;
+    -- 'catalog:<id>' → efigie del catálogo del santuario (RF-03.1);
+    -- 'own:<fileId>' → efigie propia en storage/avatars/ con nombre
+    -- aleatorio NO derivado del alias (plan §5.2). La efigie propia es
+    -- DATO PERSONAL (RNF-04): vive solo en el panel y en la cabecera del
+    -- propio adepto (exclusión 5) y muere con la cuenta purgada
+    -- (retención de la renuncia, SPEC-03 RF-09). Sin CHECK a propósito:
+    -- la semántica de valores la custodia el servicio (único escritor,
+    -- plan §1.1). Sin REFERENCES: la efigie propia es fichero, no fila.
+    -- Coherente con el ALTER de sql/12_user_panel.sql (guion↔esquema).
+    avatar        TEXT NULL,
     recovery_token_hash         TEXT NOT NULL DEFAULT '',    -- SHA-256 del pergamino activo ('' = sin pergamino, RF-04.1)
     recovery_token_expires_at   TEXT,                        -- Vigencia de 60 minutos del pergamino (RF-04.1)
     created_at    TEXT NOT NULL,                             -- Alta del iniciado (ISO 8601 UTC)

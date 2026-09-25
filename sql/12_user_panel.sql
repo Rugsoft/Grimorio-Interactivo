@@ -1,0 +1,121 @@
+-- =====================================================================
+-- 12_user_panel.sql — Columna del Avatar del Adepto (SPEC-12).
+--
+-- Tarea 1.1 (TASKS-12): añade a `users` la columna de identidad personal
+-- `avatar` (RF-03.1…RF-03.5, persistencia del Panel del Adepto).
+--
+-- Cubre: RF-03.1…RF-03.5 (persistencia de la efigie), RNF-02 (Dogma
+--        Vanilla: PDO nativo, sin librerías), Artículo V (Dualidad
+--        Lingüística: snake_case técnico, narrativa en noble castellano).
+--
+-- =====================================================================
+-- NATURALEZA DE LA COLUMNA
+-- =====================================================================
+-- `users.avatar` es ANULABLE a propósito: NULL significa «avatar canónico
+-- por defecto del santuario» (RF-03.5: la identidad jamás queda sin
+-- efigie). La semántica de valores es un CONTRATO CERRADO del plan §2.1:
+--
+--   * NULL              → el adepto viste el avatar canónico por defecto.
+--   * 'catalog:<id>'    → efigie del catálogo del santuario (RF-03.1):
+--                         efígies y heráldicas ya existentes en el canon
+--                         visual, elegidas sin ceremonia de moderación.
+--   * 'own:<fileId>'    → efigie propia subida por el adepto (RF-03.2):
+--                         fileId es el nombre físico del fichero en
+--                         storage/avatars/ (nombre aleatorio NO derivado
+--                         del alias, decisión del plan §5.2).
+--
+-- La efigie propia es DATO PERSONAL del adepto (RNF-04): vive solo en el
+-- panel y en la cabecera del propio adepto (exclusión 5 de SPEC-12);
+-- muere con la cuenta purgada (retención de la renuncia, SPEC-03 RF-09).
+-- Su ÚNICO escritor será el repositorio del panel (plan §1.1), jamás una
+-- superficie compartida.
+--
+-- =====================================================================
+-- CONTRATO DE APLICACIÓN IDEMPOTENTE
+-- =====================================================================
+-- SQLite NO admite `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`: un ALTER
+-- re-aplicado falla con «duplicate column name: avatar». Este guion
+-- adopta el contrato de aplicación VANILLA que la restricción impone y
+-- que su arnés ejercita:
+--
+--   * El aplicador ejecuta el guion SENTENCIA A SENTENCIA (PDO exec por
+--     trozo, sin librerías). Un ALTER rechazado con «duplicate column»
+--     NO es un error: es la señal de que la base ya porta la columna y
+--     el guion se aplica por segunda vez. Cualquier otro fallo sí es un
+--     error de aplicación.
+--   * La guardia previa por PRAGMA table_info (SQLite) e
+--     INFORMATION_SCHEMA.COLUMNS (MySQL) permite al aplicador saber
+--     ANTES de ejecutar si la columna ya vive en la base.
+--
+-- Así, ejecutar el guion dos veces consecutivas no produce error ni
+-- muta fila alguna, y una base legada queda en el estado exacto de una
+-- base nueva levantada con `database/schema.sql` (coherencia
+-- guion↔esquema de esta misma tarea).
+--
+-- =====================================================================
+-- ORDEN DE APLICACIÓN (secuencial, un solo paso)
+-- =====================================================================
+--   1) database/schema.sql  → esquema canónico completo (las bases nuevas
+--                             nacen ya con la columna; este script no es
+--                             necesario).
+--   2) database/seeds.sql   → linajes, clanes y custodio fundacional.
+--   3) ESTE script          → solo sobre bases legadas a SPEC-12: añade
+--                             la columna si falta.
+--
+-- Verificación: php scratch/test_user_panel_migration.php
+-- (Tarea 1.1 de TASKS-12; la coherencia guion↔esquema se ratifica en la
+-- misma tarea inscribiendo la columna en el DDL maestro.)
+--
+-- =====================================================================
+-- COMPATIBILIDAD DE DIALECTO
+-- =====================================================================
+--   * SQLite 3.35+ (pragma_table_info es antiguo; sin CHECK en esta
+--     columna porque su semántica de valores es contrato de servicio,
+--     no muralla de base).
+--   * MySQL 8 / MariaDB 10.4+: la columna resultante es idéntica
+--     (TEXT NULL); en MariaDB basta `ADD COLUMN IF NOT EXISTS` y en
+--     MySQL 8 se consulta antes INFORMATION_SCHEMA.COLUMNS. La columna
+--     viaja como TEXT, consistente con los campos TEXT del resto del
+--     esquema canónico.
+-- =====================================================================
+
+PRAGMA foreign_keys = OFF;
+
+-- ---------------------------------------------------------------------
+-- 1. EL ALTER DEL AVATAR (RF-03.1…RF-03.5)
+-- ---------------------------------------------------------------------
+-- Añade la columna SIN CHECK a propósito: la semántica cerrada de
+-- valores (NULL / catalog:<id> / own:<fileId>) la custodia el servicio
+-- (AvatarService, plan §1.1), como el canon de linajes vive como
+-- servicio en su faceta de escritura. No porta REFERENCES a propósito:
+-- la efigie propia no es fila de tabla alguna, es fichero en
+-- storage/avatars/ con nombre no derivado del alias.
+-- ---------------------------------------------------------------------
+ALTER TABLE users ADD COLUMN avatar TEXT NULL;
+
+PRAGMA foreign_keys = ON;
+
+-- ---------------------------------------------------------------------
+-- GUARDIAS DE IDEMPOTENCIA POR DIALECTO (documentación de aplicación)
+-- ---------------------------------------------------------------------
+-- Este bloque NO contiene sentencias ejecutables: documenta la vía
+-- idempotente de cada motor para el aplicador humano del despliegue.
+--
+--   * SQLite (recomendado antes de aplicar):
+--       SELECT COUNT(*) FROM pragma_table_info('users')
+--       WHERE name = 'avatar';
+--     Si el conteo es 0, aplicar el ALTER; si es 1, el guion ya vivió
+--     aquí y el ALTER re-aplicado devolverá «duplicate column name»,
+--     que el contrato de aplicación declara SEÑAL y no error.
+--
+--   * MariaDB 10.4+ (sintaxis directa):
+--       ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT NULL;
+--
+--   * MySQL 8 (la consulta previa es la guardia):
+--       SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+--       WHERE TABLE_SCHEMA = DATABASE()
+--         AND TABLE_NAME   = 'users'
+--         AND COLUMN_NAME  = 'avatar';
+--     Si el conteo es 0, aplicar: ALTER TABLE users ADD COLUMN avatar TEXT NULL;
+--     Si es 1, la base ya porta la columna: no ejecutar nada.
+-- ---------------------------------------------------------------------
