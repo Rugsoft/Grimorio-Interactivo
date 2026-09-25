@@ -90,12 +90,12 @@
 
 ## FASE 4 — La Lente de Bitácora Personal
 
-- [ ] **Tarea 4.1 — Consulta de pertenencia paginada**
+- [x] **Tarea 4.1 — Consulta de pertenencia paginada**
   *Cubre:* RF-06.1, RF-06.2, hallazgo 8/12 del QA (solo actos con el adepto como sujeto).  
   *Alcance:* `GET /api/v1/panel/ledger?cursor=` con el filtro SQL parametrizado del plan §2.7 (actor = yo ∨ target user = yo ∨ obra propia), 20 asientos por página con cursor opaco, orden inverso cronológico, `actionLabel` castellano del mapa de `AuditEntry`. Arnés `scratch/test_personal_ledger.php` fases [1,2,6].  
   **Hecho cuando:** el arnés aserta presencia de los actos propios, ausencia de los ajenos y de los colectivos del clan sin el adepto como sujeto, y paginación estable sin duplicados.
 
-- [ ] **Tarea 4.2 — Terceros, vacío y privacidad**
+- [x] **Tarea 4.2 — Terceros, vacío y privacidad**
   *Cubre:* RF-06.3, RF-06.4, RF-01.1.  
   *Alcance:* narración de actos con terceros conforme a lo público (sin datos personales de más), `entries: []` ante vacío, y 403 si se solicita la lente de una identidad ajena (el endpoint jamás acepta `userId` ajeno). Arnés fases [3,4,5,7].  
   **Hecho cuando:** el arnés aserta la firma ajena sobre obra propia narrada sin exceso de datos del firmante, el vacío con `entries: []` y el 403 ante identidad ajena.

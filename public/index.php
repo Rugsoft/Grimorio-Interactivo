@@ -306,6 +306,7 @@ function buildRouter(): Router
     $router->addRoute('POST', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->chooseAvatar($request));
     $router->addRoute('DELETE', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->removeAvatar($request));
     $router->addRoute('POST', '/api/v1/panel/passphrase', fn (Request $request): Response => $userPanelController->changePassphrase($request));
+    $router->addRoute('GET', '/api/v1/panel/ledger', fn (Request $request): Response => $userPanelController->ledger($request));
 
     // --- Rutas de la Matriz Elemental (SPEC-06, plan Endpoints 1-3) ---
     $router->addRoute('GET', '/api/v1/elements/matrix', fn (Request $request): Response => $elementalMatrixController->getMatrix($request));

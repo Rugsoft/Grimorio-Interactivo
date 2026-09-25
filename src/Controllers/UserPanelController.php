@@ -10,6 +10,8 @@
  *                             (RF-01, RF-02, RF-07; plan §2.2).
  *   POST /api/v1/panel/avatar    — alta/elección de efigie (Tarea 1.5).
  *   DELETE /api/v1/panel/avatar  — retiro al canónico (Tarea 1.5).
+ *   GET /api/v1/panel/ledger     — la lente de bitácora personal
+ *                             (RF-06; Tareas 4.1 y 4.2; plan §2.7).
  *
  * Las escrituras de avatar aceptan aquí la guardia CENTRAL de retención
  * (Tarea 1.5): si el vinculado es peregrino, toda escritura responde
@@ -477,6 +479,127 @@ final class UserPanelController
 
         // Recibo del acto (200 changed / 200 idempotentReceipt).
         return Response::json(['success' => true, 'data' => $result], 200);
+    }
+
+    // -----------------------------------------------------------------
+    // La Lente de Bitácora Personal (RF-06; Tarea 4.1, plan §2.7)
+    // -----------------------------------------------------------------
+
+    /**
+     * GET /api/v1/panel/ledger?cursor={cursor} — la lente de lectura.
+     *
+     * Pura lente (RF-06.2): el filtro de pertenencia vive en el
+     * repositorio (plan §2.7) y el mapa de rótulos castellanos es el
+     * hermano servidor del `actionLabel` de `auditLogView.js` (Art. V:
+     * misma lengua del santuario en ambos lados). El endpoint jamás
+     * acepta identidad ajena: la lente siempre es la del titular de la
+     * sesión (RF-01.1) — y si un cliente intentara colar un parámetro
+     * `userId` ajeno, la puerta FALLA CERRADA con 403 LEDGER_NOT_YOURS
+     * (Tarea 4.2): la lente jamás refleja la bitácora de otro adepto.
+     */
+    public function ledger(Request $request): Response
+    {
+        // ---- Guardia 1: el umbral del anónimo (RF-01.4) ---------------
+        $adept = $this->requireAuthenticatedUser($request);
+        if ($adept === null) {
+            return $this->unauthenticatedResponse();
+        }
+
+        // ---- Guardia 2: la lente jamás refleja identidad ajena --------
+        // (RF-01.1, Tarea 4.2, plan §2.7: sin parámetro de identidad
+        // ajena). Un `?userId` distinto del titular se rechaza con 403
+        // sin revelar si la identidad ajena existe: el veredicto es el
+        // mismo para ajeno existente, inexistente o malformado.
+        $requestedUserId = $request->getQueryParams()['userId'] ?? null;
+        if (is_string($requestedUserId) && $requestedUserId !== '' && $requestedUserId !== (string) $adept['id']) {
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'LEDGER_NOT_YOURS',
+                    'message' => 'La lente de la bitácora solo contempla la propia bitácora: jamás reflejará la de otro adepto.',
+                ],
+            ], 403);
+        }
+
+        $cursor = $request->getQueryParams()['cursor'] ?? null;
+        $cursor = is_string($cursor) ? $cursor : null;
+
+        try {
+            $page = $this->panelRepository->fetchPersonalLedger((string) $adept['id'], $cursor, 20);
+        } catch (\Throwable $lensFailure) {
+            // El velo arcano jamás levanta trazas internas (plan §2.8).
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'PANEL_UNAVAILABLE',
+                    'message' => 'La lente de la bitácora no puede iluminarse en este instante: inténtalo de nuevo en breve.',
+                ],
+            ], 500);
+        }
+
+        // Los rótulos castellanos del santuario (Art. V, hermanados con
+        // el mapa del frontend — commit canónico de auditLogView.js).
+        $actionLabels = [
+            'SIGN_VALIDATE' => 'Firma de Validación',
+            'SIGN_REJECT' => 'Firma de Rechazo',
+            'ADMIN_VETO' => 'Veto del Admin Supremo',
+            'PROMOTE_MASTER' => 'Ascenso a Maestro',
+            'DEMOTE_MASTER' => 'Degradación de Maestro',
+            'CLAN_MODIFY' => 'Sello de Linaje',
+            'CLAN_FOUNDED' => 'Fundación de Linaje',
+            'CLAN_MEMBER_LEFT' => 'Partida de un Adepto',
+            'CLAN_MEMBER_EXPELLED' => 'Expulsión de un Adepto',
+            'PATRIARCH_TRANSFERRED' => 'Traspaso de la Corona',
+            'PATRIARCH_INACTIVITY_SUCCESSION' => 'Sucesión por Inactividad',
+            'CLAN_ARCHIVED_BY_PATRIARCH' => 'Disolución del Linaje',
+            'CLAN_ARCHIVED_EMPTY_SUCCESSION' => 'Disolución por Orfandad',
+            'DOMINION_WEEK_CONCLUDED' => 'Cierre de la Semana Arcana',
+            'ACC_LINK_RENOUNCED' => 'Renuncia al Vínculo de la Cuenta',
+            'RESET_SIGNATURES_MATH_CHANGE' => 'Reinicio de Firmas por Enmienda Matemática',
+            'UPDATE_DESCRIPTION_INTACT_SIGNATURES' => 'Enmienda del Pergamino con Firmas Intactas',
+            'CREATE_VARIANT_FROM_VALIDATED' => 'Variante de una Obra Consagrada',
+            'MODERATION_SUBMITTED' => 'Elevación a Deliberación Arcana',
+            'MODERATION_WITHDRAWN' => 'Retiro a la Libreta del Autor',
+            'MODERATION_REOPENED' => 'Reapertura como Borrador',
+            'SIGNATURE_RETRACTED' => 'Retractación de una Firma',
+            'SIGNATURE_ANNULMENT' => 'Anulación de Oficio de una Firma',
+            'SPELL_CONSECRATED' => 'Consagración por Tercera Firma',
+            'MODERATION_EXPIRED' => 'Caducidad por Letargo Colegiado',
+            'SOVEREIGN_VALIDATION' => 'Firma Soberana del Cónclave',
+            'SOVEREIGN_RESCUE' => 'Rescate Soberano de una Obra',
+            'SOVEREIGN_ARCHIVE' => 'Destierro Soberano del Canon',
+            'SOVEREIGN_POINTS_DEDUCTED' => 'Deducción Retroactiva de Gloria',
+            'LINEAGE_OATH_SWORN' => 'Juramento de Linaje sellado',
+            'CLAN_MEMBER_JOINED' => 'Ingreso en una Hermandad',
+            'CLAN_APPLICATION_SUBMITTED' => 'Remisión de una Petición de Ingreso',
+            'CLAN_APPLICATION_WITHDRAWN' => 'Retirada de una Petición de Ingreso',
+            'CLAN_APPLICATION_VERDICT' => 'Dictamen sobre una Petición de Ingreso',
+            'CLAN_APPLICATION_RESIDUALS_ANNULLED' => 'Anulación de Peticiones Huérfanas',
+            'TOME_SEAL' => 'Sellado en el Tomo Personal',
+            'TOME_PRAISE' => 'Elogio con Gloria Acreditada',
+            'AVATAR_SELF_MODIFIED' => 'Cambio de efigie de la identidad',
+            'PASSPHRASE_SELF_CHANGED' => 'La custodia de la frase de paso',
+        ];
+
+        $entries = [];
+        foreach ($page['entries'] as $entry) {
+            $actionType = (string) ($entry['actionType'] ?? '');
+            $entries[] = [
+                'actionLabel' => $actionLabels[$actionType] ?? $actionType,
+                'actionType'  => $actionType,
+                'createdAt'   => (string) ($entry['createdAt'] ?? ''),
+                'narrative'   => (string) ($entry['narrative'] ?? ''),
+                'targetKind'  => (string) ($entry['targetKind'] ?? ''),
+            ];
+        }
+
+        return Response::json([
+            'success' => true,
+            'data'    => [
+                'entries'    => $entries,
+                'nextCursor' => $page['nextCursor'],
+            ],
+        ], 200);
     }
 
     // -----------------------------------------------------------------

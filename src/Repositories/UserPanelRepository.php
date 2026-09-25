@@ -286,4 +286,96 @@ final class UserPanelRepository
 
         return $statement->rowCount() === 1;
     }
+
+    /**
+     * La Lente de Bitácora Personal (RF-06.1/06.2, Tarea 4.1; plan §2.7).
+     *
+     * Pura LECTURA sobre el registro inmutable con el filtro de
+     * pertenencia canónico — «actos dirigidos al adepto» (decisión QA):
+     *
+     *   actor = yo  ∨  (target user = yo)  ∨  (target spell = obra propia)
+     *
+     * Los actos colectivos del clan sin el adepto como sujeto quedan
+     * fuera: esa visión colectiva vive en las cámaras del clan. TODOS
+     * los parámetros viajan vinculados (AGENTS.md §6.1): el filtro es
+     * inmune a inyección aunque el cursor provenga del cliente.
+     *
+     * Paginación por CURSOR OPACO (hallazgo 1 del QA: 20 asientos por
+     * página, sin límite histórico): el cursor es el id numérico del
+     * último asiento servido; la página siguiente continúa ESTRICTAMENTE
+     * por debajo de él (orden `id DESC`), lo que garantiza estabilidad y
+     * ausencia de duplicados aun con asientos naciendo entre páginas.
+     *
+     * @param string $userId El titular de la lente (jamás identidad ajena).
+     * @param string|null $cursor Cursor opaco (id del último asiento); null = primera página.
+     * @param int $limit Asientos por página (techo constitucional 20).
+     *
+     * @return array{entries: array<int, array<string, mixed>>, nextCursor: string|null}
+     */
+    public function fetchPersonalLedger(string $userId, ?string $cursor = null, int $limit = 20): array
+    {
+        // Blindaje de cardinalidad: la página jamás excede 20 asientos.
+        $safeLimit = min(max(1, $limit), 20);
+
+        // El grupo completo de pertenencia viaja ENTRE PARÉNTESIS: sin
+        // ellos, la precedencia SQL (AND liga más fuerte que OR) haría
+        // que el corte del cursor (`AND id < :cursorId`) solo alcanzara
+        // a la última rama y las páginas se repitieran (hallazgo del
+        // arnés TDD: paginación estable exige el paréntesis externo).
+        $baseWhere = "(
+            (actor_user_id = :userId)
+            OR (target_entity_type = 'user' AND target_entity_id = :userId)
+            OR (target_entity_type = 'spell' AND target_entity_id IN (
+                SELECT id FROM spells WHERE author_id = :userId
+            ))
+        )";
+
+        $cursorWhere = '';
+        $cursorId = 0;
+        if ($cursor !== null && $cursor !== '' && ctype_digit($cursor)) {
+            $cursorId = (int) $cursor;
+            $cursorWhere = ' AND id < :cursorId';
+        }
+
+        // La página se pide con UN asiento de cortesía para conocer si
+        // existe página siguiente sin una segunda consulta de recuento.
+        $statement = $this->pdo->prepare(
+            "SELECT id, actor_user_id, action_type, target_entity_type, justification, created_at
+               FROM audit_log
+              WHERE {$baseWhere}{$cursorWhere}
+              ORDER BY id DESC
+              LIMIT :limit"
+        );
+        $statement->bindValue(':userId', $userId, PDO::PARAM_STR);
+        if ($cursorId > 0) {
+            $statement->bindValue(':cursorId', $cursorId, PDO::PARAM_INT);
+        }
+        $statement->bindValue(':limit', $safeLimit + 1, PDO::PARAM_INT);
+        $statement->execute();
+
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        // El asiento de cortesía se retira y se convierte en el cursor.
+        $hasMore = count($rows) > $safeLimit;
+        if ($hasMore) {
+            array_pop($rows);
+        }
+
+        $entries = [];
+        $lastId = null;
+        foreach ($rows as $row) {
+            $lastId = (int) $row['id'];
+            $entries[] = [
+                'actionType'   => (string) $row['action_type'],
+                'targetKind'   => (string) $row['target_entity_type'],
+                'narrative'    => (string) $row['justification'],
+                'createdAt'    => (string) $row['created_at'],
+            ];
+        }
+
+        return [
+            'entries'    => $entries,
+            'nextCursor' => $hasMore && $lastId !== null ? (string) $lastId : null,
+        ];
+    }
 }
