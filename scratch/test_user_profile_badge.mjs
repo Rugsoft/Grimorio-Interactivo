@@ -144,7 +144,6 @@ const badge0 = createMemoryBadgeRoot(shell0.badgeRoot, {
   documentRef: shell0.documentSim,
   onCrossThreshold: () => {},
   onOpenGrimoire: () => {},
-  onChangeClan: () => {},
   onDissolve: () => {},
   onDissolveAll: () => {},
 });
@@ -174,18 +173,17 @@ assertCondition(userMenu !== null, 'El menú desplegable arcano existe (userProf
 const badgeButton = byId(shell0.badgeRoot, 'userProfileToggle');
 assertCondition(badgeButton !== null && badgeButton.getAttribute('aria-expanded') === 'false', 'El distintivo nace con el menú cerrado (aria-expanded false)');
 
-// --- FASE 2: Opciones del menú arcano (RF-02.4) ---
-console.log('\nFASE 2: Menú desplegable — libro, cambio de clan, disoluciones');
+// FASE 2: Opciones del menú arcano (RF-02.4) ---
+console.log('\nFASE 2: Menú desplegable — libro, disoluciones; SIN cambio de linaje');
 
 badgeButton.dispatch('click');
 assertCondition(badgeButton.getAttribute('aria-expanded') === 'true', 'El click sobre el distintivo despliega el menú (aria-expanded true)');
 
-const menuCallbacks = { grimoire: 0, clan: 0, dissolve: 0, dissolveAll: 0 };
+const menuCallbacks = { grimoire: 0, dissolve: 0, dissolveAll: 0 };
 const shell2 = buildBadgeRoot();
 const badge2 = createMemoryBadgeRoot(shell2.badgeRoot, {
   documentRef: shell2.documentSim,
   onOpenGrimoire: () => { menuCallbacks.grimoire++; },
-  onChangeClan: () => { menuCallbacks.clan++; },
   onDissolve: () => { menuCallbacks.dissolve++; },
   onDissolveAll: () => { menuCallbacks.dissolveAll++; },
 });
@@ -199,11 +197,12 @@ assertCondition(grimoireOption !== null, 'El menú ofrece «ver el libro persona
 grimoireOption.dispatch('click');
 assertCondition(menuCallbacks.grimoire === 1, 'La opción del libro notifica onOpenGrimoire al orquestador');
 
-// Cambiar de clan en tregua (RF-07: la tregua de 24 horas la decide el backend).
-const changeClanOption = byAction(shell2.badgeRoot, 'changeClan');
-assertCondition(changeClanOption !== null, 'El menú ofrece «cambiar de clan» (changeClan)');
-changeClanOption.dispatch('click');
-assertCondition(menuCallbacks.clan === 1, 'La opción de clan notifica onChangeClan al orquestador');
+// SPEC-09 (RF-03.4, exclusión 2): el juramento de linaje es perpetuo — el
+// menú JAMÁS ofrece «Cambiar de linaje» ni ningún flujo de cambio (flujo que,
+// además, jamás existió en el santuario: sin endpoint ni cliente tras de sí).
+assertCondition(byAction(shell2.badgeRoot, 'changeClan') === null, 'El menú JAMÁS ofrece «Cambiar de linaje» (SPEC-09, RF-03.4: el juramento es perpetuo)');
+const forbiddenLabel = findByText(shell2.badgeRoot, 'Cambiar de linaje')[0] ?? null;
+assertCondition(forbiddenLabel === null, 'El rótulo «Cambiar de linaje» no existe en ninguna opción del menú');
 
 // Disolución individual del dispositivo actual (RF-02.4).
 const dissolveOption = byAction(shell2.badgeRoot, 'dissolve');

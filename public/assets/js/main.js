@@ -1192,11 +1192,12 @@ export function createGrimoireApp(options = {}) {
 
     // Distintivo de sesión (Tarea 4.5): reemplaza «Cruzar el Umbral» por el
     // badge del vinculado y delega las disoluciones en el orquestador.
+    // SPEC-09 (RF-03.4): sin callback de cambio de linaje — el juramento es
+    // perpetuo y ninguna vista ofrece su cambio ni revocación.
     sessionBadge = badgeRoot !== null && badgeRoot !== undefined
       ? createMemoryBadgeRoot(badgeRoot, {
           onCrossThreshold: () => handleReservedAction('crossThreshold'),
           onOpenGrimoire: () => handleOpenGrimoire(),
-          onChangeClan: () => handleReservedAction('changeClan'),
           onDissolve: () => handleDissolve('dissolve'),
           onDissolveAll: () => handleDissolve('dissolveAll'),
           documentRef,

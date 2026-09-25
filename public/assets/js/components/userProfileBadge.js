@@ -47,10 +47,19 @@ const LINEAGE_INDEX = new Map(Object.entries({
   aetherWeavers: { name: 'Linaje de los Tejedores del Éter', rulingElement: 'pureArcane' },
 }));
 
-/** Opciones canónicas del menú desplegable arcano (RF-02.4, RF-07.1). */
+/** Opciones canónicas del menú desplegable arcano (RF-02.4, RF-07.1).
+ *
+ * SPEC-09 (RF-03.4, exclusión 2): la opción «Cambiar de linaje» quedó
+ * RETIRADA de este menú. El juramento de linaje es perpetuo e irrevocable —
+ * ninguna vista, acción o administrativo posterior puede ofrecer cambio ni
+ * revocación del vínculo— y la ventana de tregua de SPEC-03 RF-07 (cambio
+ * de CLAN) jamás llegó a materializarse en el santuario: la opción no
+ * tenía flujo ni endpoint tras de sí y ofendía al vínculo de linaje
+ * confundiendo vocabulario. Las disoluciones de sesión (dissolve/
+ * dissolveAll) son cierre de credenciales, jamás mutación del linaje.
+ */
 const MENU_OPTIONS = Object.freeze([
   { action: 'openGrimoire', label: 'Ver mi libro personal' },
-  { action: 'changeClan', label: 'Cambiar de linaje' },
   { action: 'dissolve', label: 'Disolver este vínculo' },
   { action: 'dissolveAll', label: 'Disolver todos mis vínculos' },
 ]);
@@ -94,7 +103,6 @@ function findDescendantsByClass(root, className, found = []) {
  * @param {Object} options
  * @param {() => void} [options.onCrossThreshold] Activación del umbral (anónimo).
  * @param {() => void} [options.onOpenGrimoire] Ver el libro personal (RF-07.1).
- * @param {() => void} [options.onChangeClan] Cambiar de linaje (RF-07).
  * @param {() => void} [options.onDissolve] Disolver el vínculo actual (RF-02.4).
  * @param {() => void} [options.onDissolveAll] Disolver todos los vínculos (RF-02.4).
  * @param {Document} [options.documentRef] Documento inyectable (tests).
@@ -272,7 +280,6 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
         // Cada opción delega en el orquestador y repliega el menú.
         const callbackMap = {
           openGrimoire: options.onOpenGrimoire,
-          changeClan: options.onChangeClan,
           dissolve: options.onDissolve,
           dissolveAll: options.onDissolveAll,
         };
