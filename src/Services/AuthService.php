@@ -457,4 +457,158 @@ final class AuthService
 
         return true;
     }
+
+    /**
+     * La Custodia de la Frase de Paso desde el panel (SPEC-12, RF-04.2,
+     * RF-04.3; Tarea 3.1 de TASKS-12).
+     *
+     * Cambio CONSCIENTE de la frase de paso por el dueño autenticado.
+     * Comparte con `resetPassphrase()` (el pergamino de recuperación) el
+     * hasheo nativo BCRYPT coste 12 y la regla de solidez mínima, pero
+     * su semántica de confianza difiere (plan §5.3): aquí el dueño está
+     * presente, así que la sesión actual se CONSERVA y solo las demás
+     * sesiones activas del adepto se disuelven — efecto inseparable del
+     * acto de custodia, jamás una gestión independiente.
+     *
+     * La operación es una transacción atómica: o el hash cambia, las
+     * demás sesiones caen y el asiento nace, o nada de ello ocurre
+     * (RNF-05: el acto sin trazabilidad no existe).
+     *
+     * @param string $userId           Titular autenticado de la cuenta.
+     * @param string $currentSessionId Identificador de la sesión actual
+     *                                 (la única que sobrevive).
+     * @param string $currentPassphrase Frase vigente presentada por el dueño.
+     * @param string $newPassphrase    Nueva frase de paso.
+     * @param string $newPassphraseRepeat Repetición de la nueva frase.
+     * @param DateTimeImmutable|null $now Instante canónico (inyectable en arneses).
+     *
+     * @return array<string, mixed> Recibo del acto según plan §2.6:
+     *         `['verdict' => 'changed', 'othersDissolvedCount' => N,
+     *           'currentSessionPreserved' => true]`.
+     *
+     * @throws InvalidArgumentException Si la solidez de la nueva frase
+     *         viola el canon (mínimo 8 caracteres, SPEC-03).
+     */
+    public function changePassphraseAuthenticated(
+        string $userId,
+        string $currentSessionId,
+        string $currentPassphrase,
+        string $newPassphrase,
+        string $newPassphraseRepeat,
+        ?DateTimeImmutable $now = null,
+    ): array {
+        $instant = $now ?? new DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        // Regla de solidez compartida con el registro y el pergamino
+        // (SPEC-03): mínimo 8 caracteres, sin símbolos forzados. La
+        // evaluación es CIEGA (Tarea 3.2, RF-04.1): las tres causas
+        // posibles responden con el MISMO veredicto que jamás revela
+        // cuál falló (aviso sin pistas).
+        if (strlen($newPassphrase) < self::MIN_PASSPHRASE_LENGTH) {
+            throw new \Grimorio\Exceptions\PassphraseChangeFailedException();
+        }
+
+        // El hash vigente de la fila (el dueño ya está autenticado, así
+        // que la fila existe; si no existiera, no hay acto que custodiar).
+        $userStatement = $this->pdo->prepare('SELECT password_hash, alias, role, updated_at FROM users WHERE id = :id');
+        $userStatement->execute([':id' => $userId]);
+        $userRow = $userStatement->fetch(PDO::FETCH_ASSOC);
+
+        if ($userRow === false) {
+            throw new RuntimeException('El titular de la custodia no habita el grimorio.');
+        }
+
+        // Verificación de la frase actual (Art. I: password_verify nativo).
+        $storedHash = (string) $userRow['password_hash'];
+        $currentPassphraseMatches = password_verify($currentPassphrase, $storedHash);
+        $newMatchesCurrent = password_verify($newPassphrase, $storedHash);
+
+        // Orden canónico del plan §3.3 (Tarea 3.3): la IDÉNTICA se
+        // comprueba ANTES del fallo ciego — la coincidencia de la nueva
+        // con la vigente es observable por el dueño sin revelar nada a
+        // un tercero que no conozca la frase vigente (quien no la
+        // conoce jamás puede fabricar una nueva que la alcance).
+        if ($newMatchesCurrent) {
+            if ($currentPassphraseMatches && $newPassphrase === $newPassphraseRepeat) {
+                // Reenvío legítimo (caso límite 12, hallazgo 16 del
+                // QA): la frase presentada como actual YA ES la nueva —
+                // el dueño jamás recibe un aviso que mienta; recibo del
+                // acto ya consumado con la estampa del cambio previo,
+                // sin asiento ni mutación.
+                return [
+                    'verdict'   => 'idempotentReceipt',
+                    'changedAt' => (string) $userRow['updated_at'],
+                ];
+            }
+
+            // Primera salvedad honesta (RF-04.1, caso límite 17): la
+            // nueva coincide con la vigente pero el envío no es un
+            // reenvío legítimo — aviso noble específico, sin asiento
+            // ni mutación, jamás el fallo ciego.
+            throw new \Grimorio\Exceptions\PassphraseIdenticalException();
+        }
+
+        // A partir de aquí la nueva NO es la vigente: solo quedan el
+        // éxito legítimo y el fallo ciego (RF-04.1).
+        if (!$currentPassphraseMatches || $newPassphrase !== $newPassphraseRepeat) {
+            throw new \Grimorio\Exceptions\PassphraseChangeFailedException();
+        }
+
+        // Transacción de la custodia (plan §3.3): UPDATE + DELETE + INSERT
+        // viven o nada de ellos vive.
+        $this->pdo->beginTransaction();
+
+        try {
+            // 1. El hash de la fila viste la nueva frase.
+            $updateStatement = $this->pdo->prepare(
+                'UPDATE users SET password_hash = :passwordHash, updated_at = :updatedAt WHERE id = :id'
+            );
+            $updateStatement->execute([
+                ':passwordHash' => password_hash($newPassphrase, PASSWORD_BCRYPT, ['cost' => self::BCRYPT_COST]),
+                ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
+                ':id'           => $userId,
+            ]);
+
+            // 2. La desconfianza sanitaria: las demás moradas se vacían.
+            //    La sesión actual sobrevive (el dueño está presente).
+            $dissolveStatement = $this->pdo->prepare(
+                'DELETE FROM user_sessions WHERE user_id = :userId AND id <> :currentSessionId'
+            );
+            $dissolveStatement->execute([':userId' => $userId, ':currentSessionId' => $currentSessionId]);
+            $othersDissolvedCount = $dissolveStatement->rowCount();
+
+            // 3. El asiento PASSPHRASE_SELF_CHANGED dentro de la
+            //    transacción (RNF-05): la justification es leyenda fija
+            //    del servicio (Art. IV) — jamás narra la frase presentada
+            //    (RF-04.1: el cuerpo del acto no se registra).
+            $auditStatement = $this->pdo->prepare(
+                'INSERT INTO audit_log
+                    (actor_user_id, actor_alias, actor_role, action_type, target_entity_type, target_entity_id, justification, created_at)
+                 VALUES
+                    (:actorUserId, :actorAlias, :actorRole, :actionType, :targetEntityType, :targetEntityId, :justification, :createdAt)'
+            );
+            $auditStatement->execute([
+                ':actorUserId'      => $userId,
+                ':actorAlias'       => (string) $userRow['alias'],
+                ':actorRole'        => (string) $userRow['role'],
+                ':actionType'       => 'PASSPHRASE_SELF_CHANGED',
+                ':targetEntityType' => 'user',
+                ':targetEntityId'   => $userId,
+                ':justification'    => 'El adepto cambió su frase de paso desde su panel y las demás moradas quedaron vaciadas.',
+                ':createdAt'        => $instant->format('Y-m-d\TH:i:s\Z'),
+            ]);
+
+            $this->pdo->commit();
+        } catch (\Throwable $custodyFailure) {
+            $this->pdo->rollBack();
+            throw $custodyFailure;
+        }
+
+        // Recibo del acto consumado (plan §2.6).
+        return [
+            'verdict'                => 'changed',
+            'othersDissolvedCount'   => $othersDissolvedCount,
+            'currentSessionPreserved' => true,
+        ];
+    }
 }

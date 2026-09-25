@@ -53,14 +53,19 @@ final class UserPanelController
     /** Instante «ahora» inyectable para la aritmética de la penitencia. */
     private ?\DateTimeImmutable $now;
 
+    /** El custodio de la frase de paso (Tarea 3.4); null = cámara sin abrir. */
+    private ?\Grimorio\Services\AuthService $authService;
+
     public function __construct(
         UserPanelRepository $panelRepository,
         ?AvatarService $avatarService = null,
         ?\DateTimeImmutable $now = null,
+        ?\Grimorio\Services\AuthService $authService = null,
     ) {
         $this->panelRepository = $panelRepository;
         $this->avatarService = $avatarService;
         $this->now = $now;
+        $this->authService = $authService;
     }
 
     // -----------------------------------------------------------------
@@ -385,6 +390,93 @@ final class UserPanelController
     private function nowUtc(): string
     {
         return ($this->now ?? new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s\Z');
+    }
+
+    // -----------------------------------------------------------------
+    // La custodia de la frase de paso (RF-04; Tarea 3.4, plan §2.6)
+    // -----------------------------------------------------------------
+
+    /**
+     * POST /api/v1/panel/passphrase — La custodia (RF-04, cuatro salidas).
+     *
+     * Controlador puro: valida el umbral del anónimo (401 sin mutación
+     * parcial — caso límite 2), lee el cuerpo JSON y delega la máquina
+     * de estados completa en `AuthService::changePassphraseAuthenticated`
+     * (Tareas 3.1–3.3). El cuerpo de la petición — con las frases en
+     * claro — JAMÁS se registra en bitácora ni logs (plan §2.6); la
+     * disolución de las demás sesiones y el asiento viven dentro de la
+     * transacción del servicio (RNF-05, RF-04.2).
+     *
+     * Salidas (plan §2.6): 200 changed · 200 idempotentReceipt ·
+     * 400 PASSPHRASE_CHANGE_FAILED (ciego) · 400 PASSPHRASE_IDENTICAL ·
+     * 401 sin mutación parcial · 500 PANEL_UNAVAILABLE sin trazas.
+     */
+    public function changePassphrase(Request $request): Response
+    {
+        // ---- Guardia 1: el umbral del anónimo (RF-01.4, caso límite 2)
+        // Sin vínculo vivo NO hay lectura del cuerpo NI examen del hash:
+        // la petición muere antes de tocar el plano arcano.
+        $adept = $this->requireAuthenticatedUser($request);
+        if ($adept === null) {
+            return $this->unauthenticatedResponse();
+        }
+
+        $sessionId = $request->getActiveSessionId();
+        if ($sessionId === null || $sessionId === '') {
+            return $this->unauthenticatedResponse();
+        }
+
+        $payload = $request->getJsonBody() ?? [];
+        $currentPassphrase = isset($payload['currentPassphrase']) && is_string($payload['currentPassphrase'])
+            ? $payload['currentPassphrase'] : '';
+        $newPassphrase = isset($payload['newPassphrase']) && is_string($payload['newPassphrase'])
+            ? $payload['newPassphrase'] : '';
+        $newPassphraseRepeat = isset($payload['newPassphraseRepeat']) && is_string($payload['newPassphraseRepeat'])
+            ? $payload['newPassphraseRepeat'] : '';
+
+        // Guardia 2: la cámara de la custodia debe estar abierta (el
+        // servicio inyectado por el front controller).
+        if ($this->authService === null) {
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'PANEL_UNAVAILABLE',
+                    'message' => 'La custodia no pudo consumarse en este instante: inténtalo de nuevo en breve.',
+                ],
+            ], 500);
+        }
+
+        try {
+            $result = $this->authService->changePassphraseAuthenticated(
+                (string) $adept['id'],
+                $sessionId,
+                $currentPassphrase,
+                $newPassphrase,
+                $newPassphraseRepeat,
+                $this->now,
+            );
+        } catch (\Grimorio\Exceptions\PassphraseIdenticalException $identical) {
+            // Salida propia del contrato (caso límite 17): aviso noble
+            // específico, sin asiento y sin mutación.
+            return Response::json($identical->toPayload(), 400);
+        } catch (\Grimorio\Exceptions\PassphraseChangeFailedException $blindFailure) {
+            // El fallo ciego único (RF-04.1): una sola respuesta para
+            // las tres causas, sin pistas del motivo.
+            return Response::json($blindFailure->toPayload(), 400);
+        } catch (\Throwable $custodyFailure) {
+            // El velo arcano jamás levanta trazas internas (plan §2.8);
+            // la transacción del servicio ya rueda atrás por su cuenta.
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'PANEL_UNAVAILABLE',
+                    'message' => 'La custodia no pudo consumarse en este instante: inténtalo de nuevo en breve.',
+                ],
+            ], 500);
+        }
+
+        // Recibo del acto (200 changed / 200 idempotentReceipt).
+        return Response::json(['success' => true, 'data' => $result], 200);
     }
 
     // -----------------------------------------------------------------

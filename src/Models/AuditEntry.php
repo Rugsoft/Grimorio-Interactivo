@@ -101,6 +101,16 @@ final class AuditEntry
         // de la efigie ya vigente) JAMÁS se inscriben (RF-03.6: un acto sin
         // efecto real no deja rastro).
         'AVATAR_SELF_MODIFIED',       // Alta/elección/retiro de la propia efigie (SPEC-12, RF-03.6)
+        // Acto de custodia personal del Panel del Adepto (SPEC-12, plan
+        // §5.3): misma ampliación mínima sellada por la duda 6 del avatar.
+        // Actor = sujeto = el propio adepto; target_entity_type='user';
+        // la justification es leyenda fija del servicio (Art. IV: jamás
+        // narra la frase presentada — RF-04.1). Distinción solemne con el
+        // pergamino de recuperación (§5.3): el cambio CONSCIENTE conserva
+        // la sesión actual; el pergamino la revoca porque nace de la
+        // pérdida de acceso. Son dos puntos de entrada a la misma columna,
+        // jamás el mismo flujo.
+        'PASSPHRASE_SELF_CHANGED',    // Cambio consciente de la frase de paso desde el panel (SPEC-12, RF-04.3)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

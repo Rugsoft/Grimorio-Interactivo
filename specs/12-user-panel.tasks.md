@@ -66,22 +66,22 @@
 
 ## FASE 3 — La Custodia de la Frase de Paso
 
-- [ ] **Tarea 3.1 — `changePassphraseAuthenticated` (éxito con disolución)**
+- [x] **Tarea 3.1 — `changePassphraseAuthenticated` (éxito con disolución)**
   *Cubre:* RF-04.2, RF-04.3, RNF-06.  
   *Alcance:* método en `AuthService` compartiendo hasheo y solidez con `resetPassphrase`, pero en transacción: UPDATE del hash + DELETE de `user_sessions` del usuario EXCEPTO la sesión actual; asiento `PASSPHRASE_SELF_CHANGED` (ampliación del catálogo cerrado, §5.1 del plan). Arnés `scratch/test_passphrase_change.php` fase [1] y [6].  
   **Hecho cuando:** el arnés aserta hash cambiado, demás sesiones disueltas, sesión actual viva, asiento inscrito y la frase ausente de bitácora y cuerpo de asiento.
 
-- [ ] **Tarea 3.2 — El fallo ciego (una sola respuesta para tres causas)**
+- [x] **Tarea 3.2 — El fallo ciego (una sola respuesta para tres causas)**
   *Cubre:* RF-04.1 (aviso sin pistas).  
   *Alcance:* veredicto único `PASSPHRASE_CHANGE_FAILED` para: frase actual errónea, nuevas que difieren, solidez insuficiente. Arnés fase [2] que aserta que los TRES cuerpos de respuesta son byte a byte idénticos.  
   **Hecho cuando:** el arnés aserta la igualdad byte a byte de las tres respuestas de fallo y que ninguna nombra la causa.
 
-- [ ] **Tarea 3.3 — Frase idéntica y reenvío idempotente**
+- [x] **Tarea 3.3 — Frase idéntica y reenvío idempotente**
   *Cubre:* RF-04.1 (salvedades honestas), casos límite 12/17, hallazgo 16 del QA.  
   *Alcance:* `PASSPHRASE_IDENTICAL` (nueva = vigente, sin asiento, comprobada ANTES del fallo ciego) y veredicto `idempotentReceipt` (actual ya vigente + nuevas coincidentes → 200 con estampa del cambio previo, sin asiento). Arnés fases [3,4].  
   **Hecho cuando:** el arnés aserta el rechazo específico de la idéntica sin asiento y el recibo idempotente con estampa previa sin asiento nuevo.
 
-- [ ] **Tarea 3.4 — Endpoint y sesión caducada**
+- [x] **Tarea 3.4 — Endpoint y sesión caducada**
   *Cubre:* RF-01.4, RF-04.1, RF-04.2, caso límite 2.  
   *Alcance:* `POST /api/v1/panel/passphrase` en el controlador del panel (401 sin mutación parcial si la sesión caducó a mitad). Arnés fase [5].  
   **Hecho cuando:** el arnés aserta 401 con sesión caducada sin mutación del hash y el endpoint completo cableado en `public/index.php`.

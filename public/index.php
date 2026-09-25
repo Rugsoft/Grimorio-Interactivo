@@ -76,6 +76,7 @@ use Grimorio\Controllers\VestibuleController;
 use Grimorio\Controllers\UserPanelController;
 use Grimorio\Repositories\UserPanelRepository;
 use Grimorio\Services\AvatarService;
+use Grimorio\Services\AuthService;
 use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
@@ -285,7 +286,10 @@ function buildRouter(): Router
 
     // Panel del Adepto (SPEC-12): la morada privada de la identidad. El
     // servicio de la efigie vive junto al PDO del front controller y su
-    // raíz de almacenamiento respeta la disposición de storage/.
+    // raíz de almacenamiento respeta la disposición de storage/. El
+    // custodio de la frase de paso comparte el PDO y el gestor de
+    // vínculos del santuario (SPEC-03) — la sesión actual sobrevive al
+    // acto porque el dueño está presente (plan §5.3).
     $avatarService = new AvatarService(
         $connection->getPdo(),
         new UserPanelRepository($connection->getPdo()),
@@ -294,11 +298,14 @@ function buildRouter(): Router
     $userPanelController = new UserPanelController(
         new UserPanelRepository($connection->getPdo()),
         $avatarService,
+        null,
+        new AuthService($connection->getPdo(), $sessionManager),
     );
     $router->addRoute('GET', '/api/v1/panel', fn (Request $request): Response => $userPanelController->show($request));
     $router->addRoute('GET', '/api/v1/panel/avatars', fn (Request $request): Response => $userPanelController->avatarCatalog($request));
     $router->addRoute('POST', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->chooseAvatar($request));
     $router->addRoute('DELETE', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->removeAvatar($request));
+    $router->addRoute('POST', '/api/v1/panel/passphrase', fn (Request $request): Response => $userPanelController->changePassphrase($request));
 
     // --- Rutas de la Matriz Elemental (SPEC-06, plan Endpoints 1-3) ---
     $router->addRoute('GET', '/api/v1/elements/matrix', fn (Request $request): Response => $elementalMatrixController->getMatrix($request));
