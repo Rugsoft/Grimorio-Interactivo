@@ -41,17 +41,30 @@
 
 .elemental-aura {
   position: absolute;
-  top: 50%;
+  /* Anclaje a la EFIGIE (corrección del recorrido de producción): la raíz
+     del aura vivía centrada en el dummy-host (top:50% + translate -50%)
+     pero, al colapsar su height a 0 —sus hijos son absolutos—, el bloque
+     nacía en el centro del host y la silueta CULGABA hacia abajo,
+     desplazada ~42px respecto al maniquí. El anclaje correcto es la BASE
+     de la efigie: bottom:6px (el padding inferior de .combat-dummy__figure)
+     y una altura propia igual a la silueta (misma clamp de la efigie), con
+     align-items al fondo para que la capa-luz asiente sobre la base. El
+     centro horizontal del host SIEMPRE coincide con el de la efigie (el
+     maniquí está centrado en su figure), así que left:50% basta — jamás
+     offsets mágicos dependientes del entorno. */
+  top: auto;
+  bottom: 6px;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   /* Dimensionada a la efigie: el resplandor abraza la figura, no un
-     círculo mayor que ella (RF-02.2 ratificado). */
+     círculo mayor que ella (RF-02.2 ratificado). La altura replica la
+     clamp de .combat-dummy__mannequin (relación 350/287 de la imagen). */
   width: clamp(120px, 14vw, 160px);
-  height: auto;
+  height: clamp(146px, 17.2vw, 196px);
   /* Perenne (RF-02.2 ratificado): la capa-luz jamás se oculta; solo el
      tinte y el contador siguen a la ventana de resonancia. */
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   pointer-events: none; /* El aura jamás roba gestos al maniquí. */
   z-index: 3;
@@ -69,7 +82,9 @@
    La transición de filter funde el cambio de dorado a tinte elemental. */
 .elemental-aura__silhouette {
   position: absolute;
-  inset: 0;
+  /* Asentada sobre la base del aura (bottom:0): abraza sombrero, brazos y
+     base de la efigie real — jamás colgando del centro del host. */
+  inset: auto 0 0 0;
   width: 100%;
   height: auto;
   opacity: 0.5;
