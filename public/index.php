@@ -73,6 +73,9 @@ use Grimorio\Controllers\AuditController;
 use Grimorio\Controllers\LineageOathController;
 use Grimorio\Controllers\SpellCreatorController;
 use Grimorio\Controllers\VestibuleController;
+use Grimorio\Controllers\UserPanelController;
+use Grimorio\Repositories\UserPanelRepository;
+use Grimorio\Services\AvatarService;
 use Grimorio\Core\RateLimiter;
 use Grimorio\Core\Request;
 use Grimorio\Core\Response;
@@ -279,6 +282,23 @@ function buildRouter(): Router
     $router->addRoute('POST', '/api/v1/grimoire/collection', fn (Request $request): Response => $grimoireCollectionController->collectSpell($request));
     $router->addRoute('DELETE', '/api/v1/grimoire/collection/{spellId}', fn (Request $request, array $routeParams): Response => $grimoireCollectionController->discardSpell($request, $routeParams));
     $router->addRoute('POST', '/api/v1/grimoire/praise', fn (Request $request): Response => $grimoireCollectionController->praiseSpell($request));
+
+    // Panel del Adepto (SPEC-12): la morada privada de la identidad. El
+    // servicio de la efigie vive junto al PDO del front controller y su
+    // raíz de almacenamiento respeta la disposición de storage/.
+    $avatarService = new AvatarService(
+        $connection->getPdo(),
+        new UserPanelRepository($connection->getPdo()),
+        dirname(__DIR__) . '/storage/avatars',
+    );
+    $userPanelController = new UserPanelController(
+        new UserPanelRepository($connection->getPdo()),
+        $avatarService,
+    );
+    $router->addRoute('GET', '/api/v1/panel', fn (Request $request): Response => $userPanelController->show($request));
+    $router->addRoute('GET', '/api/v1/panel/avatars', fn (Request $request): Response => $userPanelController->avatarCatalog($request));
+    $router->addRoute('POST', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->chooseAvatar($request));
+    $router->addRoute('DELETE', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->removeAvatar($request));
 
     // --- Rutas de la Matriz Elemental (SPEC-06, plan Endpoints 1-3) ---
     $router->addRoute('GET', '/api/v1/elements/matrix', fn (Request $request): Response => $elementalMatrixController->getMatrix($request));

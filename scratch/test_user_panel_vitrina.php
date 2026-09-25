@@ -33,6 +33,9 @@ declare(strict_types=1);
 require_once __DIR__ . '/../src/Repositories/UserPanelRepository.php';
 require_once __DIR__ . '/../src/Dto/UserPanelDto.php';
 require_once __DIR__ . '/../src/Models/User.php';
+require_once __DIR__ . '/../src/Models/AuditEntry.php';
+require_once __DIR__ . '/../src/Services/AvatarService.php';
+require_once __DIR__ . '/../src/Exceptions/AvatarIdenticalException.php';
 require_once __DIR__ . '/../src/Core/Response.php';
 require_once __DIR__ . '/../src/Core/Request.php';
 require_once __DIR__ . '/../src/Controllers/UserPanelController.php';
@@ -179,7 +182,9 @@ seedAuditEntry($pdo, 'usr_linajado', 'LINEAGE_OATH_SWORN', 'user', 'usr_linajado
 seedAuditEntry($pdo, 'usr_maestro', 'LINEAGE_OATH_SWORN', 'user', 'usr_maestro', '2025-03-11T08:00:00Z');
 
 $repository = new UserPanelRepository($pdo);
-$controller = new UserPanelController($repository);
+// Tarea 2.1: la cámara de la efigie ya está erigida — el controlador
+// recibe el AvatarService (raíz temporal para las efigies propias).
+$controller = new UserPanelController($repository, new Grimorio\Services\AvatarService($pdo, $repository, sys_get_temp_dir() . '/grimorio_vitrina_' . getmypid()));
 
 assertCondition(true, 'Controlador y DTO instanciados sobre la base canónica');
 
@@ -326,10 +331,18 @@ assertCondition(
 );
 $row = $pdo->query("SELECT avatar FROM users WHERE id = 'usr_peregrino'")->fetchColumn();
 assertCondition($row === null, 'La retención es real: ninguna efigie escrita en la fila del peregrino');
-$response = $controller->chooseAvatar(authenticatedRequest('POST', '/api/v1/panel/avatar', forgeUser('usr_linajado', 'Heredera de la Llama', 'heredera@arcano.arc', 'editor', 'cln_llama', 'primordialFlame'), '{"mode":"catalog","avatarId":"seal_primordialFlame"}'));
+$response = $controller->chooseAvatar(authenticatedRequest('POST', '/api/v1/panel/avatar', forgeUser('usr_linajado', 'Heredera de la Llama', 'heredera@arcano.arc', 'editor', 'cln_llama', 'primordialFlame'), '{"mode":"catalog","avatarId":"seal_celestialTides"}'));
 assertCondition($response->getStatusCode() === 200, 'El linajado SÍ viste la efigie del catálogo: la retención solo alcanza al peregrino');
+// El acto inocuo también queda ejercitado (RF-03.6, caso límite 18):
+// re-elegir la efigie ya vigente responde el aviso noble específico.
+$response = $controller->chooseAvatar(authenticatedRequest('POST', '/api/v1/panel/avatar', forgeUser('usr_linajado', 'Heredera de la Llama', 'heredera@arcano.arc', 'editor', 'cln_llama', 'primordialFlame'), '{"mode":"catalog","avatarId":"seal_celestialTides"}'));
+$identicalBody = json_decode($response->getBody(), true) ?? [];
+assertCondition(
+    $response->getStatusCode() === 400 && ($identicalBody['error']['code'] ?? '') === 'AVATAR_IDENTICAL',
+    'Re-elegir la vigente responde 400 AVATAR_IDENTICAL (acto inocuo sin asiento, RF-03.6)'
+);
 $row = $pdo->query("SELECT avatar FROM users WHERE id = 'usr_linajado'")->fetchColumn();
-assertCondition($row === 'catalog:seal_primordialFlame', 'La escritura del linajado surte efecto en la fila (única vía del repositorio)');
+assertCondition($row === 'catalog:seal_celestialTides', 'La escritura del linajado surte efecto en la fila (única vía del repositorio)');
 $response = $controller->chooseAvatar(authenticatedRequest('POST', '/api/v1/panel/avatar', forgeUser('usr_supremo', 'Custodio Fundador', 'supremo@arcano.arc', 'supremeAdmin', null, null), '{"mode":"catalog","avatarId":"seal_primordialFlame"}'));
 assertCondition(
     $response->getStatusCode() === 200,

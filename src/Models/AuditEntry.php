@@ -92,6 +92,15 @@ final class AuditEntry
         // elogio JAMÁS se asientan (plan §2.3).
         'TOME_SEAL',                  // Sellado de un hechizo en el tomo personal (SPEC-11, RF-06.1)
         'TOME_PRAISE',                // Elogio con gloria acreditada al clan del hechizo (SPEC-11, RF-06.2)
+        // Acto de gobierno personal del Panel del Adepto (SPEC-12, plan §5.1):
+        // ampliación mínima sellada por la duda 6 — ningún acto del catálogo
+        // cerrado amparaba el cambio consciente de avatar, y RNF-05 exige la
+        // trazabilidad del acto. Actor = sujeto = el propio adepto;
+        // target_entity_type='user'; la justification es leyenda fija del
+        // servicio (no editable). Los actos INOCUOS (re-subida o re-elección
+        // de la efigie ya vigente) JAMÁS se inscriben (RF-03.6: un acto sin
+        // efecto real no deja rastro).
+        'AVATAR_SELF_MODIFIED',       // Alta/elección/retiro de la propia efigie (SPEC-12, RF-03.6)
     ];
 
     /** Tipos de entidad objetivo canónicos (RF-08.1). */

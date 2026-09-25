@@ -150,6 +150,7 @@ final class UserPanelDto implements JsonSerializable
      * @param bool                        $isCurrentSession ¿Es el vínculo de la petición viva?
      * @param int                         $sealedCount      Obras selladas en el tomo (RF-07.1).
      * @param int                         $praiseCount      Homenajes rendidos (RF-07.1).
+     * @param bool                        $ownAvatarUnavailable Bandera discreta del fichero propio inaccesible (Tarea 2.5, caso límite 15).
      */
     public static function fromRows(
         ?array $vitalsRow,
@@ -164,6 +165,7 @@ final class UserPanelDto implements JsonSerializable
         bool $isCurrentSession = true,
         int $sealedCount = 0,
         int $praiseCount = 0,
+        bool $ownAvatarUnavailable = false,
     ): self {
         // --- La identidad íntegra (RF-02.1, RF-02.4) --------------------
         $role = (string) ($vitalsRow['role'] ?? 'reader');
@@ -176,7 +178,7 @@ final class UserPanelDto implements JsonSerializable
                 'alias' => (string) ($vitalsRow['alias'] ?? ''),
                 'email' => (string) ($vitalsRow['email'] ?? ''),
                 'roleLabel' => self::ROLE_LABELS[$role] ?? self::ROLE_LABELS['reader'],
-                'avatar' => self::forgeAvatar($vitalsRow['avatar'] ?? null),
+                'avatar' => self::forgeAvatar($vitalsRow['avatar'] ?? null, $ownAvatarUnavailable),
             ],
             lineage: self::forgeLineage($lineageKey, $oathSwornAt),
             clan: self::forgeClan($clanRow, $membershipRow),
@@ -241,17 +243,25 @@ final class UserPanelDto implements JsonSerializable
      * La efigie vigente (RF-03.x): la semántica cerrada de la columna
      * `avatar` se traduce aquí (NULL → canónico por defecto;
      * 'catalog:<id>' → efigie del catálogo; 'own:<fileId>' → efigie
-     * propia), jamás en la base.
+     * propia), jamás en la base. Con el fichero propio inaccesible, la
+     * degradación de solo-lectura (Tarea 2.5, caso límite 15) viste el
+     * canónico con la bandera discreta `unavailable:true` — la identidad
+     * jamás queda sin efigie ni la cámara rota.
      *
-     * @return array{kind: string, reference: string|null, isOwn: bool}
+     * @return array{kind: string, reference: string|null, isOwn: bool, unavailable?: bool}
      */
-    private static function forgeAvatar(mixed $rawAvatar): array
+    private static function forgeAvatar(mixed $rawAvatar, bool $ownAvatarUnavailable = false): array
     {
         if (is_string($rawAvatar) && str_starts_with($rawAvatar, 'catalog:')) {
             return ['kind' => 'catalog', 'reference' => substr($rawAvatar, 8), 'isOwn' => false];
         }
 
         if (is_string($rawAvatar) && str_starts_with($rawAvatar, 'own:')) {
+            if ($ownAvatarUnavailable) {
+                // Degradación de SOLO-LECTURA: la fila jamás se muta.
+                return ['kind' => 'default', 'reference' => null, 'isOwn' => false, 'unavailable' => true];
+            }
+
             return ['kind' => 'own', 'reference' => substr($rawAvatar, 4), 'isOwn' => true];
         }
 

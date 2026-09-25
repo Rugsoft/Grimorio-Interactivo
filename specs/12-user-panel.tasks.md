@@ -37,27 +37,27 @@
 
 ## FASE 2 — El Avatar (catálogo + efigie propia)
 
-- [ ] **Tarea 2.1 — Catálogo canónico de avatares**
+- [x] **Tarea 2.1 — Catálogo canónico de avatares**
   *Cubre:* RF-03.1, duda 5 sellada.  
   *Alcance:* `src/Services/AvatarService.php` con el catálogo en código (efigies/heráldicas del canon existente: 8 sellos de linaje + canónicos del santuario), `AvatarCatalogDto`, `GET /api/v1/panel/avatars` con `restricted` para el peregrino y `AVATAR_CATALOG_UNAVAILABLE` (500) ante fallo. Arnés `scratch/test_avatar_service.php` fase [1] y fase de catálogo.  
   **Hecho cuando:** el arnés aserta el catálogo servido con su `current` y `restricted` correcto por estado de cuenta, y el fallo simulado de catálogo responde 500 con el código canónico sin trazas.
 
-- [ ] **Tarea 2.2 — Alta de efigie propia (validación + encuadre)**
+- [x] **Tarea 2.2 — Alta de efigie propia (validación + encuadre)**
   *Cubre:* RF-03.2, RF-03.3, RNF-04, §7b.  
   *Alcance:* `POST /api/v1/panel/avatar` modo `own`: validación de formato (png/jpg/webp), peso ≤ 2 MiB, lados ≤ 1024 px, encuadre ceremonial 512×512, fichero en `storage/avatars/` con nombre aleatorio NO derivado del alias. Códigos: `INVALID_AVATAR_FORMAT`, `AVATAR_TOO_LARGE`, `AVATAR_DIMENSIONS_EXCEEDED`, 413. Arnés fase [3].  
   **Hecho cuando:** el arnés aserta las tres familias de rechazo con su código que NOMBRA el motivo, el vigente intacto y el fichero no creado.
 
-- [ ] **Tarea 2.3 — Aceptación atómica + asiento de bitácora**
+- [x] **Tarea 2.3 — Aceptación atómica + asiento de bitácora**
   *Cubre:* RF-03.6, RNF-05, casos límite 15/16.  
   *Alcance:* transacción fichero→UPDATE→INSERT `AVATAR_SELF_MODIFIED` (ampliación mínima del catálogo cerrado en `AuditEntry.php`, §5.1 del plan); rollback con limpieza de huérfano si falla la bitácora; re-subida idéntica → `AVATAR_IDENTICAL` sin asiento (hash del resultado). Arnés fases [1,2,4,7] + caso límite 18.  
   **Hecho cuando:** el arnés aserta alta exitosa con asiento, fallo simulado de almacenamiento/bitácora sin mutación ni huérfanos, y re-subida idéntica rechazada sin asiento.
 
-- [ ] **Tarea 2.4 — Elección del catálogo y retiro al canónico**
+- [x] **Tarea 2.4 — Elección del catálogo y retiro al canónico**
   *Cubre:* RF-03.1 (efecto inmediato), RF-03.4, RF-03.5, caso límite 5.  
   *Alcance:* modo `catalog` del POST (asiento si cambia la vigente; inocuo si ya es la vigente) y `DELETE /api/v1/panel/avatar` (retiro → canónico, borrado del fichero propio). Arnés fases [5,8].  
   **Hecho cuando:** el arnés aserta elección de catálogo con asiento, re-elección de la vigente sin asiento, y retiro con retorno a `kind:"default"` y fichero propio borrado.
 
-- [ ] **Tarea 2.5 — Degradación ante fichero inaccesible**
+- [x] **Tarea 2.5 — Degradación ante fichero inaccesible**
   *Cubre:* RF-03.5 (jamás sin efigie), caso límite 15.  
   *Alcance:* en la lectura de vitrina y catálogo, si `avatar = own:f` y `f` no es accesible, servir el canónico con bandera discreta de indisponibilidad (sin mutar la fila). Arnés con fichero borrado a mano tras el alta.  
   **Hecho cuando:** el arnés aserta que con el fichero físico eliminado la vitrina responde `kind:"default"` + bandera y la fila de `users.avatar` NO cambia.
