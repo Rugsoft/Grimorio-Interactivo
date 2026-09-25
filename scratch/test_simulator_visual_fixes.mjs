@@ -203,9 +203,17 @@ assertCondition(
   'El aura porta su silueta-luz y su contador numérico (RF-02.2 ratificado)',
 );
 
+// Hallazgo 17 (SPEC-06 §9): el anclaje del aura es la BASE de la efigie, no el
+// centro del anfitrión. El anclaje antiguo (top: 50% + translate(-50%,-50%)
+// con height:auto colapsado) desplazaba la silueta ~42px bajo la efigie.
+const auraBlock = codexCss.match(/\.elemental-aura\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
 assertCondition(
-  codexCss.includes('left: 50%') && codexCss.includes('top: 50%'),
-  'El halo de aura se centra directamente sobre el torso del maniquí (top: 50%, left: 50%)',
+  auraBlock.includes('bottom: 6px') && !auraBlock.includes('top: 50%') && !auraBlock.includes('height: auto'),
+  'El aura se ancla a la base de la efigie (bottom: 6px; jamás top: 50% ni height: auto, Hallazgo 17)',
+);
+assertCondition(
+  codexCss.includes('left: 50%'),
+  'El aura se centra horizontalmente con el centrado puro del host (left: 50%, sin offsets mágicos)',
 );
 
 // ══════════════════════════════════════════════════════════════════════

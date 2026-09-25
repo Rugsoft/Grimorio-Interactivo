@@ -27,6 +27,11 @@
  *   [9] Movimiento reducido (RNF-03): con la media query activa, el halo
  *       se renderiza SIN la clase pulsante (el tinte y el contador siguen).
  *  [10] Determinismo (RNF-01): mismos actos → mismos atributos del contador.
+ *  [11] Anclaje a la base de la efigie (RF-02.2, Hallazgo 17): la hoja
+ *       elemental-codex.css ancla la raíz del aura al borde inferior del
+ *       contenedor de la figura (bottom: 6px), con altura que replica la
+ *       clamp de la efigie, silueta asentada sobre la base (inset inferior)
+ *       y sin offset mágico horizontal (left: 50% puro).
  *
  * Criterio «Hecho cuando» (Tarea 3.1): al aplicar un elemento, la capa-luz
  * perenne se tiñe del color heráldico y el contador numérico declara los
@@ -42,6 +47,10 @@
  *
  * Uso: node scratch/test_elemental_aura.mjs
  */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let passed = 0;
 let failed = 0;
@@ -443,6 +452,36 @@ console.log('\n[FASE 10] Determinismo (RNF-01)');
 }
 
 // ---------------------------------------------------------------------------
+console.log('\n[FASE 11] Anclaje de la capa-luz a la base de la efigie (RF-02.2, Hallazgo 17)');
+// ---------------------------------------------------------------------------
+
+{
+  // La regresión del anclaje es puramente declarativa (CSS): el DOM falso de
+  // este arnés carece de layout, así que la garantía se lee de la hoja de
+  // estilos, al modo de los arneses de hojas del santuario. El hallazgo 17
+  // destapó que la raíz del aura se centraba en el anfitrión del maniquí
+  // (top:50% + translate(-50%,-50%)) con height:auto colapsado a 0 —sus
+  // hijos son absolutos—, de modo que la silueta colgaba ~42px bajo la
+  // efigie. El anclaje ratificado es la BASE de la efigie: mismo borde
+  // inferior que la figura, altura que replica su clamp y centrado puro
+  // (jamás offsets mágicos dependientes del entorno).
+  const codexCssPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../public/assets/css/components/elemental-codex.css');
+  const codexCss = fs.readFileSync(codexCssPath, 'utf8');
+  const auraBlock = codexCss.match(/\.elemental-aura\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+  const silhouetteBlock = codexCss.match(/\.elemental-aura__silhouette\s*\{([\s\S]*?)\n\}/)?.[1] ?? '';
+
+  assertTruthy(auraBlock !== '', 'La hoja declara el bloque .elemental-aura');
+  assertTruthy(!auraBlock.includes('top: 50%'), 'La raíz del aura JAMÁS se centra en el anfitrión (sin top: 50%, causa raíz del desplazamiento)');
+  assertTruthy(!auraBlock.includes('translate(-50%'), 'La raíz del aura JAMÁS desplaza verticalmente (sin translate(-50%, -50%))');
+  assertTruthy(auraBlock.includes('bottom: 6px'), 'La raíz se ancla a la base de la efigie (bottom: 6px, el relleno inferior de la figura)');
+  assertTruthy(auraBlock.includes('left: 50%') && !auraBlock.includes('calc('), 'Centrado horizontal puro del aura (left: 50%; prohibido el offset mágico)');
+  assertTruthy(!auraBlock.includes('height: auto'), 'La altura del aura es propia (jamás auto, que colapsa a 0 con hijos absolutos)');
+  assertTruthy(auraBlock.includes('height: clamp(146px, 17.2vw, 196px)'), 'La altura replica la clamp de la efigie (clamp(146px, 17.2vw, 196px), proporción 350/287)');
+  assertTruthy(auraBlock.includes('align-items: flex-end'), 'La capa-luz asienta sobre la base (align-items: flex-end)');
+  assertTruthy(silhouetteBlock.includes('inset: auto 0 0 0'), 'La silueta se ancla al fondo de la raíz (inset: auto 0 0 0): abraza sombrero, brazos y base');
+}
+
+// ---------------------------------------------------------------------------
 console.log('\n== RESUMEN ==');
 console.log(`Asertos superados: ${passed}, fallidos: ${failed}`);
 
@@ -455,5 +494,5 @@ if (failed > 0) {
   process.exit(1);
 }
 
-console.log('\nRESULTADO: ÉXITO — Silueta perenne dorada, tinte heráldico, contador decreciente y regreso solemne (Tarea 3.1).');
+console.log('\nRESULTADO: ÉXITO — Silueta perenne dorada, tinte heráldico, contador decreciente, regreso solemne y anclaje a la efigie (Tarea 3.1).');
 process.exit(0);
