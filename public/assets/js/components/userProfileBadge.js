@@ -3,8 +3,9 @@
  *
  * Tarea 4.5 (TASKS-03): cuando existe vínculo activo, reemplaza el botón
  * «Cruzar el Umbral» por el distintivo del usuario y su clan, con un menú
- * desplegable arcano que ofrece ver el libro personal, cambiar de clan en
- * tregua o disolver el vínculo (individual y global).
+ * desplegable arcano que ofrece ver el libro personal o disolver el
+ * vínculo de sesión (individual y global). SIN opción de cambio de
+ * linaje: el juramento es perpetuo (SPEC-09, RF-03.4) — ver §MENU_OPTIONS.
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): DOM nativo; los nodos se forjan con
