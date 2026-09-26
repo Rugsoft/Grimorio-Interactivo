@@ -115,22 +115,29 @@ final class ClanApplicationRepository
               WHERE (
                         SELECT COUNT(*)
                           FROM clan_applications
-                         WHERE user_id = :userId
-                           AND status = :pendingStatus
+                         WHERE user_id = :userIdCount
+                           AND status = :pendingStatusCount
                     ) < :maxPending
                 AND NOT EXISTS (
                         SELECT 1
                           FROM clan_applications
-                         WHERE user_id = :userId
-                           AND clan_id = :clanId
-                           AND status = :pendingStatus
+                         WHERE user_id = :userIdHouse
+                           AND clan_id = :clanIdHouse
+                           AND status = :pendingStatusHouse
                     )'
         );
         try {
+            // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6): MySQL con
+            // prepares nativos prohíbe reutilizar un parámetro nombrado (HY093).
             $statement->bindValue(':applicationId', $applicationId);
             $statement->bindValue(':clanId', $clanId);
             $statement->bindValue(':userId', $userId);
             $statement->bindValue(':pendingStatus', self::STATUS_PENDING);
+            $statement->bindValue(':userIdCount', $userId);
+            $statement->bindValue(':pendingStatusCount', self::STATUS_PENDING);
+            $statement->bindValue(':userIdHouse', $userId);
+            $statement->bindValue(':clanIdHouse', $clanId);
+            $statement->bindValue(':pendingStatusHouse', self::STATUS_PENDING);
             $statement->bindValue(':createdAt', $createdAt);
             $statement->bindValue(':motivation', $motivation);
             $statement->bindValue(':maxPending', self::MAX_PENDING_APPLICATIONS, PDO::PARAM_INT);
@@ -532,12 +539,13 @@ final class ClanApplicationRepository
                FROM clan_applications
               WHERE user_id = :userId
                 AND status = :pendingStatus
-                AND (:exceptApplicationId IS NULL OR id <> :exceptApplicationId)'
+                AND (:exceptApplicationId IS NULL OR id <> :exceptApplicationIdRead)'
         );
         $readStatement->execute([
-            ':userId'              => $userId,
-            ':pendingStatus'       => self::STATUS_PENDING,
-            ':exceptApplicationId' => $exceptApplicationId,
+            ':userId'                   => $userId,
+            ':pendingStatus'            => self::STATUS_PENDING,
+            ':exceptApplicationId'      => $exceptApplicationId,
+            ':exceptApplicationIdRead'  => $exceptApplicationId,
         ]);
         $annulledIds = array_map(
             static fn (array $row): string => (string) $row['id'],
@@ -551,14 +559,15 @@ final class ClanApplicationRepository
                     resolved_at = :resolvedAt
               WHERE user_id = :userId
                 AND status = :pendingStatus
-                AND (:exceptApplicationId IS NULL OR id <> :exceptApplicationId)'
+                AND (:exceptApplicationId IS NULL OR id <> :exceptApplicationIdWrite)'
         );
         $statement->execute([
-            ':cancelledStatus'     => self::STATUS_CANCELLED,
-            ':resolvedAt'          => $resolvedAt,
-            ':userId'              => $userId,
-            ':pendingStatus'       => self::STATUS_PENDING,
-            ':exceptApplicationId' => $exceptApplicationId,
+            ':cancelledStatus'             => self::STATUS_CANCELLED,
+            ':resolvedAt'                  => $resolvedAt,
+            ':userId'                      => $userId,
+            ':pendingStatus'               => self::STATUS_PENDING,
+            ':exceptApplicationId'         => $exceptApplicationId,
+            ':exceptApplicationIdWrite'    => $exceptApplicationId,
         ]);
 
         return $annulledIds;

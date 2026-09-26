@@ -118,10 +118,15 @@ final class WeeklyCycleRepository
               WHERE NOT EXISTS (
                         SELECT 1
                           FROM weekly_cycles
-                         WHERE cycle_year = :cycleYear
-                           AND week_number = :weekNumber
+                         WHERE cycle_year = :cycleYearGuard
+                           AND week_number = :weekNumberGuard
                     )'
         );
+        // Doble canal dialectal (SPEC-13 §8.6): los marcadores de la guardia
+        // llevan nombre PROPIO porque MySQL con prepares nativos
+        // (EMULATE_PREPARES = false) prohíbe reutilizar un parámetro
+        // nombrado (HY093), mientras que SQLite lo tolera. Misma semántica
+        // en ambos motores.
         $statement->bindValue(':cycleId', $cycleId);
         $statement->bindValue(':weekNumber', $weekNumber, PDO::PARAM_INT);
         $statement->bindValue(':cycleYear', $cycleYear, PDO::PARAM_INT);
@@ -129,6 +134,8 @@ final class WeeklyCycleRepository
         $statement->bindValue(':winningPoints', $winningPoints, PDO::PARAM_INT);
         $statement->bindValue(':winnerSpellCount', $winnerSpellCount, PDO::PARAM_INT);
         $statement->bindValue(':closedAt', $closedAt);
+        $statement->bindValue(':cycleYearGuard', $cycleYear, PDO::PARAM_INT);
+        $statement->bindValue(':weekNumberGuard', $weekNumber, PDO::PARAM_INT);
         $statement->execute();
 
         if ($statement->rowCount() === 0) {

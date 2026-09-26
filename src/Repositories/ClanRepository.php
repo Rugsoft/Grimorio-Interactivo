@@ -525,19 +525,31 @@ final class ClanRepository
             . self::ACTIVE_MEMBER_COUNT . ' AS member_count'
             . '
                FROM clans
-              WHERE (:lineageType IS NULL OR lineage_type = :lineageType)
-                AND (:status IS NULL OR status = :status)
+              WHERE (:lineageType IS NULL OR lineage_type = :lineageTypeEq)
+                AND (:status IS NULL OR status = :statusEq)
               ORDER BY weekly_points DESC, historical_points DESC, created_at ASC, id ASC
               LIMIT :limit OFFSET :offset'
         );
 
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6): MySQL con
+        // prepares nativos prohíbe reutilizar un parámetro nombrado (HY093).
         $statement->bindValue(
             ':lineageType',
             $lineageType,
             $lineageType === null ? PDO::PARAM_NULL : PDO::PARAM_STR
         );
         $statement->bindValue(
+            ':lineageTypeEq',
+            $lineageType,
+            $lineageType === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(
             ':status',
+            $status,
+            $status === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(
+            ':statusEq',
             $status,
             $status === null ? PDO::PARAM_NULL : PDO::PARAM_STR
         );
@@ -564,17 +576,26 @@ final class ClanRepository
     {
         $statement = $this->pdo->prepare(
             'SELECT COUNT(*) FROM clans
-              WHERE (:lineageType IS NULL OR lineage_type = :lineageType)
-                AND (:status IS NULL OR status = :status)'
-        );
-
+              WHERE (:lineageType IS NULL OR lineage_type = :lineageTypeEq)
+                AND (:status IS NULL OR status = :statusEq)'        );
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6).
         $statement->bindValue(
             ':lineageType',
             $lineageType,
             $lineageType === null ? PDO::PARAM_NULL : PDO::PARAM_STR
         );
         $statement->bindValue(
+            ':lineageTypeEq',
+            $lineageType,
+            $lineageType === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(
             ':status',
+            $status,
+            $status === null ? PDO::PARAM_NULL : PDO::PARAM_STR
+        );
+        $statement->bindValue(
+            ':statusEq',
             $status,
             $status === null ? PDO::PARAM_NULL : PDO::PARAM_STR
         );

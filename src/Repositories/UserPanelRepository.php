@@ -248,11 +248,13 @@ final class UserPanelRepository
               WHERE actor_user_id = :userId
                 AND action_type = \'LINEAGE_OATH_SWORN\'
                 AND target_entity_type = \'user\'
-                AND target_entity_id = :userId
+                AND target_entity_id = :userIdTarget
               ORDER BY created_at ASC
               LIMIT 1'
         );
-        $statement->execute([':userId' => $userId]);
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6): MySQL con
+        // prepares nativos prohíbe reutilizar un parámetro nombrado (HY093).
+        $statement->execute([':userId' => $userId, ':userIdTarget' => $userId]);
         $stamp = $statement->fetchColumn();
 
         return is_string($stamp) && $stamp !== '' ? $stamp : null;

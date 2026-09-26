@@ -946,20 +946,24 @@ final class WeeklyDominionService
                     :awardedPoints, :hasSynergy, :sourceId, :awardedAt
               WHERE NOT EXISTS (
                         SELECT 1 FROM dominion_awards
-                         WHERE action_type = :actionType
-                           AND source_id = :sourceId
+                         WHERE action_type = :actionTypeGuard
+                           AND source_id = :sourceIdGuard
                     )'
         );
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6): MySQL con
+        // prepares nativos prohíbe reutilizar un parámetro nombrado (HY093).
         $statement->execute([
-            ':awardId'       => $awardId,
-            ':clanId'        => $clanId,
-            ':userId'        => $userId,
-            ':actionType'    => $actionType,
-            ':basePoints'    => $basePoints,
-            ':awardedPoints' => $awardedPoints,
-            ':hasSynergy'    => $hasSynergy ? 1 : 0,
-            ':sourceId'      => $sourceId,
-            ':awardedAt'     => $awardedAt,
+            ':awardId'          => $awardId,
+            ':clanId'           => $clanId,
+            ':userId'           => $userId,
+            ':actionType'       => $actionType,
+            ':basePoints'       => $basePoints,
+            ':awardedPoints'    => $awardedPoints,
+            ':hasSynergy'       => $hasSynergy ? 1 : 0,
+            ':sourceId'         => $sourceId,
+            ':awardedAt'        => $awardedAt,
+            ':actionTypeGuard'  => $actionType,
+            ':sourceIdGuard'    => $sourceId,
         ]);
 
         return $statement->rowCount() > 0;
@@ -1004,16 +1008,20 @@ final class WeeklyDominionService
              SELECT :trackerId, :userId, :clanId, :cycleDate, 0
               WHERE NOT EXISTS (
                         SELECT 1 FROM daily_simulator_tracker
-                         WHERE user_id = :userId
-                           AND clan_id = :clanId
-                           AND cycle_date = :cycleDate
+                         WHERE user_id = :userIdGuard
+                           AND clan_id = :clanIdGuard
+                           AND cycle_date = :cycleDateGuard
                     )'
         );
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6).
         $openDay->execute([
-            ':trackerId' => $this->newIdentifier('dst'),
-            ':userId'    => $userId,
-            ':clanId'    => $clanId,
-            ':cycleDate' => $cycleDate,
+            ':trackerId'       => $this->newIdentifier('dst'),
+            ':userId'          => $userId,
+            ':clanId'          => $clanId,
+            ':cycleDate'       => $cycleDate,
+            ':userIdGuard'     => $userId,
+            ':clanIdGuard'     => $clanId,
+            ':cycleDateGuard'  => $cycleDate,
         ]);
 
         $increment = $this->pdo->prepare(
@@ -1022,14 +1030,16 @@ final class WeeklyDominionService
               WHERE user_id = :userId
                 AND clan_id = :clanId
                 AND cycle_date = :cycleDate
-                AND points_awarded + :pointsAwarded <= :dailyCap'
+                AND points_awarded + :pointsAwardedGuard <= :dailyCap'
         );
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6).
         $increment->execute([
-            ':pointsAwarded' => $pointsAwarded,
-            ':userId'        => $userId,
-            ':clanId'        => $clanId,
-            ':cycleDate'     => $cycleDate,
-            ':dailyCap'      => self::DAILY_SIMULATOR_CAP,
+            ':pointsAwarded'       => $pointsAwarded,
+            ':userId'              => $userId,
+            ':clanId'              => $clanId,
+            ':cycleDate'           => $cycleDate,
+            ':pointsAwardedGuard'  => $pointsAwarded,
+            ':dailyCap'            => self::DAILY_SIMULATOR_CAP,
         ]);
 
         return $increment->rowCount() > 0;
@@ -1051,15 +1061,18 @@ final class WeeklyDominionService
              SELECT :favoriteId, :userId, :spellId, :createdAt
               WHERE NOT EXISTS (
                         SELECT 1 FROM favorites
-                         WHERE user_id = :userId
-                           AND spell_id = :spellId
+                         WHERE user_id = :userIdGuard
+                           AND spell_id = :spellIdGuard
                     )'
         );
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6).
         $statement->execute([
-            ':favoriteId' => $favoriteId,
-            ':userId'     => $userId,
-            ':spellId'    => $spellId,
-            ':createdAt'  => $createdAt,
+            ':favoriteId'    => $favoriteId,
+            ':userId'        => $userId,
+            ':spellId'       => $spellId,
+            ':createdAt'     => $createdAt,
+            ':userIdGuard'   => $userId,
+            ':spellIdGuard'  => $spellId,
         ]);
 
         return $statement->rowCount() > 0;

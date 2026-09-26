@@ -190,10 +190,12 @@ final class AuthService
     public function bind(string $identity, string $passphrase, ?DateTimeImmutable $now = null): BindResult
     {
         // La identidad puede llegar como alias o como correo (plan 2.2, Endpoint 2).
+        // Marcadores con nombre PROPIO por uso (SPEC-13 §8.6): MySQL con
+        // prepares nativos prohíbe reutilizar un parámetro nombrado (HY093).
         $userStatement = $this->pdo->prepare(
-            'SELECT id, password_hash FROM users WHERE email = :identity OR alias = :identity LIMIT 1'
+            'SELECT id, password_hash FROM users WHERE email = :identityEmail OR alias = :identityAlias LIMIT 1'
         );
-        $userStatement->execute([':identity' => $identity]);
+        $userStatement->execute([':identityEmail' => $identity, ':identityAlias' => $identity]);
         $userRow = $userStatement->fetch(PDO::FETCH_ASSOC);
 
         // Hash señuelo (plan 3.4): mismo algoritmo y coste que un hash real,
