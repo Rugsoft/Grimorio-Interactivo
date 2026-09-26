@@ -26,8 +26,11 @@
 > `/var/www/errors/override.php`, no sobrescribible), por eso los
 > canales .htaccess/`php_value` y `.user.ini` del paquete son inertes
 > ALLÍ y el `require` del front controller es el que manda. El DSN no
-> viaja por el prepend: lo materializa `env.php` vía `putenv` ANTES de
-> que `Connection.php` lea la variable.
+> viaja por el prepend: lo materializa `env.php` vía `define` ANTES de
+> que `Connection.php` lea la configuración (la vía `putenv` está muerta
+> en el sandbox: `putenv` figura en `disable_functions` y la llamada
+> muere en silencio — véase la sección «Migración sobre SQLite en
+> producción»).
 
 ---
 
@@ -233,6 +236,100 @@ simple: nada de credenciales ni de importar el esquema a mano.
 | Aspecto | Detalle |
 |---|---|
 | Sesiones | Siguen siendo ficheros PHP nativos del hosting — no cambian con el motor de la base. |
-| Migraciones nuevas | Las guiones de ascensión posteriores (`sql/*.sql`) son idempotentes en SQLite; en MySQL ejecútalos también en phpMyAdmin cuando el santuario crezca. SPEC-12 añadió `users.avatar` (Panel del Adepto): sobre bases legadas aplícala con la guardia de `INFORMATION_SCHEMA` del paso 2; sobre bases nuevas de `schema.sql` vigente no hace falta. Los avatares propios viven en `storage/avatars/` con nombre aleatorio NO derivado del alias; vigila la cuota de ficheros del plan gratuito (limitación declarada en SPEC-12 §7b). |
+| Migraciones nuevas | Las guiones de ascensión posteriores (`sql/*.sql`) son idempotentes en SQLite; en MySQL ejecútalos también en phpMyAdmin cuando el santuario crezca. SPEC-12 añadió `users.avatar` (Panel del Adepto): sobre bases legadas aplícala con la guardia de `INFORMATION_SCHEMA` del paso 2; sobre bases nuevas de `schema.sql` vigente no hace falta. (Sobre la vía SQLite sin phpMyAdmin, véase la sección «Migración sobre SQLite en producción».) Los avatares propios viven en `storage/avatars/` con nombre aleatorio NO derivado del alias; vigila la cuota de ficheros del plan gratuito (limitación declarada en SPEC-12 §7b). |
 | `PRAGMA foreign_keys` | No aplica; MySQL con InnoDB aplica las claves foráneas por defecto (ya lo documenta `schema.sql`). |
 | Contraseña en el fichero | `env.php` vive en `public/` pero el funnel la protege; el guard de 403 impide servirla como URL. La contraseña de la base es la del plan gratuito — regénérala desde el panel si acaso. |
+
+---
+
+## Migración sobre SQLite en producción (sonda `migrate-spec12.php`)
+
+> Contexto: la vía MySQL de arriba tiene phpMyAdmin; la vía SQLite del
+> hosting NO ofrece CLI ni administración sobre el fichero
+> `storage/grimorio_live.sqlite`. Cuando una ascensión de esquema
+> (p. ej. SPEC-12: `users.avatar`) llegue a una base legada ya en
+> producción, la herramienta oficial es la **sonda de migración**
+> `deploy/infinityfree/migrate-spec12.php` — misma doctrina que la
+> sonda del entorno `probe-env.php` del paso 9: subir, ejecutar en el
+> navegador, leer el informe y **borrar del servidor**.
+
+### Cuándo procede
+
+- Tu base SQLite fue creada por el auto-bootstrap con un `schema.sql`
+  ANTERIOR a la migración (base legada), y los adeptos ya registran
+  datos que no quieres perder.
+- Sobre bases NUEVAS no hace falta: el auto-bootstrap levanta el
+  `schema.sql` vigente con la columna ya incluida.
+
+### Pasos
+
+1. **Sube la sonda por FTP** como `htdocs/public/migrate-spec12.php`
+   (junto a `index.php`).
+2. **Ábrela en el navegador**:
+   `https://TU_SUBDOMINIO.infinityfreeapp.com/migrate-spec12.php`.
+   Responde un JSON de informe, por ejemplo en la ascensión SPEC-12
+   (la primera corrida real de esta sonda):
+
+   ```json
+   {
+       "dsn": "sqlite (persistente)",
+       "columnaAntes": 0,
+       "migracion": "ALTER aplicado: columna avatar añadida a users",
+       "columnaDespues": 1,
+       "usuarios": 3,
+       "avataresVestidos": 0,
+       "success": true
+   }
+   ```
+
+3. **Certifica la idempotencia**: re-ejecuta la misma URL. La segunda
+   respuesta debe decir `"La base ya porta la columna: nada que hacer
+   (idempotente)"` con `"success": true` — la guardia por
+   `PRAGMA table_info(users)` evita el ALTER si la columna ya vive, en
+   fiel cumplimiento del contrato idempotente de `sql/12_user_panel.sql`
+   («duplicate column» es señal, jamás error).
+4. **BORRA la sonda del servidor** (`htdocs/public/migrate-spec12.php`):
+   es llave de esquema y la guía la prohíbe en producción una vez usada
+   (misma regla que `probe-env.php`).
+
+### Guardias de la sonda (por qué es fail-safe)
+
+| Guardia | Comportamiento |
+|---|---|
+| DSN ausente o `:memory:` | HTTP 500 con informe JSON y **ninguna escritura**: si el entorno no materializa el DSN persistente, tocar la base sería borrar todo en cada petición. Verificado en la primera corrida real: la primera versión de la sonda (solo `getenv`) falló con «DSN no materializado» y la base quedó intacta. |
+| Idempotencia | `PRAGMA table_info(users)` decide si el ALTER procede; re-ejecutar nunca falla ni muta fila. |
+| Errores controlados | `catch (Throwable)` con JSON mínimo, sin trazas PDO ni rutas internas (AGENTS.md 6.1). |
+
+### El hallazgo del doble canal del DSN (define vs putenv)
+
+La sonda respeta la **misma precedencia** que `Connection.php`, y ahí
+vive el hallazgo que motivó su corrección:
+
+1. La documentación inicial de `env.php` atribuía el DSN a la vía
+   `putenv('GRIMORIO_DB_DSN', ...)`.
+2. En el sandbox real de InfinityFree, **`putenv` está en
+   `disable_functions`**: la llamada muere en silencio (verificado con
+   `probe-env.php`: `dsnTrasRequire: null`), así que el DSN jamás
+   llegaría por ahí.
+3. El `env.php` desplegado materializa el DSN vía
+   `define('GRIMORIO_DB_DSN', 'sqlite:' . $storageDir . '/grimorio_live.sqlite')`,
+   y `Connection.php` resuelve PRIMERO la constante
+   `GRIMORIO_DB_DSN`, recurriendo a `getenv` solo como fallback.
+4. Por eso la sonda lee el doble canal, en este orden:
+
+   ```php
+   $dsn = defined('GRIMORIO_DB_DSN')
+       ? constant('GRIMORIO_DB_DSN')
+       : getenv('GRIMORIO_DB_DSN');
+   ```
+
+   La primera versión (solo `getenv`) devolvía `null` en producción y
+   la guardia cortó la ejecución ANTES de abrir la base — el fail-safe
+   funcionó tal cual fue diseñado. Corregida la precedencia, la sonda
+   fue ensayada en AMBOS canales (define: ALTER aplicado; getenv:
+   fallback operativo) antes de su corrida real exitosa.
+
+Cualquier sonda futura de migración debe copiar este patrón:
+`require __DIR__ . '/env.php'`, doble canal del DSN, guardia anti
+memoria, guardia idempotente del esquema, informe JSON y borrado del
+servidor tras el uso.
