@@ -388,6 +388,77 @@ final class UserPanelController
         ], 200);
     }
 
+    /**
+     * GET /api/v1/panel/avatar/image — el retrato de la efigie propia
+     * (plan §2.3: `avatar.url` / `ownAvatar.url`). PRIVADA: la guardia
+     * de sesión precede a la lectura del disco — el fichero jamás vive
+     * bajo public/ y la imagen solo viste la cabecera y el panel del
+     * PROPIO adepto (RF-03.3, exclusión 5 de la spec).
+     *
+     * Respuesta binaria PNG (el alta siempre re-encuadra a PNG, §5.2)
+     * con ETag de contenido para caché ceremonial del navegador.
+     */
+    public function avatarImage(Request $request): Response
+    {
+        $adept = $this->requireAuthenticatedUser($request);
+        if ($adept === null) {
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'UNAUTHENTICATED',
+                    'message' => 'El vínculo arcano no está activo: la efigie propia solo se contempla con vínculo vivo.',
+                ],
+            ], 401);
+        }
+
+        if ($this->avatarService === null) {
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'AVATAR_CATALOG_UNAVAILABLE',
+                    'message' => 'La efigie no puede contemplarse en este instante: inténtalo de nuevo en breve.',
+                ],
+            ], 500);
+        }
+
+        $filePath = $this->avatarService->ownAvatarFilePath($adept['id']);
+        if ($filePath === null) {
+            // Sin efigie propia legible: 404 controlado SIN trazas (el
+            // cliente degrada al canónico por su cuenta, RF-03.5).
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'AVATAR_IMAGE_UNAVAILABLE',
+                    'message' => 'Ninguna efigie propia vive en este instante: vistes la efigie canónica.',
+                ],
+            ], 404);
+        }
+
+        // ETag de contenido: si el navegador ya porta la vigente, el
+        // santuario responde 304 sin reenviar el retrato.
+        $contentHash = hash_file('sha256', $filePath);
+        if ($contentHash !== false && $request->getHeader('If-None-Match') === '"' . $contentHash . '"') {
+            return new Response(304, '', ['ETag' => '"' . $contentHash . '"', 'Content-Type' => 'image/png']);
+        }
+
+        $bytes = file_get_contents($filePath);
+        if ($bytes === false) {
+            return Response::json([
+                'success' => false,
+                'error'   => [
+                    'code'    => 'AVATAR_IMAGE_UNAVAILABLE',
+                    'message' => 'La efigie no pudo leerse en este instante.',
+                ],
+            ], 500);
+        }
+
+        return new Response(200, $bytes, [
+            'Content-Type' => 'image/png',
+            'ETag' => '"' . $contentHash . '"',
+            'Cache-Control' => 'private, max-age=300',
+        ]);
+    }
+
     /** Instante canónico de ahora (inyectable en los arneses). */
     private function nowUtc(): string
     {

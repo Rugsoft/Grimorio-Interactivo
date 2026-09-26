@@ -38,6 +38,7 @@ use Grimorio\Core\SessionManager;
 use Grimorio\Models\User;
 use Grimorio\Services\AuditService;
 use Grimorio\Services\AuthService;
+use Grimorio\Services\AvatarService;
 use PDO;
 use RuntimeException;
 use InvalidArgumentException;
@@ -215,16 +216,7 @@ final class AuthController
         return Response::json([
             'success' => true,
             'data'    => [
-                'user' => [
-                    'id'       => $userRow['id'],
-                    'alias'    => $userRow['alias'],
-                    'role'     => $userRow['role'],
-                    'clanId'   => $userRow['clan_id'],
-                    'clanName' => $this->resolveClanName(
-                        $userRow['clan_id'] === null ? null : (string) $userRow['clan_id']
-                    ),
-                    'lineage'  => $userRow['lineage'] ?? null,
-                ],
+                'user' => $this->forgeUserPayload($userRow),
             ],
         ], 200);
     }
@@ -307,14 +299,10 @@ final class AuthController
             'success' => true,
             'data'    => [
                 'authenticated' => true,
-                'user'          => [
-                    'id'       => $activeUser->getId(),
-                    'alias'    => $activeUser->getAlias(),
-                    'role'     => $activeUser->getRole(),
-                    'clanId'   => $activeUser->getClanId(),
-                    'clanName' => $this->resolveClanName($activeUser->getClanId()),
-                    'lineage'  => $activeUser->getLineage(),
-                ],
+                // La efigie vigente acompaña a la identidad (SPEC-12,
+                // RF-03.3, plan §2.3): la cabecera nace vestida sin una
+                // segunda llamada al panel.
+                'user'          => $this->forgeUserPayload($this->fetchUserRow($activeUser->getId()), $activeUser),
             ],
         ], 200);
     }
@@ -537,12 +525,67 @@ final class AuthController
     private function fetchUserRow(string $userId): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, alias, email, role, clan_id, lineage, created_at, updated_at FROM users WHERE id = :userId'
+            'SELECT id, alias, email, role, clan_id, lineage, avatar, created_at, updated_at FROM users WHERE id = :userId'
         );
         $statement->execute([':userId' => $userId]);
         $userRow = $statement->fetch(PDO::FETCH_ASSOC);
 
         return is_array($userRow) ? $userRow : null;
+    }
+
+    /**
+     * El contrato data.user canónico (plan 2.2 + enmienda SPEC-12, plan
+     * §2.3): identidad, oficio, hermandad, linaje jurado y EFIGIE
+     * vigente (kind + url de servicio). La efigie viaja SIEMPRE — kind
+     * `default` ante canónico — para que la cabecera nazca vestida.
+     *
+     * @param array<string, mixed>|null $userRow Fila materializada del titular.
+     * @param \Grimorio\Models\User|null $activeUser Entidad de sesión viva (fallback de campos).
+     * @return array<string, mixed>
+     */
+    private function forgeUserPayload(?array $userRow, ?\Grimorio\Models\User $activeUser = null): array
+    {
+        $fieldValue = static function (string $key) use ($userRow, $activeUser): mixed {
+            if (is_array($userRow) && array_key_exists($key, $userRow)) {
+                return $userRow[$key];
+            }
+
+            return match ($key) {
+                'id'     => $activeUser?->getId(),
+                'alias'  => $activeUser?->getAlias(),
+                'role'   => $activeUser?->getRole(),
+                'clanId' => $activeUser?->getClanId(),
+                default  => $activeUser?->getLineage(),
+            };
+        };
+
+        $payload = [
+            'id'       => $fieldValue('id'),
+            'alias'    => $fieldValue('alias'),
+            'role'     => $fieldValue('role'),
+            'clanId'   => $fieldValue('clanId'),
+            'clanName' => $this->resolveClanName(
+                ($fieldValue('clanId') === null || $fieldValue('clanId') === '') ? null : (string) $fieldValue('clanId')
+            ),
+            'lineage'  => $fieldValue('lineage'),
+        ];
+
+        // La efigie propia viaja con su URL de servicio (plan §2.3); el
+        // canónico viaja sin ella (kind `default`).
+        $rawAvatar = is_array($userRow) && array_key_exists('avatar', $userRow) ? $userRow['avatar'] : null;
+        if (is_string($rawAvatar) && str_starts_with($rawAvatar, 'own:')) {
+            $payload['avatarKind'] = 'own';
+            $payload['avatarReference'] = substr($rawAvatar, 4);
+            $payload['avatarUrl'] = AvatarService::OWN_IMAGE_PATH . '?v=' . rawurlencode(substr($rawAvatar, 4));
+        } elseif (is_string($rawAvatar) && str_starts_with($rawAvatar, 'catalog:')) {
+            $payload['avatarKind'] = 'catalog';
+            $payload['avatarReference'] = substr($rawAvatar, 8);
+        } else {
+            $payload['avatarKind'] = 'default';
+            $payload['avatarReference'] = null;
+        }
+
+        return $payload;
     }
 
     /**

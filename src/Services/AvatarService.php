@@ -66,6 +66,14 @@ final class AvatarService
     public const FRAME_SIDE = 512;
 
     /**
+     * Vía pública de servicio de la efigie propia (plan §2.3: `avatar.url`
+     * y `ownAvatar.url`): la identidad de cabecera y el panel la citan;
+     * el controlador la sirve con guardia de sesión (el fichero jamás
+     * vive bajo public/ y su lectura es PRIVADA del propio adepto).
+     */
+    public const OWN_IMAGE_PATH = '/api/v1/panel/avatar/image';
+
+    /**
      * El catálogo canónico en código (plan §1.1): reutilización del arte
      * existente por sello rúnico determinista. `heraldryKey` es la MISMA
      * clave que el Salón de Linajes y el distintivo consumen.
@@ -141,12 +149,54 @@ final class AvatarService
 
         return [
             'catalog' => $catalog,
-            'current' => ['kind' => $avatar['kind'], 'reference' => $avatar['reference']] + ($avatar['unavailable'] ? ['unavailable' => true] : []),
+            'current' => ['kind' => $avatar['kind'], 'reference' => $avatar['reference']]
+                + ($avatar['kind'] === 'own' && !$avatar['unavailable'] ? ['url' => $this->ownAvatarUrl($avatar['reference'])] : [])
+                + ($avatar['unavailable'] ? ['unavailable' => true] : []),
             'ownAvatar' => $avatar['kind'] === 'own' && $avatar['reference'] !== null && !$avatar['unavailable']
-                ? ['reference' => $avatar['reference']]
+                ? ['reference' => $avatar['reference'], 'url' => $this->ownAvatarUrl($avatar['reference'])]
                 : null,
             'restricted' => $this->isPilgrim($role, $lineage),
         ];
+    }
+
+    /**
+     * La URL canónica de la efigie propia (plan §2.3): la referencia
+     * viaja como consulta firmada por su nombre aleatorio; el
+     * controlador valida la sesión ANTES de leer el disco.
+     */
+    private function ownAvatarUrl(?string $fileId): ?string
+    {
+        return $fileId !== null && $fileId !== ''
+            ? self::OWN_IMAGE_PATH . '?v=' . rawurlencode($fileId)
+            : null;
+    }
+
+    /**
+     * La ruta física de la efigie propia VIGENTE del adepto (servicio
+     * del fichero, plan §2.3): resuelve la referencia, exige kind own
+     * y confirma el fichero en el almacenamiento. Null ante canónico,
+     * ante ausencia o ante fichero ilegible — el controlador traduce
+     * el null en 404 sin trazas.
+     */
+    public function ownAvatarFilePath(string $userId): ?string
+    {
+        $vitals = $this->panelRepository->fetchUserVitals($userId);
+        if (!is_array($vitals)) {
+            return null;
+        }
+        $avatar = self::parseReference($vitals['avatar'] ?? null);
+        if ($avatar['kind'] !== 'own' || !is_string($avatar['reference']) || $avatar['reference'] === '') {
+            return null;
+        }
+
+        // basename(): el fichero vive SIEMPRE a un solo nivel del raíz
+        // (defensa en profundidad idéntica a resolveReadableAvatar).
+        $file = $this->avatarsRoot . DIRECTORY_SEPARATOR . basename($avatar['reference']);
+        if (!is_file($file) || !is_readable($file) || filesize($file) === 0) {
+            return null;
+        }
+
+        return $file;
     }
 
     /**
@@ -375,8 +425,7 @@ final class AvatarService
         }
 
         return [
-            'verdict' => self::VERDICT_CHANGED,
-            'avatar' => ['kind' => 'own', 'reference' => $fileId, 'isOwn' => true],
+            'verdict' => self::VERDICT_CHANGED,                'avatar' => ['kind' => 'own', 'reference' => $fileId, 'isOwn' => true, 'url' => $this->ownAvatarUrl($fileId)],
         ];
     }
 

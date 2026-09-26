@@ -24,6 +24,10 @@
  * @module components/avatarPickerComponent
  */
 
+import {
+  createRuneSeal,
+} from './runeSealComponent.js';
+
 /** Rótulos y leyendas solemnes del picker (Art. V). */
 export const AVATAR_PICKER_LEGENDS = Object.freeze({
   title: 'Efigie',
@@ -81,6 +85,24 @@ export function avatarErrorLegendFor(envelope) {
 }
 
 /**
+ * Índice heráldico local de los Linajes Canónicos (espejo del canon de
+ * SPEC-07, mismas claves que el LINEAGE_INDEX del distintivo): la
+ * afinidad rectora manda en la CARGA del sello que cada celda heráldica
+ * del canon forja (RF-07.2 del santuario: el blasón se dibuja, no se
+ * imprime; reutilización del arte existente, duda 5 de SPEC-12).
+ */
+const CATALOG_HERALDRY_ELEMENTS = Object.freeze({
+  'rune-ignis': 'fire',
+  'rune-aqua': 'water',
+  'rune-fulgur': 'lightning',
+  'rune-terra': 'earth',
+  'rune-ventus': 'wind',
+  'rune-lux': 'light',
+  'rune-tenebrae': 'darkness',
+  'rune-arcana': 'pureArcane',
+});
+
+/**
  * Crea el selector de efigie.
  *
  * @param {HTMLElement} mountRoot Punto de montaje (la sección Efigie).
@@ -136,6 +158,30 @@ export function createAvatarPickerComponent(mountRoot, options = {}) {
     return null;
   }
 
+  /**
+   * Forja el sello rúnico heráldico de una entrada del canon (RF-03.1,
+   * reutilización del arte de SPEC-02 RF-07). Ante entornos sin
+   * createElementNS (arneses con DOM simulado) o clave desconocida,
+   * degrada a null con dignidad: la celda conserva su leyenda.
+   */
+  function forgeHeraldicSeal(entry) {
+    if (entry?.kind !== 'heraldry' || typeof entry.heraldryKey !== 'string') return null;
+    const rulingElement = CATALOG_HERALDRY_ELEMENTS[entry.heraldryKey];
+    if (rulingElement === undefined) return null;
+    try {
+      return createRuneSeal({
+        houseName: String(entry.label ?? ''),
+        coatOfArms: String(entry.heraldryKey),
+        rulingElement,
+        state: 'active',
+        role: 'house',
+        document: documentRef,
+      });
+    } catch {
+      return null;
+    }
+  }
+
   /** Busca el primer descendiente con la clase dada (doble vía). */
   function findByClassName(root, className) {
     return findDescendant(root, (node) => node.classList?.contains?.(className)
@@ -186,13 +232,26 @@ export function createAvatarPickerComponent(mountRoot, options = {}) {
       const isCurrent = current?.kind === 'catalog' && current?.reference === entry.id;
       const cell = forge('button', {
         className: `avatar-picker__cell${isCurrent ? ' avatar-picker__cell--current' : ''}`,
-        text: entry.label,
         attrs: {
           type: 'button',
           'data-avatar-id': entry.id,
           'aria-pressed': String(isCurrent),
         },
       });
+      // El sello heráldico forjado (RF-03.1): la celda del canon porta
+      // SU blasón (SVG nativo) y SU leyenda; el identificador técnico
+      // jamás se imprime (Art. V).
+      const seal = forgeHeraldicSeal(entry);
+      if (seal !== null) {
+        seal.setAttribute('class', `${String(seal.getAttribute('class') ?? '')} avatar-picker__cell-seal`.trim());
+        seal.setAttribute('aria-hidden', 'true');
+        cell.appendChild(seal);
+      }
+      const label = forge('span', {
+        className: 'avatar-picker__cell-label',
+        text: entry.label,
+      });
+      cell.appendChild(label);
       cell.addEventListener('click', () => { void chooseFromCatalog(entry.id); });
       grid.appendChild(cell);
     }
@@ -356,6 +415,12 @@ export function createAvatarPickerComponent(mountRoot, options = {}) {
         attrs: { 'data-frame-legend': AVATAR_PICKER_LEGENDS.frameLegend },
       });
       mountRoot.appendChild(frame);
+
+      // Si el adepto YA viste una efigie propia, el marco la exhibe
+      // (plan §2.3: current.url / ownAvatar.url sirven el retrato).
+      if (current?.kind === 'own' && typeof current?.url === 'string' && current.url !== '') {
+        showPreview(current.url);
+      }
 
       input.addEventListener('change', () => {
         const file = input.files?.[0] ?? null;

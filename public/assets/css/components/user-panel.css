@@ -188,8 +188,12 @@
 }
 
 .avatar-picker__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-ink-1);
   min-height: var(--touch-target-min);
-  padding: var(--space-ink-2) var(--space-ink-3);
+  padding: var(--space-ink-3) var(--space-ink-2);
   font-family: var(--font-arcane-seal);
   font-size: var(--font-size-ink-small);
   letter-spacing: var(--letter-spacing-seal);
@@ -199,6 +203,13 @@
   border-radius: var(--radius-scroll);
   cursor: pointer;
   transition: filter var(--transition-arcane);
+}
+
+/* El sello forjado de cada celda heráldica (RF-03.1): el MISMO SVG
+   canónico del Salón de Linajes, a tamaño de efigie. */
+.avatar-picker__cell-seal {
+  width: 56px;
+  height: 56px;
 }
 
 .avatar-picker__cell:hover {
@@ -411,6 +422,15 @@
 .user-profile__avatar[data-avatar-kind='catalog'],
 .user-profile__avatar[data-avatar-kind='default'] {
   border-color: var(--color-parchment-border);
+}
+
+/* El sello del canon forjado DENTRO del nodo de la efigie (SPEC-02
+   RF-07): el retrato heráldico de la cabecera, a tamaño de nodo. */
+.user-profile__avatar .user-profile__avatar-seal,
+.user-profile__avatar-seal {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* ------------------------------------------------------------------

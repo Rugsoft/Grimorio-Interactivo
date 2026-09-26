@@ -305,6 +305,9 @@ function buildRouter(): Router
     $router->addRoute('GET', '/api/v1/panel/avatars', fn (Request $request): Response => $userPanelController->avatarCatalog($request));
     $router->addRoute('POST', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->chooseAvatar($request));
     $router->addRoute('DELETE', '/api/v1/panel/avatar', fn (Request $request): Response => $userPanelController->removeAvatar($request));
+    // El retrato de la efigie propia (plan §2.3: avatar.url): binario
+    // PNG privado del adepto, con guardia de sesión antes de leer disco.
+    $router->addRoute('GET', '/api/v1/panel/avatar/image', fn (Request $request): Response => $userPanelController->avatarImage($request));
     $router->addRoute('POST', '/api/v1/panel/passphrase', fn (Request $request): Response => $userPanelController->changePassphrase($request));
     $router->addRoute('GET', '/api/v1/panel/ledger', fn (Request $request): Response => $userPanelController->ledger($request));
 

@@ -353,12 +353,17 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     // La efigie del vínculo (SPEC-12, Tarea 7.3, RF-03.3): el avatar
     // propio se proyecta SOLO en la cabecera del propio adepto (jamás
     // ante terceros, exclusión 5). Nace con la marca de la sesión
-    // hidratada y RE-PINTA por evento sin recarga de página.
+    // hidratada (que YA porta avatarKind/Reference/Url desde la
+    // enmienda del contrato data.user) y RE-PINTA por evento sin
+    // recarga de página.
     const avatarNode = documentRef.createElement?.('span');
     avatarNode.setAttribute('class', 'user-profile__avatar');
-    avatarNode.setAttribute('data-avatar-kind', String(user.avatarKind ?? 'default'));
-    avatarNode.setAttribute('data-avatar-reference', String(user.avatarReference ?? ''));
+    const avatarKind = String(user.avatarKind ?? 'default');
+    const avatarReference = String(user.avatarReference ?? '');
+    avatarNode.setAttribute('data-avatar-kind', avatarKind);
+    avatarNode.setAttribute('data-avatar-reference', avatarReference);
     avatarNode.setAttribute('aria-hidden', 'true'); // decorativa: el nombre accesible ya declara la identidad
+    applyAvatarImage(avatarNode, avatarKind, avatarReference, typeof user.avatarUrl === 'string' ? user.avatarUrl : null, user);
     badgeElement.appendChild(avatarNode);
 
     // La heráldica del linaje jurado (SPEC-09, RF-04.3): el MISMO sello
@@ -436,7 +441,12 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
    * ni sondeo. Jamás muta el store: la sesión hidratada manda en el
    * siguiente checkSession (caso límite 19: sin sincronismo vivo).
    *
-   * @param {CustomEvent} event Evento del bus con { kind, reference }.
+   * La EFIGIE PROPIA se pinta por Custom Property (--avatar-image, Tarea
+   * 7.3): la URL de servicio (plan §2.3) llega por el detail o, en su
+   * defecto, se deriva de la referencia — la imagen vive tras guardia
+   * de sesión, jamás en una superficie pública.
+   *
+   * @param {CustomEvent} event Evento del bus con { kind, reference, url? }.
    */
   function handleAvatarChanged(event) {
     if (isDestroyed || currentUser === null) return;
@@ -447,6 +457,55 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     const reference = String(detail.reference ?? '');
     avatarNode.setAttribute('data-avatar-kind', kind);
     avatarNode.setAttribute('data-avatar-reference', reference);
+    avatarNode.replaceChildren?.();
+    applyAvatarImage(avatarNode, kind, reference, typeof detail.url === 'string' ? detail.url : null, currentUser);
+  }
+
+  /**
+   * Viste (o desviste) la imagen de la efigie en el nodo de cabecera:
+   * la PROPIA porta pintura (--avatar-image, URL de servicio del plan
+   * §2.3); la del CANON forja su sello rúnico dentro del nodo (el MISMO
+   * arte de SPEC-02 RF-07 que el picker exhibe); el canónico por
+   * defecto queda en reposo noble.
+   *
+   * @param {Element} avatarNode Nodo de la efigie.
+   * @param {string} kind kind canónico: own | catalog | default.
+   * @param {string} reference Referencia del contrato cerrado.
+   * @param {string|null} url URL de servicio de la efigie propia, si se conoce.
+   * @param {User} user Sesión hidratada (linaje jurado para el sello).
+   */
+  function applyAvatarImage(avatarNode, kind, reference, url, user) {
+    if (kind !== 'own' && kind !== 'catalog') {
+      avatarNode.removeAttribute('style');
+      return;
+    }
+    if (kind === 'own') {
+      const resolvedUrl = url !== null && url !== ''
+        ? url
+        : `/api/v1/panel/avatar/image?v=${encodeURIComponent(reference)}`;
+      avatarNode.setAttribute('style', `--avatar-image: url('${resolvedUrl}')`);
+      return;
+    }
+    // Efigie heráldica del canon: el sello nace del sufijo del
+    // linaje en la referencia (seal_primordialFlame → fire…). Las
+    // efigies no heráldicas (custodio, peregrino) degradan al
+    // ouroboros del Arcano Puro — jamás un cuadro vacío.
+    const lineageKey = String(reference ?? '').replace(/^seal_/, '');
+    const lineageProfile = LINEAGE_INDEX.get(lineageKey) ?? null;
+    try {
+      const seal = createRuneSeal({
+        houseName: String(user?.alias ?? ''),
+        coatOfArms: `rune_avatar_${String(reference ?? '')}`,
+        rulingElement: String(lineageProfile?.rulingElement ?? 'pureArcane'),
+        state: RUNE_SEAL_STATES.ACTIVE,
+        role: 'house',
+        document: documentRef,
+      });
+      seal.setAttribute('class', 'user-profile__avatar-seal');
+      avatarNode.appendChild?.(seal);
+    } catch {
+      // Arnés sin createElementNS: el nodo conserva su marco noble.
+    }
   }
 
   /** Liga el oyente del bus UNA sola vez (sin fugas por re-render). */
