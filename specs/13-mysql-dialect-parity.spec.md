@@ -59,7 +59,7 @@ invariantes, y asegurar que el backend PHP es portable a ambos motores.
 | Orden de tablas con FKs hacia tablas aún no creadas | `SET FOREIGN_KEY_CHECKS=0` al inicio y `=1` al final | Misma doctrina que los `PRAGMA foreign_keys = OFF/ON` de los guiones sql/*.sql. |
 | `CREATE UNIQUE INDEX ... WHERE left_at IS NULL` (clan_members) | Columna generada `membership_bucket VARCHAR(64) AS (CASE WHEN left_at IS NULL THEN '<<active>>' ELSE id END) STORED` + `UNIQUE (user_id, membership_bucket)` | MariaDB no admite índices parciales. Emulación de semántica EXACTA: dos membresías activas simultáneas chocan («<<active>>» repetido); las filas cerradas usan su `id` único y jamás colisionan. RF-01.1 queda garantizado estructuralmente. |
 | `CREATE UNIQUE INDEX ... WHERE is_revoked = 0` (master_signatures) | Columna generada `signature_bucket` análoga + `UNIQUE (spell_id, master_id, signature_bucket)` | Ídem para RF-02.1 (firma única viva). |
-| Triggers `RAISE(ABORT, ...)` de audit_log | Triggers `BEFORE UPDATE/DELETE ... SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = ...` | Inmutabilidad de la Bitácora (RF-08.1) con sintaxis MySQL; mismo mensaje castellano. |
+| Triggers `RAISE(ABORT, ...)` de audit_log | **Anexo opcional** `database/schema-mysql-triggers.sql` (`BEFORE UPDATE/DELETE ... SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = ...`, cuerpo de una sola sentencia, sin BEGIN...END) | Inmutabilidad de la Bitácora (RF-08.1). AMENAZA REAL de despliegue (hallazgo en producción): el plan gratuito de InfinityFree NO concede el privilegio `TRIGGER` al usuario de la base (`#1142 - TRIGGER comando denegado`), de modo que los triggers NO pueden vivir en el guion principal (la importación entera moriría a mitad). En ese sandbox la inmutabilidad queda garantizada por la CAPA DE APLICACIÓN: verificado por búsqueda que ningún código de `src/` ejecuta UPDATE ni DELETE sobre `audit_log` (únicos escritores: `AuditService::record`, `AuthService` y `AvatarService`, todos por INSERT). El anexo es vía de blindaje DDL para anfitriones completos (MySQL propio, planes con privilegios). |
 | Motor | `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci` | InnoDB aplica FK por defecto; utf8mb4 obligatorio (acentos y «comillas angulares»). |
 | `DESC` en índices | Se conserva tal cual | MariaDB 10.4 lo acepta y ignora (sin error); MySQL 8 lo aplica. Sin cambio semántico observable. |
 
@@ -97,7 +97,12 @@ de datos y no altera peticiones ni respuestas.
 5. **Firma única viva (RF-02.1):** dos firmas activas del mismo Maestro
    al mismo conjuro → violación; tras `is_revoked = 1`, se admite otra.
 6. **Bitácora inmutable (RF-08.1):** `UPDATE audit_log` y `DELETE FROM
-   audit_log` lanzan error 45000 con el mensaje solemne.
+   audit_log` lanzan error 45000 con el mensaje solemne. **Criterio
+   dual según anfitrión:** (a) con el anexo de triggers aplicado, la
+   inmutabilidad es DDL (los triggers lo rechazan); (b) en anfitriones
+   sin privilegio `TRIGGER` (InfinityFree), la garantía es de capa de
+   aplicación: verificación estática de que `src/` jamás ejecuta UPDATE
+   ni DELETE sobre `audit_log`. El arnés cubre ambas vías.
 7. **Autoincremental:** tres INSERT en `login_attempts` producen ids 1,2,3.
 8. **Semillas asentadas:** 8 escuelas, 8 doctrinas, 1 clan, 1 usuario
    tutor, 1 membresía, 4 conjuros.
@@ -112,6 +117,13 @@ Crear base en el panel → importar `schema-mysql.sql` y `seeds.sql` en
 phpMyAdmin (en ese orden) → editar `env.php` con el trío `define()` →
 Ctrl+F5 y verificación funcional. La columna `users.avatar` ya viene en
 el guion: las bases MySQL nacen directamente vistiendo SPEC-12.
+
+**Anexo de triggers (opcional):** el fichero
+`database/schema-mysql-triggers.sql` NO se importa en anfitriones que
+nieguen el privilegio `TRIGGER` (InfinityFree: la importación moriría
+con `#1142`); se reserva para MySQL propio o planes completos. En su
+ausencia, la inmutabilidad RF-08.1 queda garantizada por la capa de
+aplicación (verificación estática de `src/`, criterio dual 6b).
 
 ## 8. LA REGLA DE LOS GEMELOS (norma permanente de mantenimiento)
 

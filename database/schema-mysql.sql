@@ -24,10 +24,13 @@
 --   * Índices parciales de SQLite (WHERE ...) emulados con columnas
 --     generadas STORED + índice único (semántica exacta, RF-01.1 y
 --     RF-02.1).
---   * Triggers de la Bitácora: SIGNAL SQLSTATE '45000' (equivalente
---     del RAISE(ABORT) SQLite), con cuerpo de UNA sola sentencia (sin
---     BEGIN...END) para que la pestaña SQL de phpMyAdmin los acepte sin
---     la directiva DELIMITER.
+--   * Triggers de la Bitácora: ANEXO OPCIONAL
+--     (database/schema-mysql-triggers.sql), SIGNAL SQLSTATE '45000' con
+--     cuerpo de UNA sola sentencia (sin BEGIN...END, para que la pestaña
+--     SQL de phpMyAdmin lo acepte sin la directiva DELIMITER). El plan
+--     gratuito de InfinityFree niega el privilegio TRIGGER (#1142): en
+--     ese sandbox la inmutabilidad RF-08.1 la garantiza la capa de
+--     aplicación (SPEC-13).
 --   * Rowid autoincrementales: INT NOT NULL AUTO_INCREMENT.
 --   * SET FOREIGN_KEY_CHECKS: el orden de creación exige referenciar
 --     tablas aún no nacidas (misma doctrina que el
@@ -410,26 +413,21 @@ CREATE INDEX idx_audit_actor ON audit_log (actor_user_id);
 CREATE INDEX idx_audit_target ON audit_log (target_entity_type, target_entity_id);
 
 -- ---------------------------------------------------------------------
--- Inmutabilidad blindada de la bitácora (RF-08.1, RNF-02, Art. III):
--- triggers MySQL equivalentes al RAISE(ABORT) de SQLite. La Bitácora
--- solo admite INSERT; ni moderadores ni el Admin Supremo alteran o
--- borran un veredicto registrado.
+-- Inmutabilidad blindada de la bitácora (RF-08.1, RNF-02, Art. III).
 --
--- NOTA DIALECTAL (importación en phpMyAdmin): el cuerpo va SIN
--- BEGIN...END a propósito. Cada trigger porta UNA sola sentencia, y
--- MySQL/MariaDB lo admite así; con BEGIN...END el ';' interno obligaría
--- a la directiva DELIMITER, que la pestaña SQL de phpMyAdmin no acepta
--- (error #1064 al cortar en el punto y medio del SIGNAL).
+-- ⚠️  LOS TRIGGERS NO VIVEN AQUÍ: son un ANEXO OPCIONAL en
+--     database/schema-mysql-triggers.sql, porque el plan gratuito de
+--     InfinityFree NO concede el privilegio TRIGGER a su usuario de
+--     base (#1142 «TRIGGER comando denegado») y meterlos en este guion
+--     mataría la importación a mitad. En ese sandbox la inmutabilidad
+--     queda garantizada por la CAPA DE APLICACIÓN: ningún código de
+--     src/ ejecuta UPDATE ni DELETE sobre audit_log (verificación
+--     estática de la SPEC-13; únicos escritores: AuditService,
+--     AuthService y AvatarService, todos por INSERT).
+--
+--     En anfitriones completos (MySQL propio, planes con privilegios)
+--     importa el anexo DESPUÉS de este guion para el blindaje DDL.
 -- ---------------------------------------------------------------------
-CREATE TRIGGER trg_audit_log_no_update
-BEFORE UPDATE ON audit_log
-FOR EACH ROW
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se alteran.';
-
-CREATE TRIGGER trg_audit_log_no_delete
-BEFORE DELETE ON audit_log
-FOR EACH ROW
-    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se borran.';
 
 -- ---------------------------------------------------------------------
 -- Libro de Gloria del Dominio Semanal (SPEC-07, Tarea 2.5) y tomo
