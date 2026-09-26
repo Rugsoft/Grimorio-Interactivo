@@ -112,3 +112,49 @@ Crear base en el panel → importar `schema-mysql.sql` y `seeds.sql` en
 phpMyAdmin (en ese orden) → editar `env.php` con el trío `define()` →
 Ctrl+F5 y verificación funcional. La columna `users.avatar` ya viene en
 el guion: las bases MySQL nacen directamente vistiendo SPEC-12.
+
+## 8. LA REGLA DE LOS GEMELOS (norma permanente de mantenimiento)
+
+> **Elevada a norma constitucional de proyecto en AGENTS.md §2.1.** Lo
+> que esta especificación nació como enmienda de despliegue, permanece
+> como regla vinculante para todo mantenimiento futuro del esquema.
+
+**Enunciado:** `database/schema.sql` (SQLite) y
+`database/schema-mysql.sql` (MySQL/MariaDB) son **gemelos dialectales
+canónicos**: DOS guiones, UNA sola forma de datos. Tablas, columnas,
+nombres, orden, CHECK, claves foráneas, índices e invariantes han de ser
+IDÉNTICOS en ambos; solo el dialecto del DDL difiere.
+
+**Obligaciones de todo cambio de DDL futuro (SPEC-14 en adelante o
+mantenimiento):**
+
+1. **Doble edición:** el cambio se aplica a AMBOS guiones en la MISMA
+   tarea y commit. Un guion tocado sin su gemelo es un bug de
+   especificación, aunque la aplicación funcione en un motor.
+2. **Paridad estructural verificable:** tras el cambio, la comprobación
+   de paridad (lista de tablas y columnas de `information_schema` vs
+   `PRAGMA table_info`, excluidas las columnas generadas
+   `membership_bucket` y `signature_bucket`, exclusivas del dialecto
+   MySQL) debe pasar sin diferencias. El arnés de referencia es la sonda
+   de verificación de SPEC-13 (patrón `scratch/verify-spec13.php`).
+3. **Fuente de verdad semántica:** el comentario de cada tabla/columna
+   del guion que se edite primero es la autoridad narrativa; el gemelo
+   copia la semántica (puede remitir a ella) pero jamás diverge en forma.
+4. **Semillas comunes:** `database/seeds.sql` es portable y común a
+   ambos motores; los cambios de semillas también son de doble edición
+   (verificando que los CHECK de ambos dialectos aceptan los valores).
+5. **Índices parciales:** si un futuro índice parcial SQLite aparece, su
+   gemelo MySQL lo emula con columnas generadas + índice único (patrón
+   de `membership_bucket`/`signature_bucket`), conservando la semántica
+   exacta; el patrón queda prohibido por encima de MariaDB 10.4 cuando
+   exista alternativa nativa (los índices funcionales de 10.8 no
+   aplican al sandbox actual de InfinityFree).
+6. **Repositorios portables:** prohibido introducir dialectismos SQLite
+   (o MySQL) en `src/` sin el doble canal motor-consciente (patrón de
+   `GrimoireCollectionRepository::add()`, interrogando
+   `PDO::ATTR_DRIVER_NAME`).
+
+**Exclusión documental:** los registros históricos (`*.plan.md`,
+`*.tasks.md`) y las notas de ratificación ya firmadas en otras specs NO
+se reescriben para citar el gemelo: son actas, no norma viva. Esta
+sección y AGENTS.md §2.1/§3/§5 son los lugares normativos.

@@ -38,6 +38,14 @@ El proyecto está diseñado bajo una filosofía de **cero dependencias externas 
   * Acceso mediante **PDO nativo**.
   * **100% consultas preparadas** con *parameter binding* (prohibida la concatenación directa de strings en queries SQL).
   * Compatible con MySQL / MariaDB o SQLite.
+  * **DOS guiones canónicos de esquema (Regla de los Gemelos, SPEC-13):**
+    `database/schema.sql` (dialecto SQLite; alimenta el auto-bootstrap de
+    `Connection.php`) y `database/schema-mysql.sql` (dialecto MySQL/MariaDB
+    10.4+; para importación en phpMyAdmin). MISMA forma de datos: tablas,
+    columnas, CHECK, FK e invariantes IDÉNTICOS. Todo cambio de DDL debe
+    aplicarse a AMBOS guiones en la misma tarea y verificarse con la
+    comprobación de paridad estructural de la SPEC-13. El detalle normativo
+    vive en `specs/13-mysql-dialect-parity.spec.md` (§8).
 * **Sesiones y Autenticación:**
   * Sesiones nativas de PHP (`session_start()`).
   * Cookies de sesión con parámetros de seguridad: `httponly = true`, `samesite = 'Strict'`, `secure = true` (en producción).
@@ -83,7 +91,9 @@ specs/
 ├── 08-moderation-two-step.spec.md       # Flujo de moderación (experimental -> 3 firmas -> validado)
 ├── 09-lineage-oath-first-access.spec.md # Juramento de linaje bloqueante en el primer acceso (enmienda SPEC-03; tríada SDD completa — implementada, 19/19 tareas cerradas)
 ├── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes del propio linaje (enmienda SPEC-07; tríada SDD completa — implementada y formalmente cerrada por test_spec10_closure: EXITO)
-└── 11-adept-grimoire-collection.spec.md # Colección del Adepto: tomo personal y Elogio Popular (cierra la costura de SPEC-07 favorites/awardCommunityFavorite y el rótulo «Ver mi libro personal» de SPEC-09; tríada SDD completa — spec, plan y tasks listos para implementación)
+├── 11-adept-grimoire-collection.spec.md # Colección del Adepto: tomo personal y Elogio Popular (cierra la costura de SPEC-07 favorites/awardCommunityFavorite y el rótulo «Ver mi libro personal» de SPEC-09; tríada SDD completa — implementada, 22/22 tareas cerradas)
+├── 12-user-panel.spec.md                # Panel del Adepto: morada personal, efigie (avatar) y bitácora (tríada SDD completa — implementada, 22/22 tareas cerradas)
+└── 13-mysql-dialect-parity.spec.md      # Paridad de dialecto MySQL/MariaDB: gemelo dialectal database/schema-mysql.sql, portabilidad del backend y Regla de los Gemelos (enmienda de despliegue — implementada, 20/20 comprobaciones EXITO en MariaDB 10.4)
 
 ---
 
@@ -154,8 +164,9 @@ grimorio-interactivo/
 │   ├── Services/                        # Lógica de negocio (Balanceo, Combos, Dominio)
 │   └── Middleware/                      # Autenticación, validación de sesión y roles
 └── database/                            # Scripts de bases de datos
-    ├── schema.sql                       # Esquema DDL de tablas e índices
-    └── seeds.sql                        # Datos iniciales (clanes, escuelas mágicas, admin)
+    ├── schema.sql                       # Esquema DDL canónico, dialecto SQLite (auto-bootstrap)
+    ├── schema-mysql.sql                 # GEMELO dialectal MySQL/MariaDB (SPEC-13; mantener paritario)
+    └── seeds.sql                        # Datos iniciales (clanes, escuelas mágicas, admin) — portable, común a ambos motores
 ```
 
 ---
