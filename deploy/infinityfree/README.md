@@ -163,8 +163,8 @@ Abre `https://TU_SUBDOMINIO.infinityfreeapp.com/`:
 ## Variante MySQL del propio hosting (opcional)
 
 El plan gratuito incluye bases MySQL/MariaDB. El esquema canónico ya es
-compatible con ambos motores (cabecera de `database/schema.sql`:
-«SQLite 3.35+ y MySQL 8 / MariaDB 10.4+»), y `Connection.php` ya lee las
+compatible con ambos motores (el guion `database/schema-mysql.sql` es el
+gemelo dialectal de `schema.sql`, SPEC-13) y `Connection.php` ya lee las
 tres variables del entorno — solo cambia el DSN en `env.php`.
 
 ### Cuándo conviene
@@ -186,16 +186,21 @@ simple: nada de credenciales ni de importar el esquema a mano.
    `Connection.php` NO aplica — es exclusivo de SQLite): abre
    **phpMyAdmin** desde el panel, entra en la base nueva y ejecuta en
    orden, en la pestaña SQL:
-   1. el contenido íntegro de `database/schema.sql`
-   2. el contenido íntegro de `database/seeds.sql`
+   1. el contenido íntegro de `database/schema-mysql.sql` (el DDL en
+      dialecto MySQL; el `schema.sql` canónico es dialecto SQLite y
+      phpMyAdmin lo rechazaría con `#1170` — SPEC-13)
+   2. el contenido íntegro de `database/seeds.sql` (portable: idéntico
+      en ambos motores)
 
    (Verifica al final que `spells`, `users` y `clans` existen y que las
-   semillas se asentaron.)
+   semillas se asentaron. El `schema-mysql.sql` vigente ya viste
+   SPEC-12: `users.avatar` viene incluida — bases MySQL NACEN con el
+   Panel del Adepto, sin migraciones previas.)
 
-   **Bases LEGADAS a SPEC-12 (Panel del Adepto):** si tu base fue creada
-   con un `schema.sql` anterior a la columna `users.avatar`, ejecuta
-   también en phpMyAdmin la guardia y, si falta, el ALTER de
-   `sql/12_user_panel.sql`:
+   **Bases MySQL LEGADAS** (creadas antes de SPEC-13 con el DDL antiguo
+   de esta guía): si tu base fue creada con un `schema.sql` anterior a
+   la columna `users.avatar`, ejecuta en phpMyAdmin la guardia y, si
+   falta, el ALTER de `sql/12_user_panel.sql`:
 
    ```sql
    -- Guardia previa (MySQL 8): ¿ya porta la columna?
@@ -212,13 +217,24 @@ simple: nada de credenciales ni de importar el esquema a mano.
    (aplicarla DOS veces no muta fila alguna ni produce error).
 3. **Edita `public/env.php`**: sustituye el bloque del DSN SQLite por el
    trío MySQL (el resto del fichero, el guard de 403 y `$projectRoot`, no
-   hace falta tocarlo):
+   hace falta tocarlo). **VÍA `define`, jamás `putenv`**: el sandbox de
+   InfinityFree tiene `putenv` en `disable_functions` y la llamada muere
+   en silencio (hallazgo de SPEC-12, verificado con la sonda
+   `probe-env.php`); `Connection.php` resuelve PRIMERO las constantes y
+   solo recurre al entorno como fallback:
 
    ```php
    // DSN MySQL del hosting (variante alternativa a SQLite).
-   putenv('GRIMORIO_DB_DSN=mysql:host=sqlXXX.infinityfree.com;dbname=infi0000_grimorio;charset=utf8mb4');
-   putenv('GRIMORIO_DB_USER=infi0000_grimorio');
-   putenv('GRIMORIO_DB_PASS=tu_contraseña_de_la_base');
+   // VÍA define (no putenv): putenv está en disable_functions del sandbox.
+   if (!defined('GRIMORIO_DB_DSN')) {
+       define('GRIMORIO_DB_DSN', 'mysql:host=sqlXXX.infinityfree.com;dbname=infi0000_grimorio;charset=utf8mb4');
+   }
+   if (!defined('GRIMORIO_DB_USER')) {
+       define('GRIMORIO_DB_USER', 'infi0000_grimorio');
+   }
+   if (!defined('GRIMORIO_DB_PASS')) {
+       define('GRIMORIO_DB_PASS', 'tu_contraseña_de_la_base');
+   }
    ```
 
    - El **host** exacto (`sqlXXX.infinityfree.com`) lo muestra el panel

@@ -1,0 +1,114 @@
+# SPEC-13 — Paridad de Dialecto MySQL/MariaDB: importación del esquema en producción
+
+> Enmienda de despliegue. Nace del intento real de tránsito del santuario
+> InfinityFree de SQLite persistente a MySQL/MariaDB: phpMyAdmin rechazó
+> `database/schema.sql` con `#1170` (columna TEXT usada como clave sin
+> tamaño). El hallazgo: la cabecera de `schema.sql` PROMETE compatibilidad
+> dual («SQLite 3.35+ y MySQL 8 / MariaDB 10.4+») pero el DDL está en
+> dialecto SQLite puro. Esta spec define la paridad real sin tocar el
+> contrato de datos (tablas, columnas, invariantes y semillas quedan
+> IDÉNTICOS en ambos motores).
+
+---
+
+## 1. Objetivo y alcance
+
+**Objetivo:** permitir la importación del esquema completo (DDL + semillas)
+en MySQL 8 / MariaDB 10.4+ sin errores y con idéntica semántica de
+invariantes, y asegurar que el backend PHP es portable a ambos motores.
+
+**Alcance:**
+1. Nuevo guion `database/schema-mysql.sql`: gemelo dialectal canónico del
+   esquema (misma tabla, columnas, CHECK, FK e índices que `schema.sql`).
+2. Portabilidad de `src/Repositories/GrimoireCollectionRepository` (único
+   dialectismo SQLite vivo fuera de `Connection.php`: `INSERT OR IGNORE`).
+3. Actualización de `deploy/infinityfree/README.md` (variante MySQL).
+
+**Fuera de alcance:**
+- `database/schema.sql` y `database/seeds.sql` NO se modifican: siguen
+  siendo la fuente del auto-bootstrap SQLite de `Connection.php`.
+- Los guiones `sql/*.sql` siguen siendo vías de ascensión SQLite; sobre
+  MySQL las bases nacen directamente del `schema-mysql.sql` vigente
+  (incluye `users.avatar` de SPEC-12), sin migraciones previas.
+
+## 2. Contexto de producción (hallazgos)
+
+- InfinityFree ofrece **MariaDB 10.4 a 10.6** según antigüedad de cuenta
+  (verificado en foros oficiales, 2024–2026). El guion debe compilar en
+  10.4: PROHIBIDO depender de sintaxis de 10.8+ (índices funcionales).
+- La conexión MySQL solo es posible DESDE el propio hosting (no remota);
+  phpMyAdmin del panel es la única vía de importación.
+- `putenv()` está en `disable_functions` del sandbox (hallazgo SPEC-12):
+  el trío MySQL (DSN/usuario/contraseña) debe materializarse vía
+  `define('GRIMORIO_DB_*', ...)` en `env.php`. `Connection.php` ya
+  resuelve constantes primero y `getenv` como fallback (líneas 78–80).
+
+## 3. Contratos: mapeo dialectal canónico
+
+| Dialecto SQLite (schema.sql) | Dialecto MySQL (schema-mysql.sql) | Justificación |
+|---|---|---|
+| `id TEXT PRIMARY KEY` | `id VARCHAR(64) PRIMARY KEY` | MySQL #1170: TEXT no puede ser clave sin tamaño. Los identificadores textuales (≤ 36 UUID, prefijos cortos) caben en 64. |
+| `slug TEXT NOT NULL UNIQUE` | `slug VARCHAR(191) NOT NULL UNIQUE` | 191 = límite histórico seguro de índice único con utf8mb4. |
+| `alias/email/name TEXT ... UNIQUE` | `VARCHAR(191)` | Mismo motivo. |
+| timestamps `TEXT` (ISO 8601 UTC) | `VARCHAR(32)` | «2026-01-01T00:00:00Z» = 20 chars; los contratos JSON exigen TEXT ISO, no DATETIME del motor. |
+| enumeraciones con `CHECK (col IN (...))` | `VARCHAR(32)` + mismo CHECK | MariaDB 10.2+ y MySQL 8 SÍ aplican CHECK: el canon cerrado sobrevive. |
+| BOOLEAN `INTEGER CHECK (IN (0,1))` | `TINYINT CHECK (IN (0,1))` | Misma semántica; conserva el CHECK. |
+| texto libre (motto, description, doctrinas, glosas…) | `TEXT` | No participa en claves ni índices únicos. |
+| `INTEGER PRIMARY KEY` (rowid: login_attempts, clan_history, audit_log) | `INT NOT NULL AUTO_INCREMENT PRIMARY KEY` | Equivalencia documentada ya en comentarios de schema.sql. |
+| `REFERENCES` en línea | `FOREIGN KEY (...) REFERENCES ...` explícita | MySQL IGNORA las REFERENCES en línea de columna: dejarlas silenciosamente eliminaría todas las FK. |
+| Orden de tablas con FKs hacia tablas aún no creadas | `SET FOREIGN_KEY_CHECKS=0` al inicio y `=1` al final | Misma doctrina que los `PRAGMA foreign_keys = OFF/ON` de los guiones sql/*.sql. |
+| `CREATE UNIQUE INDEX ... WHERE left_at IS NULL` (clan_members) | Columna generada `membership_bucket VARCHAR(64) AS (CASE WHEN left_at IS NULL THEN '<<active>>' ELSE id END) STORED` + `UNIQUE (user_id, membership_bucket)` | MariaDB no admite índices parciales. Emulación de semántica EXACTA: dos membresías activas simultáneas chocan («<<active>>» repetido); las filas cerradas usan su `id` único y jamás colisionan. RF-01.1 queda garantizado estructuralmente. |
+| `CREATE UNIQUE INDEX ... WHERE is_revoked = 0` (master_signatures) | Columna generada `signature_bucket` análoga + `UNIQUE (spell_id, master_id, signature_bucket)` | Ídem para RF-02.1 (firma única viva). |
+| Triggers `RAISE(ABORT, ...)` de audit_log | Triggers `BEFORE UPDATE/DELETE ... SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = ...` | Inmutabilidad de la Bitácora (RF-08.1) con sintaxis MySQL; mismo mensaje castellano. |
+| Motor | `ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci` | InnoDB aplica FK por defecto; utf8mb4 obligatorio (acentos y «comillas angulares»). |
+| `DESC` en índices | Se conserva tal cual | MariaDB 10.4 lo acepta y ignora (sin error); MySQL 8 lo aplica. Sin cambio semántico observable. |
+
+**Semillas:** `database/seeds.sql` es ya portable (INSERTs individuales,
+sin dialectismos) y se usa IDÉNTICO en ambos motores. Los CHECK de
+`math_fingerprint` (64 hex) y los valores sembrados son coherentes.
+
+## 4. Contrato backend: portabilidad del repositorio
+
+`GrimoireCollectionRepository::add()` debe interrogar al motor
+(`PDO::ATTR_DRIVER_NAME`) y emitir `INSERT IGNORE` (MySQL) u
+`INSERT OR IGNORE` (SQLite). La señal de idempotencia (`rowCount()`)
+es idéntica en ambos. Ningún otro fichero de `src/` contiene
+dialectismos SQLite (verificado por búsqueda: `Connection.php` solo
+usa PRAGMA/sqlite_master dentro de su rama SQLite explícita).
+
+## 5. Endpoints
+
+Ninguno: el contrato REST queda intacto. Este cambio es de infraestructura
+de datos y no altera peticiones ni respuestas.
+
+## 6. Criterios de aceptación y casos de prueba
+
+1. **Importación limpia:** `schema-mysql.sql` + `seeds.sql` se importan
+   en una base MariaDB 10.4 vacía SIN errores (verificación local con
+   la misma versión: 10.4.32).
+2. **Paridad estructural:** tras importar ambos guiones en paralelo
+   (SQLite y MySQL), las tablas y columnas coinciden en nombre, orden y
+   nulabilidad (verificación programática de information_schema vs pragma).
+3. **Canon cerrado:** un INSERT que viole un CHECK (p. ej.
+   `lineage_type = 'dragonfire'`) es rechazado por MariaDB.
+4. **Membresía única activa (RF-01.1):** dos filas activas del mismo
+   usuario en `clan_members` → violación de unicidad; cerrando la
+   primera (`left_at`), la segunda se admite.
+5. **Firma única viva (RF-02.1):** dos firmas activas del mismo Maestro
+   al mismo conjuro → violación; tras `is_revoked = 1`, se admite otra.
+6. **Bitácora inmutable (RF-08.1):** `UPDATE audit_log` y `DELETE FROM
+   audit_log` lanzan error 45000 con el mensaje solemne.
+7. **Autoincremental:** tres INSERT en `login_attempts` producen ids 1,2,3.
+8. **Semillas asentadas:** 8 escuelas, 8 doctrinas, 1 clan, 1 usuario
+   tutor, 1 membresía, 4 conjuros.
+9. **Portabilidad del repositorio:** el sellado del tomo es idempotente
+   en ambos motores (`add()` → true la primera vez, false la segunda).
+10. **Regresión SQLite:** `schema.sql` + `seeds.sql` siguen importando
+    limpio en SQLite (auto-bootstrap intacto).
+
+## 7. Procedimiento de despliegue (resumen, detalle en README)
+
+Crear base en el panel → importar `schema-mysql.sql` y `seeds.sql` en
+phpMyAdmin (en ese orden) → editar `env.php` con el trío `define()` →
+Ctrl+F5 y verificación funcional. La columna `users.avatar` ya viene en
+el guion: las bases MySQL nacen directamente vistiendo SPEC-12.

@@ -73,9 +73,16 @@ final class GrimoireCollectionRepository
      */
     public function add(string $userId, string $spellId, string $addedAtUtc): bool
     {
+        // Doble canal dialectal (SPEC-13): la cláusula de "ignorar si ya
+        // vive" cambia de nombre entre motores — 'INSERT OR IGNORE' en
+        // SQLite e 'INSERT IGNORE' en MySQL/MariaDB. La señal de
+        // idempotencia (rowCount()) es idéntica en ambos.
+        $driver = (string) $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $insertClause = $driver === 'mysql' ? 'INSERT IGNORE INTO' : 'INSERT OR IGNORE INTO';
+
         $statement = $this->pdo->prepare(
-            'INSERT OR IGNORE INTO grimoire_collections (id, user_id, spell_id, added_at)
-             VALUES (:id, :userId, :spellId, :addedAt)'
+            $insertClause . " grimoire_collections (id, user_id, spell_id, added_at)
+             VALUES (:id, :userId, :spellId, :addedAt)"
         );
         $statement->execute([
             ':id' => $this->newIdentifier('tme'),
