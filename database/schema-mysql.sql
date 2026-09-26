@@ -25,7 +25,9 @@
 --     generadas STORED + índice único (semántica exacta, RF-01.1 y
 --     RF-02.1).
 --   * Triggers de la Bitácora: SIGNAL SQLSTATE '45000' (equivalente
---     del RAISE(ABORT) SQLite).
+--     del RAISE(ABORT) SQLite), con cuerpo de UNA sola sentencia (sin
+--     BEGIN...END) para que la pestaña SQL de phpMyAdmin los acepte sin
+--     la directiva DELIMITER.
 --   * Rowid autoincrementales: INT NOT NULL AUTO_INCREMENT.
 --   * SET FOREIGN_KEY_CHECKS: el orden de creación exige referenciar
 --     tablas aún no nacidas (misma doctrina que el
@@ -412,22 +414,22 @@ CREATE INDEX idx_audit_target ON audit_log (target_entity_type, target_entity_id
 -- triggers MySQL equivalentes al RAISE(ABORT) de SQLite. La Bitácora
 -- solo admite INSERT; ni moderadores ni el Admin Supremo alteran o
 -- borran un veredicto registrado.
+--
+-- NOTA DIALECTAL (importación en phpMyAdmin): el cuerpo va SIN
+-- BEGIN...END a propósito. Cada trigger porta UNA sola sentencia, y
+-- MySQL/MariaDB lo admite así; con BEGIN...END el ';' interno obligaría
+-- a la directiva DELIMITER, que la pestaña SQL de phpMyAdmin no acepta
+-- (error #1064 al cortar en el punto y medio del SIGNAL).
 -- ---------------------------------------------------------------------
 CREATE TRIGGER trg_audit_log_no_update
 BEFORE UPDATE ON audit_log
 FOR EACH ROW
-BEGIN
-    SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se alteran.';
-END;
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se alteran.';
 
 CREATE TRIGGER trg_audit_log_no_delete
 BEFORE DELETE ON audit_log
 FOR EACH ROW
-BEGIN
-    SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se borran.';
-END;
+    SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La Bitácora de Auditoría Arcana es inmutable: los veredictos jamás se borran.';
 
 -- ---------------------------------------------------------------------
 -- Libro de Gloria del Dominio Semanal (SPEC-07, Tarea 2.5) y tomo
