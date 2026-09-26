@@ -149,6 +149,128 @@
   border-radius: var(--radius-scroll);
 }
 
+/* Sub-secciones del picker: rótulos con sello menor (hermanos de los
+   `dt` de la vitrina), jamás h3 crudos del agente usuario. */
+.panel-avatar-picker-slot h3 {
+  margin: var(--space-ink-3) 0 var(--space-ink-2);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-burnished);
+}
+
+/* Estado vigente y avisos solemnes: narración al margen. */
+.avatar-picker__current,
+.avatar-picker__notice,
+.avatar-picker__hint {
+  margin: var(--space-ink-2) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-ink-small);
+}
+
+.avatar-picker__live {
+  min-height: 1.5em;
+}
+
+.avatar-picker__error {
+  margin: var(--space-ink-2) 0;
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* Rejilla del canon: losas de pergamino con la vigente marcada
+   por metal Y forma (aria-pressed, RF-07.4 del canon heráldico). */
+.avatar-picker__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-ink-2);
+  margin: var(--space-ink-2) 0 var(--space-ink-3);
+}
+
+.avatar-picker__cell {
+  min-height: var(--touch-target-min);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-text-primary);
+  background: var(--color-parchment-base);
+  border: var(--border-ink);
+  border-radius: var(--radius-scroll);
+  cursor: pointer;
+  transition: filter var(--transition-arcane);
+}
+
+.avatar-picker__cell:hover {
+  filter: brightness(1.15);
+}
+
+.avatar-picker__cell:focus-visible {
+  outline: 2px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+.avatar-picker__cell--current {
+  color: var(--color-ink-seal);
+  background: var(--color-gold-arcane);
+  border: var(--border-ink-strong);
+}
+
+/* Zona de subida: etiqueta operable y input discreto (RNF-03). */
+.avatar-picker__label {
+  display: block;
+  margin: var(--space-ink-2) 0 var(--space-ink-1);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  color: var(--color-gold-burnished);
+}
+
+.avatar-picker__input {
+  display: block;
+  max-width: var(--measure-parchment);
+  color: var(--color-text-secondary);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-small);
+}
+
+.avatar-picker__input:focus-visible {
+  outline: 2px solid var(--color-parchment-border-focus);
+  outline-offset: 2px;
+}
+
+/* Marco ceremonial cuadrado: el recorte lo dicta el marco (RF-03.3);
+   en reposo aguarda vacío con su leyenda al centro. */
+.avatar-picker__frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(200px, 100%);
+  aspect-ratio: 1 / 1;
+  margin: var(--space-ink-3) 0;
+  background: var(--color-parchment-base);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-seal);
+  box-shadow: var(--shadow-arcane-soft);
+  overflow: hidden;
+}
+
+.avatar-picker__frame::after {
+  content: attr(data-frame-legend);
+  padding: var(--space-ink-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-ink-small);
+  text-align: center;
+}
+
+.avatar-picker__frame[data-has-preview='true']::after {
+  content: none;
+}
+
+.avatar-picker__frame[data-has-preview='true'] {
+  background: transparent;
+}
+
 /* ------------------------------------------------------------------
    La custodia de la frase de paso (Tarea 6.2): tres campos con
    etiqueta propia (operables sin ratón) y veredicto de lectura
@@ -368,7 +490,8 @@
   .panel-cta,
   .panel-section__cta,
   .panel-dialog__confirm,
-  .panel-dialog__cancel {
+  .panel-dialog__cancel,
+  .avatar-picker__cell {
     transition: none;
   }
 }
