@@ -160,26 +160,48 @@ export function createAvatarPickerComponent(mountRoot, options = {}) {
 
   /**
    * Forja el sello rúnico heráldico de una entrada del canon (RF-03.1,
-   * reutilización del arte de SPEC-02 RF-07). Ante entornos sin
-   * createElementNS (arneses con DOM simulado) o clave desconocida,
-   * degrada a null con dignidad: la celda conserva su leyenda.
+   * reutilización del arte de SPEC-02 RF-07). Las entradas heráldicas
+   * portan su sello por afinidad rectora; las EFIGIES canónicas sin
+   * heráldica (custodio, peregrino) portan el ouroboros del Arcano
+   * Puro con huella determinista — el MISMO dictamen que la cabecera
+   * (userProfileBadge, RF-03.5 en espíritu: jamás un cuadro vacío).
+   * Ante entornos sin createElementNS (arneses con DOM simulado) o
+   * clave desconocida, degrada a null con dignidad: la celda conserva
+   * su leyenda.
    */
   function forgeHeraldicSeal(entry) {
-    if (entry?.kind !== 'heraldry' || typeof entry.heraldryKey !== 'string') return null;
-    const rulingElement = CATALOG_HERALDRY_ELEMENTS[entry.heraldryKey];
-    if (rulingElement === undefined) return null;
-    try {
-      return createRuneSeal({
-        houseName: String(entry.label ?? ''),
-        coatOfArms: String(entry.heraldryKey),
-        rulingElement,
-        state: 'active',
-        role: 'house',
-        document: documentRef,
-      });
-    } catch {
-      return null;
+    if (entry?.kind === 'heraldry' && typeof entry.heraldryKey === 'string') {
+      const rulingElement = CATALOG_HERALDRY_ELEMENTS[entry.heraldryKey];
+      if (rulingElement === undefined) return null;
+      try {
+        return createRuneSeal({
+          houseName: String(entry.label ?? ''),
+          coatOfArms: String(entry.heraldryKey),
+          rulingElement,
+          state: 'active',
+          role: 'house',
+          document: documentRef,
+        });
+      } catch {
+        return null;
+      }
     }
+    // Efigie canónica sin heráldica: misma forja que la cabecera.
+    if (entry?.kind === 'effigy' && typeof entry.id === 'string' && entry.id !== '') {
+      try {
+        return createRuneSeal({
+          houseName: String(entry.label ?? ''),
+          coatOfArms: `rune_avatar_${entry.id}`,
+          rulingElement: 'pureArcane',
+          state: 'active',
+          role: 'house',
+          document: documentRef,
+        });
+      } catch {
+        return null;
+      }
+    }
+    return null;
   }
 
   /** Busca el primer descendiente con la clase dada (doble vía). */

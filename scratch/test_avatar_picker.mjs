@@ -125,7 +125,12 @@ function createObservableElement(tagName) {
   return element;
 }
 
-const documentSim = { createElement: (tagName) => createObservableElement(tagName) };
+const documentSim = {
+  createElement: (tagName) => createObservableElement(tagName),
+  // createElementNS para la forja heráldica (runeSealComponent): el sello
+  // SVG se dibuja igual sobre el DOM simulado con elementos observables.
+  createElementNS: (_namespace, tagName) => createObservableElement(tagName),
+};
 class CustomEventSim {
   constructor(type, options = {}) { this.type = type; this.detail = options.detail ?? null; }
 }
@@ -247,6 +252,23 @@ const currentCell = findDescendants(grid, (n) => n.getAttribute?.('data-avatar-i
 assertCondition(currentCell?.getAttribute('aria-pressed') === 'true', 'la vigente porta aria-pressed true (RF-03.1)');
 const otherCell = findDescendants(grid, (n) => n.getAttribute?.('data-avatar-id') === 'seal_celestialTides')[0] ?? null;
 assertCondition(otherCell?.getAttribute('aria-pressed') === 'false', 'las no vigentes portan aria-pressed false');
+
+// [1b] El arte del canon en la rejilla: toda celda porta SU sello —
+// las heráldicas por afinidad rectora y las EFIGIES canónicas con el
+// ouroboros del Arcano Puro (mismo dictamen que la cabecera: jamás un
+// cuadro vacío — hallazgo de la verificación visual de SPEC-14).
+const custodianCell = findDescendants(grid, (n) => n.getAttribute?.('data-avatar-id') === 'custodian')[0] ?? null;
+const custodianSeal = custodianCell !== null
+  ? findDescendants(custodianCell, (n) => n.getAttribute?.('data-heraldic-charge') === 'ouroboros')[0] ?? null
+  : null;
+assertCondition(custodianSeal !== null, 'la efigie canónica sin heráldica (Custodio Fundacional) porta su sello ouroboros');
+const ignisSeal = currentCell !== null
+  ? findDescendants(currentCell, (n) => n.getAttribute?.('data-heraldic-charge') === 'flame')[0] ?? null
+  : null;
+assertCondition(ignisSeal !== null, 'la celda heráldica porta su sello por afinidad rectora (llama del fuego)');
+if (custodianSeal !== null) {
+  assertCondition(custodianSeal.getAttribute('aria-hidden') === 'true', 'el sello de la celda es decorativo (aria-hidden, la leyenda basta)');
+}
 
 // =====================================================================
 // [2] Selección → evento panel:avatar-changed (plan §4.2, RF-03.4)
