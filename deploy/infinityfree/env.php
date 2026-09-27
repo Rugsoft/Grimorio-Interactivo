@@ -52,3 +52,16 @@ if (!is_dir($storageDir)) {
 if (!defined('GRIMORIO_DB_DSN')) {
     define('GRIMORIO_DB_DSN', 'sqlite:' . $storageDir . '/grimorio_live.sqlite');
 }
+
+// Chemin de las efigies propias (SPEC-14 — La Efigie en Producción).
+//
+// DESCOMENTAR SOLO si tu topología difiere de la canónica (repositorio
+// completo en htdocs/): la derivación automática del front controller ya
+// resuelve htdocs/storage/avatars, y el funnel raíz (.htaccess con
+// `RewriteRule ^storage/ - [F,L]`) la niega por URL. Esta constante es la
+// válvula para árboles no canónicos (hermano de los GRIMORIO_DB_* de la
+// variante MySQL):
+//
+// if (!defined('GRIMORIO_AVATARS_ROOT')) {
+//     define('GRIMORIO_AVATARS_ROOT', $projectRoot . '/storage/avatars');
+// }

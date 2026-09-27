@@ -290,10 +290,20 @@ function buildRouter(): Router
     // custodio de la frase de paso comparte el PDO y el gestor de
     // vínculos del santuario (SPEC-03) — la sesión actual sobrevive al
     // acto porque el dueño está presente (plan §5.3).
+    //
+    // SPEC-14 (RF-01.1): la raíz de efigies puede declararse por
+    // despliegue con GRIMORIO_AVATARS_ROOT (env.php, misma familia que
+    // los GRIMORIO_DB_*); la derivación automática queda como valor por
+    // defecto y los despliegues canónicos no cambian de comportamiento.
+    $avatarsRoot = defined('GRIMORIO_AVATARS_ROOT')
+        && is_string(GRIMORIO_AVATARS_ROOT)
+        && GRIMORIO_AVATARS_ROOT !== ''
+        ? GRIMORIO_AVATARS_ROOT
+        : dirname(__DIR__) . '/storage/avatars';
     $avatarService = new AvatarService(
         $connection->getPdo(),
         new UserPanelRepository($connection->getPdo()),
-        dirname(__DIR__) . '/storage/avatars',
+        $avatarsRoot,
     );
     $userPanelController = new UserPanelController(
         new UserPanelRepository($connection->getPdo()),

@@ -93,7 +93,8 @@ specs/
 ├── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes del propio linaje (enmienda SPEC-07; tríada SDD completa — implementada y formalmente cerrada por test_spec10_closure: EXITO)
 ├── 11-adept-grimoire-collection.spec.md # Colección del Adepto: tomo personal y Elogio Popular (cierra la costura de SPEC-07 favorites/awardCommunityFavorite y el rótulo «Ver mi libro personal» de SPEC-09; tríada SDD completa — implementada, 22/22 tareas cerradas)
 ├── 12-user-panel.spec.md                # Panel del Adepto: morada personal, efigie (avatar) y bitácora (tríada SDD completa — implementada, 22/22 tareas cerradas)
-└── 13-mysql-dialect-parity.spec.md      # Paridad de dialecto MySQL/MariaDB: gemelo dialectal database/schema-mysql.sql, portabilidad del backend y Regla de los Gemelos (enmienda de despliegue — implementada, 20/20 comprobaciones EXITO en MariaDB 10.4)
+├── 13-mysql-dialect-parity.spec.md      # Paridad de dialecto MySQL/MariaDB: gemelo dialectal database/schema-mysql.sql, portabilidad del backend y Regla de los Gemelos (enmienda de despliegue — implementada, 20/20 comprobaciones EXITO en MariaDB 10.4)
+└── 14-avatar-production-deployment.spec.md # La Efigie en Producción: paridad de despliegue de la efigie propia (SPEC-12) en InfinityFree — chemin de storage/, privacidad por funnel, sonda de diagnóstico GD/topes (enmienda de despliegue — RATIFICADA)
 
 ---
 

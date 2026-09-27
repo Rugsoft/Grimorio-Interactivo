@@ -349,3 +349,76 @@ Cualquier sonda futura de migración debe copiar este patrón:
 `require __DIR__ . '/env.php'`, doble canal del DSN, guardia anti
 memoria, guardia idempotente del esquema, informe JSON y borrado del
 servidor tras el uso.
+
+---
+
+## La efigie en producción (SPEC-14)
+
+> La subida de efigie propia de SPEC-12 está implementada y probada en
+> local; esta sección cubre su PARIDAD DE DESPLIEGUE en InfinityFree:
+> chemin del almacenamiento, privacidad por funnel, fragua gráfica (GD)
+> y topes de transporte. Fuente normativa: `specs/14-avatar-production-deployment.spec.md`.
+
+### 1. Topología canónica
+
+- **Directorio de efigies:** `htdocs/storage/avatars` (el mismo
+  `storage/` que usó la base SQLite; hoy queda libre para uso exclusivo
+  de las efigies, pues la base de producción es MySQL remota).
+- **Privacidad (RF-03.3 de SPEC-12):** la efigie propia es PRIVADA del
+  adepto; la única vía de lectura es `GET /api/v1/panel/avatar/image`
+  con guardia de sesión. El funnel raíz (`htdocs/.htaccess` con
+  `RewriteRule ^storage/ - [F,L]` y `Options -Indexes`) niega por URL
+  todo el árbol: una URL directa responde 403, jamás la imagen.
+- **Chemins no canónicos:** si tu instalación difiere, descomenta en
+  `htdocs/public/env.php` el bloque `GRIMORIO_AVATARS_ROOT` (hermano de
+  los `GRIMORIO_DB_*`); la derivación automática del front controller
+  sigue siendo el valor por defecto y los despliegues canónicos no
+  cambian nada.
+
+### 2. Verificación con la sonda `probe-avatar.php`
+
+1. Sube `deploy/infinityfree/probe-avatar.php` por FTP como
+   `htdocs/public/probe-avatar.php`.
+2. Ábrelo en el navegador:
+   `https://TU_SUBDOMINIO/probe-avatar.php`. Devuelve un JSON con cuatro
+   comprobaciones y remedios accionables:
+
+   | Comprobación | Qué mide | Si falla |
+   |---|---|---|
+   | `chemin` | El directorio de efigies existe y acepta escritura real | Crea `htdocs/storage/avatars` desde el File Manager con permisos 700, o declara `GRIMORIO_AVATARS_ROOT` en `env.php` |
+   | `gd` | Extensión GD con las 6 funciones del canon y encuadre REAL 512×512 | Contacta al hospedaje o restringe el canon de formatos anunciado |
+   | `transport` | `upload_max_filesize` / `post_max_size` efectivos contra el canon (2 MiB / 4 MiB) | Véase la nota de honestidad del punto 4 |
+   | `funnel` | El `.htaccess` raíz niega `storage/` por URL (doble vía: fichero + petición HTTP de prueba) | Reinstala `htaccess-root` y repite la sonda — sin funnel, la efigie podría exponerse |
+
+3. El veredicto global `EXITO` requiere las cuatro comprobaciones sanas;
+   `REVISAR` lista los remedios.
+4. **Nota de honestidad ante `post_max_size`:** si un envío excede el
+   `upload_max_filesize` del hospedaje, PHP lo entrega con error y la
+   API responde con aviso que nombra el motivo. Pero si excede el
+   `post_max_size`, PHP VACÍA el envío antes de ejecutar la aplicación:
+   allí ningún aviso específico es posible (la honestidad es documental,
+   esta misma nota). La sonda mide los topes reales; compáralos con el
+   canon y, si fueran menores, ajústalo en la guía del adepto.
+5. **BORRA la sonda del servidor** tras el diagnóstico (misma regla que
+   `probe-env.php` y `probe-mysql.php`): su permanencia es incidencia
+   de despliegue (RF-03.3).
+
+### 3. Ciclo de verificación de extremo a extremo (cuenta de prueba)
+
+Con la sonda en EXITO, ejerce el ciclo completo desde el panel con una
+cuenta de prueba linajada:
+
+1. **Alta:** `POST /api/v1/panel/avatar` modo `own` con multipart
+   (`image`) → **200** con `data.avatar` (`kind: "own"`) y asiento
+   `AVATAR_SELF_MODIFIED` en la Bitácora.
+2. **Lectura privada:** `GET /api/v1/panel/avatar/image` con sesión →
+   el PNG; sin sesión → 401; URL directa al fichero → 403 del funnel.
+3. **Reemplazo:** sube otra imagen → el fichero anterior deja de existir
+   (RF-03.4 de SPEC-12).
+4. **Idéntica rechazada:** re-subir la misma imagen → 400
+   `AVATAR_IDENTICAL` sin asiento (el juez del hash).
+5. **Retiro:** `DELETE /api/v1/panel/avatar` → vuelve el canónico y el
+   fichero propio se borra del disco.
+
+Con los cinco pasos verdes, la SPEC-14 queda desplegada y la efigie
+propia plenamente ejercitable en producción.
