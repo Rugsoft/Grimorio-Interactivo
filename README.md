@@ -39,7 +39,7 @@ El desarrollo del santuario se encuentra blindado por la [**Constitución del Gr
 
 ## ✨ Módulos y Funcionalidades Núcleo
 
-El proyecto se estructura en 8 grandes especificaciones técnicas implementadas y verificadas:
+El proyecto se estructura en 15 grandes especificaciones técnicas implementadas y verificadas:
 
 ```
 specs/
@@ -50,7 +50,14 @@ specs/
 ├── 05-grimoire-simulator.spec.md        # Simulador de Grimorio, Canvas y Web Speech API
 ├── 06-elemental-affinity-combos.spec.md # Códice de Afinidades, Rueda Rúnica y Combos
 ├── 07-clans-lineages.spec.md            # Linajes Arcanos, Hermandades y Dominio Semanal
-└── 08-moderation-two-step.spec.md       # Cónclave de Moderación Solemne en Dos Pasos
+├── 08-moderation-two-step.spec.md       # Cónclave de Moderación Solemne en Dos Pasos
+├── 09-lineage-oath-first-access.spec.md # Juramento de Linaje bloqueante en el primer acceso
+├── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes
+├── 11-adept-grimoire-collection.spec.md # Colección del Adepto: tomo personal y Elogio Popular
+├── 12-user-panel.spec.md                # Panel del Adepto: morada, efigie y bitácora
+├── 13-mysql-dialect-parity.spec.md      # Paridad de dialecto MySQL/MariaDB (gemelos DDL)
+├── 14-avatar-production-deployment.spec.md # La Efigie en producción (InfinityFree)
+└── 15-session-security-production-deployment.spec.md # Cookies HTTPS, procedencia y revocación
 ```
 
 ### 🌌 1. Gran Portal y Navegación SPA Fluida (`#/`)
@@ -76,7 +83,7 @@ specs/
 
 ### ⚖️ 4. Creador de Hechizos y Ley Universal del Maná
 * **Determinismo Matemático Absoluto (Artículo II):** El coste de maná no lo fija nadie a mano. Se calcula en el backend mediante una función invariable basada en la composición objetiva de sus efectos:
-  $$\text{Coste Base} = \text{Daño} \times 1.0 + \text{Curación} \times 1.3 + \text{Barrera} \times 1.2 + \text{Control} + \text{Duración} + \text{Área}$$
+  $$\text{Coste Base} = \text{Daño} \times 1.0 + \text{Curación} \times 1.5 + \text{Barrera} \times 1.2 + \text{Control} + \text{Duración} + \text{Área}$$
 * Descuento litúrgico por componentes (Verbal, Somático, Material) hasta un máximo del $-30\%$.
 * Sellado criptográfico de cada balance mediante huella SHA-256 (`math_fingerprint`) de 64 caracteres.
 
@@ -132,7 +139,7 @@ GrimorioInteractivo/
 │   ├── 01-portal-and-navigation.spec.md
 │   ├── 02-design-system-layout.spec.md
 │   ├── ...
-│   └── 08-moderation-two-step.tasks.md
+│   └── 15-session-security-production-deployment.spec.md
 ├── public/                              # Raíz pública del servidor web
 │   ├── index.php                        # Front Controller y enrutador REST
 │   ├── index.html                       # Shell principal de la Single Page Application (SPA)
@@ -158,7 +165,8 @@ GrimorioInteractivo/
 │   ├── Repositories/                    # Repositorios PDO con parameter binding
 │   └── Services/                        # Lógica de dominio (Balanceo de maná, Combos, Dominio, Moderación)
 ├── database/                            # Esquemas de base de datos
-│   ├── schema.sql                       # Esquema canónico DDL de tablas e índices
+│   ├── schema.sql                       # Esquema canónico DDL (dialecto SQLite; auto-bootstrap)
+│   ├── schema-mysql.sql                 # Gemelo dialectal MySQL/MariaDB (paridad SPEC-13)
 │   └── seeds.sql                        # Semillas fundacionales y pergaminos primordiales
 └── scratch/                             # Batería de pruebas automatizadas CLI (PHP y Node)
 ```
