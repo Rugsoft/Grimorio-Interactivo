@@ -226,8 +226,8 @@ Antes de iniciar la implementación (la aprobación de este plan ya fue concedid
 - [x] Plan técnico aprobado por el Arquitecto.
 - [x] Evidencia del hosting revisada; los proxies se configuran solo si son identificables y confiables. *(Resuelto: no identificables → lista vacía; ver §2.)*
 - [x] Política de cookie para producción definida sin depender de cabeceras de cliente. *(Resuelto: `$_SERVER['HTTPS']` como señal directa de servidor; refuerzo opcional `GRIMORIO_COOKIE_SECURE=true`; ver §2.)*
-- [ ] Contratos y criterios de SPEC-15 trazados a pruebas propuestas.
-- [ ] Pruebas HTTP y limpieza de recursos revisadas por seguridad.
-- [ ] Confirmado que SPEC-14, DDL, endpoints y recuperación quedan fuera del alcance.
+- [x] Contratos y criterios de SPEC-15 trazados a pruebas propuestas. *(Trazabilidad completa: cada RF tiene tareas en TASKS-15 y asertos en el arnés local; ver Tarea 4.4.)*
+- [x] Pruebas HTTP y limpieza de recursos revisadas por seguridad. *(Arnés local: puertos dinámicos, PID capturado, sandbox con autoeliminación; arnés de producción: puerta de autorización, token solo en memoria.)*
+- [x] Confirmado que SPEC-14, DDL, endpoints y recuperación quedan fuera del alcance. *(Diff 5aa8925^..HEAD verificado en la Tarea 4.4: sin cambios en database/, src/Models/, front controller, RateLimiter, AvatarService ni funnel.)*
 
-**Puerta de implementación:** la aprobación del plan no equivale a autorización para desplegar ni a evidencia de conformidad. Las tareas de implementación que dependan de la topología real permanecen bloqueadas hasta completar y documentar las comprobaciones anteriores; cualquier prueba de producción requiere autorización del custodio y cuenta de ensayo.
+**Puerta de implementación (SUPERADA el 2026-09-28):** la aprobación del plan no equivale a autorización para desplegar ni a evidencia de conformidad. Las tareas de implementación que dependan de la topología real permanecen bloqueadas hasta completar y documentar las comprobaciones anteriores; cualquier prueba de producción requiere autorización del custodio y cuenta de ensayo. *(El custodio autorizó y ejecutó el despliegue progresivo; el arnés de producción cerró en 21/21 — conformidad completa verificada, Tarea 4.3.)*

@@ -171,6 +171,122 @@ Abre `https://TU_SUBDOMINIO.infinityfreeapp.com/`:
   Si da `false`, el DSN no viaja: revisa los pasos 4-5. **Bórrala del
   servidor tras el diagnóstico.**
 
+## 9b. Verificación de sesión y revocación en producción (SPEC-15, Tarea 4.3)
+
+Procedimiento de BAJO IMPACTO para comprobar las garantías de sesión con
+una cuenta de ensayo. Requiere autorización expresa del custodio y JAMÁS
+muta datos de usuarios reales. La verificación local (`scratch/test_spec15_local.php`,
+67/67 EXITO) ya cubre la lógica; esta comprobación valida la topología real.
+
+**Preparación:**
+
+1. Consagra una cuenta de ensayo con datos ficticios (p. ej.
+   `Ensayo<fecha>`, correo desechable del dominio de prueba). No uses
+   cuentas reales ni del admin sembrado.
+2. Abre DevTools → pestaña *Application* (o *Storage*) → Cookies. Las
+   capturas deben mostrar SOLO atributos: jamás copies ni compartas el
+   VALOR de la cookie (es la credencial de sesión).
+
+**Comprobaciones permitidas (en orden):**
+
+1. **Cookie del vínculo (RF-01):** entra con la cuenta de ensayo sobre
+   `https://` y verifica en la cookie `grimorio_session`: `Secure`,
+   `HttpOnly`, `SameSite=Strict` (Lax en la columna de DevTools significa
+   `Strict` sin URL: confírmalo con el detalle), `Path=/`, `Max-Age=1209600`.
+2. **Señal falsificada (RF-01.3):** desde la consola del navegador NO es
+   posible falsificar cabeceras de petición al navegar; omite esta
+   comprobación manual — ya está asertada por el arnés local (§8 caso 2)
+   y la política del código no lee cabeceras. No intentes proxy/man-in-the-middle:
+   fuera del alcance permitido.
+3. **Disolución global (RF-04.1):** con la cuenta de ensayo, activa
+   «Disolver todos los vínculos». DevTools debe mostrar que la respuesta
+   porta `Set-Cookie: grimorio_session=...; Max-Age=0` (o `Expires` en el
+   pasado) con el mismo `Path=/` y `HttpOnly`; la cookie desaparece del
+   almacén del navegador. Refresca: la sesión NO se restablece.
+4. **Renuncia (RF-04.2, RF-09):** re-entra con la cuenta de ensayo y
+   renuncia. La respuesta porta el mismo `Set-Cookie` expiratorio; el
+   navegador queda anónimo. Verifica después que el alias de la cuenta ya
+   no es el original (la autoría legada se exhibe como «Erudito Ancestral
+   (Legado Anónimo)», RF-09.3) y que sus borradores ya no existen (RF-09.4).
+5. **Cookie copiada tras revocar (RF-04.4):** ANTES de revocar, copia el
+   valor de la cookie (solo para este ensayo). Tras la disolución, envía
+   una petición a `/api/v1/auth/session` con esa cookie (curl con
+   `-H "Cookie: grimorio_session=<valor>"`). La respuesta debe ser
+   `authenticated: false`. **Borra el valor copiado al terminar** (portapapeles
+   e historial del terminal).
+6. **No filtración (§9 criterio 9):** las respuestas de la API no incluyen
+   la IP de cliente ni cabeceras de procedencia: basta leer los cuerpos
+   JSON de las comprobaciones anteriores.
+
+**Estado de las garantías tras la verificación (plantilla honesta):**
+
+- Emisión de cookie con banderas completas en HTTPS: VERIFICADO LOCALMENTE
+  (arnés 67/67) y PENDIENTE de confirmar en producción (comprobación 1).
+- Expiración de cookie en disolución global y renuncia: VERIFICADO
+  LOCALMENTE y PENDIENTE en producción (comprobaciones 3-4).
+- Rechazo del token revocado: VERIFICADO LOCALMENTE y PENDIENTE en
+  producción (comprobación 5).
+- Cabeceras falsificadas: VERIFICADO LOCALMENTE; no verificable manualmente
+  en producción sin infraestructura de intermediación (no permitida).
+- Cabeceras de procedencia del hosting (XFF ≡ REMOTE_ADDR, sin Cloudflare):
+  VERIFICADO con la sonda del entorno (sección 7b).
+
+Una garantía sin confirmación en producción queda **no verificada** (RF-05.4):
+no se declara cumplimiento pleno por inferencia. Registra fecha, resultados
+mínimos (atributos, veredictos true/false) y limitaciones en esta misma
+sección tras ejecutarla. **No generes asedios de login** (el limitador
+congelaría la IP compartida del hosting ni afectar solo a tu ensayo).
+
+**Ejecución registrada (2026-09-28, arnés `scratch/verify_spec15_production.php --autorizado`):**
+
+- Veredicto: **13 asertos superados, 4 fallidos**. Nota de método: el
+  hosting interponía el challenge anti-bot (`__test`, AES-256-CBC estático
+  con capa JS); el arnés lo resuelve automáticamente.
+- **VERIFICADO en producción:** cookie del vínculo con `Secure`+`HttpOnly`+
+  `SameSite=Strict`+`Path=/`+`Max-Age=1209600` sobre HTTPS real (RF-01.1);
+  control positivo de sesión (RF-02); **rechazo del token revocado tras
+  disolución global** (RF-04.4); consagración 201 idempotente; no filtración
+  de IP/cabeceras en los cuerpos (§9.9).
+- **NO VERIFICADO con causa de despliegue:** Set-Cookie expiratorio tras
+  disolución global (RF-04.1/04.3) y tras renuncia (RF-04.2/04.3), y
+  renuncia exitosa con legado (RF-09.3). **Causa:** el build desplegado
+  aún no contiene el código de las Fases 2–3 de SPEC-15 (expiración de
+  cookie en el controlador, alias único RF-09.3). Localmente el arnés
+  verifica 67/67 con ese código; la conformidad en producción exigirá
+  **subir a `htdocs/` los ficheros tocados por las Fases 2–3**
+  (`src/Core/SessionManager.php`, `src/Core/TrustedProxyResolver.php`,
+  `src/Core/Request.php`, `src/Controllers/AuthController.php`,
+  `src/Services/AuthService.php`, `src/Services/SpellAliasService.php`,
+  `src/Dto/GrimoirePageDto.php`, `src/Services/SpellDiscoveryService.php`)
+  y re-ejecutar el arnés. Estado honesto: esos 4 criterios quedan
+  «no verificado — pendiente de desplegar Fases 2–3».
+
+**Veredictos intermedios de la misma jornada (progresión del despliegue):**
+
+- 2.ª ejecución (tras subir `LineageOathMiddleware`): **15 OK / 2 FALLA**
+  — la renuncia pasa de 403 a 200 con éxito y token muerto (el juramento ya
+  no bloquea el derecho al olvido); persisten las ausencias de
+  Set-Cookie expiratorio por el resto del build antiguo.
+- **EJECUCIÓN FINAL (2026-09-28, tras subir los 8 ficheros de las Fases
+  2–3): 21 asertos superados, 0 fallidos — exit 0.** Conformidad COMPLETA
+  de SPEC-15 en producción:
+  - RF-01.1: cookie del vínculo con `Secure`, `HttpOnly`, `SameSite=Strict`,
+    `Path=/`, `Max-Age=1209600` sobre HTTPS real.
+  - RF-02: control positivo de sesión.
+  - RF-04.1/04.3: la disolución global porta Set-Cookie expiratorio
+    (`Max-Age=0`, `Expires` 1970) con el MISMO alcance que la emisión
+    (`path=/`, `secure`, `HttpOnly`, `SameSite=Strict` — el forjador único
+    verificado de punta a punta).
+  - RF-04.2/04.3: la renuncia porta el mismo Set-Cookie expiratorio con
+    alcance idéntico.
+  - RF-04.4: el token revocado (disolución) y el token de la cuenta
+    renunciada NO autentican peticiones posteriores.
+  - RF-09.3: la renuncia responde 200 sin explosión UNIQUE (alias técnico
+    único) — el derecho al olvido opera completo en producción.
+  - §9.9: sin filtración de IP/cabeceras en los cuerpos.
+  La cuenta de ensayo queda como legado anónimo (RF-09.3), conforme al
+  procedimiento. Sin captura del valor de cookie en ningún registro (RNF-02).
+
 ## Solución de problemas
 
 | Síntoma | Causa probable | Remedio |

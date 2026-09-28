@@ -117,6 +117,12 @@ final class LineageOathMiddleware
             '/api/v1/auth/bind',
             '/api/v1/auth/dissolve',
             '/api/v1/auth/dissolve-all',
+            // El derecho al olvido (RF-09) es IRRENUNCIABLE incluso para el
+            // peregrino sin linaje: si el juramento bloqueara la renuncia,
+            // la cuenta quedaría cautiva de la ceremonia que jamás prestó.
+            // Mismo principio que las disoluciones exentas arriba (SPEC-15,
+            // Tarea 4.3: hallazgo de la verificación en producción).
+            '/api/v1/auth/renounce-account',
         ],
     ];
 

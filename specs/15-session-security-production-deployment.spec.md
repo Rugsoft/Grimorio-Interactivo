@@ -145,17 +145,17 @@ La verificación deberá observar las respuestas de los flujos actuales de auten
 
 ## 9. Criterios de aceptación
 
-- [ ] En HTTPS representativo de producción, la cookie emitida lleva `Secure`, `HttpOnly`, `SameSite=Strict` y `Path=/`.
-- [ ] Las pruebas identifican y documentan qué componente termina TLS y qué señal de esquema es confiable.
-- [ ] Una cabecera HTTPS enviada directamente por un cliente no confiable no cambia la decisión de transporte seguro.
-- [ ] Una cabecera de IP falsificada desde un cliente no confiable no cambia la clave usada por el limitador.
-- [ ] La IP reenviada solo se usa cuando la conexión procede de un proxy documentado y confiable.
-- [ ] La disolución global revoca las sesiones de servidor y expira la cookie del navegador.
-- [ ] La renuncia revoca las sesiones, completa el contrato de anonimización de SPEC-03 y expira la cookie del navegador.
-- [ ] Una cookie revocada no autentica peticiones posteriores aunque el cliente la reenvíe.
-- [ ] Las pruebas no exponen secretos ni requieren un endpoint de diagnóstico público permanente.
-- [ ] La documentación registra versión/entorno probado, topología relevante y cualquier limitación pendiente.
-- [ ] No se modifican endpoints, DDL, la semántica del limitador ni el alcance de SPEC-14 bajo esta spec.
+- [x] En HTTPS representativo de producción, la cookie emitida lleva `Secure`, `HttpOnly`, `SameSite=Strict` y `Path=/`. *(Verificado en producción 2026-09-28: arnés 21/21.)*
+- [x] Las pruebas identifican y documentan qué componente termina TLS y qué señal de esquema es confiable. *(Guía §7b: apache2handler sin offload; `$_SERVER['HTTPS']` señal canónica.)*
+- [x] Una cabecera HTTPS enviada directamente por un cliente no confiable no cambia la decisión de transporte seguro. *(Arnés local 6.3; el forjador no lee cabeceras.)*
+- [x] Una cabecera de IP falsificada desde un cliente no confiable no cambia la clave usada por el limitador. *(Arnés local Fases 1–2; Tarea 2.1.)*
+- [x] La IP reenviada solo se usa cuando la conexión procede de un proxy documentado y confiable. *(Matriz M del arnés, 12 casos; lista de confianza vacía ratificada — Tareas 0.3/2.2.)*
+- [x] La disolución global revoca las sesiones de servidor y expira la cookie del navegador. *(Arnés local 6.4 y producción: Set-Cookie expiratorio con alcance idéntico.)*
+- [x] La renuncia revoca las sesiones, completa el contrato de anonimización de SPEC-03 y expira la cookie del navegador. *(Arnés local 6.5 y producción: RF-09.3/09.4 + Set-Cookie expiratorio.)*
+- [x] Una cookie revocada no autentica peticiones posteriores aunque el cliente la reenvíe. *(Arnés local y producción: disolución y renuncia.)*
+- [x] Las pruebas no exponen secretos ni requieren un endpoint de diagnóstico público permanente. *(RNF-02: token jamás impreso/persistido; sin sondas públicas nuevas.)*
+- [x] La documentación registra versión/entorno probado, topología relevante y cualquier limitación pendiente. *(Guía §7b y §9b con los tres veredictos y el método anti-bot.)*
+- [x] No se modifican endpoints, DDL, la semántica del limitador ni el alcance de SPEC-14 bajo esta spec. *(Diff 5aa8925^..HEAD verificado en la Tarea 4.4: database/, Models/, front controller, RateLimiter, AvatarService y funnel intactos.)*
 
 ---
 
