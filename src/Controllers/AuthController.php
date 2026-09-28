@@ -436,8 +436,12 @@ final class AuthController
         }
 
         if (!$this->authService->renounceAccount($rawToken)) {
-            // Vínculo caducado entre la lectura y la escritura, o cuenta
-            // ya anonimizada (doble renuncia): 409 explícito y no mutante.
+            // Vínculo caducado entre la lectura y la escritura, o cuenta ya
+            // anonimizada (doble renuncia): 409 canónico. La cláusula de
+            // reconciliación de RF-09.5 expira la cookie portadora igualmente:
+            // el navegador no debe retener un vínculo muerto (RF-04.2).
+            $this->sessionManager->expireSessionCookie();
+
             return Response::json([
                 'success' => false,
                 'error'   => [
@@ -448,23 +452,12 @@ final class AuthController
             ], 409);
         }
 
-        // Trazabilidad solemne (Art. III, RF-08.1): la renuncia queda
-        // imborrable en la bitácora con la identidad previa a la purga.
-        $this->auditService->recordAction(
-            actorUserId: $renouncer['id'],
-            actorAlias: $renouncer['alias'],
-            actorRole: $renouncer['role'],
-            actionType: 'ACC_LINK_RENOUNCED',
-            targetEntityType: 'user',
-            targetEntityId: $renouncer['id'],
-            justification: 'Renuncia al Vínculo: el iniciado solicitó su derecho al olvido y su legado pasa al seudónimo común «Erudito Ancestral (Legado Anónimo)».',
-        );
-
-        // Expiración de la cookie portadora (SPEC-15 RF-04.2/RF-04.3,
-        // Tarea 3.3): SOLO tras completar la renuncia y su asiento de
-        // auditoría, por el mismo canal seguro del gestor (forjador único,
-        // mismo alcance que la emisión). Sin ella, el vínculo muerto viaja
-        // una última vez y el middleware degrada a anónimo.
+        // Trazabilidad solemne (Art. III, RF-08.1; enmienda RF-09.5): el
+        // asiento ACC_LINK_RENOUNCED nace DENTRO de la transacción del
+        // servicio (o todo vive, o nada vive). Aquí solo queda el cierre
+        // visible del navegador: expiración de la cookie portadora (SPEC-15
+        // RF-04.2/RF-04.3) por el canal seguro del gestor, SOLO tras la
+        // consumación atómica del acto.
         $this->sessionManager->expireSessionCookie();
 
         return Response::json([

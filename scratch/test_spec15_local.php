@@ -511,6 +511,121 @@ assertArcane(
 );
 
 // ---------------------------------------------------------------------
+// FASE G (SPEC-03 RF-09.5, enmienda ratificada): ATOMICIDAD de la
+// renuncia. Un fallo forzado del INSERT de auditoría durante la renuncia
+// debe dejar la base EXACTAMENTE en su estado previo (sin anonimización,
+// sin purga de borradores, sin caída de sesiones) y propagar la
+// excepción (el controlador responde 500 con cuenta y sesión intactas).
+// ---------------------------------------------------------------------
+echo "\n[5-G] Atomicidad: fallo de auditoría revoca TODO (RF-09.5)\n";
+
+$_SERVER['REMOTE_ADDR'] = '192.0.2.53';
+$atomicManager = new SessionManager($pdo, $_SERVER['REMOTE_ADDR'], 'Arnés SPEC-15/1.0');
+$atomicService = new AuthService($pdo, $atomicManager);
+$atomicController = new AuthController($pdo, $atomicManager, $rateLimiter);
+$atomicController->consecrate(new Request('POST', '/api/v1/auth/consecrate', [], ['Content-Type' => 'application/json'], (string) json_encode([
+    'alias'      => 'Atomico15',
+    'email'      => 'atomico15@sanctuario.arc',
+    'passphrase' => 'frase-de-paso-atomico-15',
+])));
+
+// Borrador propio + vínculo: el estado previo que la transacción debe
+// preservar íntegro si el asiento de bitácora falla.
+$atomicId = (string) $pdo->query("SELECT id FROM users WHERE alias = 'Atomico15'")->fetchColumn();
+$atomicFingerprint = 'arnes15atomic' . str_repeat('b', 51);
+$atomicDraft = $pdo->prepare(
+    "INSERT INTO spells
+        (id, slug, name, author_id, magic_school, elemental_affinity, casting_time, mana_cost, circle,
+         math_fingerprint, clan_id, summary, description, components_verbal, components_somatic, components_material,
+         damage, healing, barrier, crowd_control_type, range_type, area_type, duration_type,
+         has_verbal, has_somatic, has_material, status, validation_signatures_count, signatures_count,
+         is_genesis_sample, created_at, updated_at)
+     VALUES
+        ('spl_atomic_15', 'chispa-atomica-15', 'Chispa Atómica', :authorId, 'evocation', 'none', 'action', 5, 1,
+         '{$atomicFingerprint}', 'cln_spec15', 'Borrador de la fase de atomicidad', 'Debe sobrevivir al fallo forzado.',
+         '', '', '', 0, 0, 0, 'none', 'touch', 'singleTarget', 'instant',
+         0, 0, 0, 'draft', 0, 0, 0, :createdAt, :updatedAt)"
+);
+$atomicDraft->execute([':authorId' => $atomicId, ':createdAt' => $now, ':updatedAt' => $now]);
+$bindAtomic = $atomicService->bind('atomico15@sanctuario.arc', 'frase-de-paso-atomico-15', new DateTimeImmutable($now));
+assertArcane($bindAtomic->success && $bindAtomic->session !== null, 'El titular atómico vincula (vía de servicio)');
+$rawTokenAtomic = $bindAtomic->session->getToken();
+// El estado previo cuenta DOS sesiones: la del vínculo automático de la
+// consagración (RF-01.2) y la del bind explícito del arnés.
+$sessionsBeforeAtomic = (int) $pdo->query(
+    "SELECT COUNT(*) FROM user_sessions WHERE user_id = '{$atomicId}'"
+)->fetchColumn();
+assertArcane($sessionsBeforeAtomic === 2, 'El estado previo del titular atómico porta sus dos sesiones (RF-01.2 + bind)');
+
+// El disyuntor: siembra una fila huérfana en audit_log que rompe la FK
+// NO APLICABLE — la bitácora no tiene FK sobre actor_user_id. La vía
+// correcta para forzar el fallo del INSERT sin tocar el esquema:
+// sobrecargar el disparador con un alias que viole el CHECK... audit_log
+// carece de CHECK. Enfoque honesto: INSERT exitoso imposible mediante
+// un actor_role nulo — la columna es NOT NULL y el servicio la alimenta
+// desde la fila del usuario. Forzamos el fallo ANTES del asiento:
+// renombramos la tabla audit_log, de modo que el INSERT falla siempre
+// (tabla inexistente) sin tocar el código bajo prueba.
+$pdo->exec('ALTER TABLE audit_log RENAME TO audit_log_shadow');
+
+$atomicThrew = false;
+try {
+    $atomicController->renounceAccount(new Request('POST', '/api/v1/auth/renounce', [], [
+        'Cookie' => 'grimorio_session=' . $rawTokenAtomic,
+    ]));
+} catch (Throwable) {
+    // Esperado: el INSERT de auditoría falla (tabla ausente) y la
+    // excepción se propaga tras el rollBack.
+    $atomicThrew = true;
+} finally {
+    $pdo->exec('ALTER TABLE audit_log_shadow RENAME TO audit_log');
+}
+
+assertArcane($atomicThrew, 'El fallo del asiento de auditoría se propaga (renuncia interrumpida)');
+
+// El veredicto de atomicidad: la base EXACTAMENTE como antes del acto.
+$atomicRow = $pdo->query(
+    "SELECT alias, email FROM users WHERE id = '{$atomicId}'"
+)->fetch(PDO::FETCH_ASSOC);
+assertArcane(
+    is_array($atomicRow) && $atomicRow['alias'] === 'Atomico15',
+    '[RF-09.5] Sin anonimización: el alias original sobrevive al fallo forzado'
+);
+$atomicDrafts = (int) $pdo->query(
+    "SELECT COUNT(*) FROM spells WHERE author_id = '{$atomicId}' AND status = 'draft'"
+)->fetchColumn();
+assertArcane($atomicDrafts === 1, '[RF-09.5] Sin purga: el borrador del renunciante sobrevive al fallo forzado');
+$atomicSessions = (int) $pdo->query(
+    "SELECT COUNT(*) FROM user_sessions WHERE user_id = '{$atomicId}'"
+)->fetchColumn();
+assertArcane(
+    $atomicSessions === $sessionsBeforeAtomic,
+    "[RF-09.5] Sin disolución: las {$sessionsBeforeAtomic} sesiones del titular sobreviven al fallo forzado"
+);
+$atomicAudit = (int) $pdo->query(
+    "SELECT COUNT(*) FROM audit_log WHERE target_entity_id = '{$atomicId}' AND action_type = 'ACC_LINK_RENOUNCED'"
+)->fetchColumn();
+assertArcane($atomicAudit === 0, '[RF-09.5] Sin asiento: ninguna renuncia en la bitácora para el intento fallido');
+
+// La sesión intacta sigue autenticando (el titular recibe 500, no queda
+// cautivo ni anónimo).
+assertArcane(
+    $atomicManager->resolveSession($rawTokenAtomic, new DateTimeImmutable($now)) !== null,
+    '[RF-09.5] El titular mantiene su sesión operativa tras el fallo (cuenta no cautiva)'
+);
+
+// Tras restaurar la bitácora, la renuncia del MISMO titular prospera
+// íntegra (transacción re-ejecutable sin estados intermedios huérfanos).
+$retriedResponse = $atomicController->renounceAccount(new Request('POST', '/api/v1/auth/renounce', [], [
+    'Cookie' => 'grimorio_session=' . $rawTokenAtomic,
+]));
+assertArcane($retriedResponse->getStatusCode() === 200, 'El reintento tras restaurar la bitácora prospera (200)');
+$retriedAudit = (int) $pdo->query(
+    "SELECT COUNT(*) FROM audit_log WHERE target_entity_id = '{$atomicId}' AND action_type = 'ACC_LINK_RENOUNCED'"
+)->fetchColumn();
+assertArcane($retriedAudit === 1, '[RF-09.5] El reintento inscribe exactamente UN asiento de renuncia');
+
+// ---------------------------------------------------------------------
 // FASE F (SPEC-15 RF-04.1/04.2, evidencia HTTP real): la sonda local
 // comprueba que la respuesta HTTP de revocación viaja SIN cabecera
 // Set-Cookie expiratoria HOY (Fase Roja) y la llevará tras las Tareas

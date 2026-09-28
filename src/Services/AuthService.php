@@ -432,55 +432,97 @@ final class AuthService
 
         $userId = (string) $ownerId;
 
-        // Defensa anti-doble-renuncia (enmienda RF-09.3): una cuenta ya
-        // anonimizada porta el alias técnico interno con el prefijo del
-        // rótulo común; una segunda renuncia no prospera.
-        $userStatement = $this->pdo->prepare('SELECT alias FROM users WHERE id = :userId');
+        // Lectura de la fila del titular: identidad previa a la purga (el
+        // asiento de la bitácora debe registrar quién renunció, no el
+        // seudónimo posterior) y defensa anti-doble-renuncia (enmienda
+        // RF-09.3): una cuenta ya anonimizada porta el alias técnico
+        // interno con el prefijo del rótulo común.
+        $userStatement = $this->pdo->prepare('SELECT alias, role FROM users WHERE id = :userId');
         $userStatement->execute([':userId' => $userId]);
-        $currentAlias = (string) $userStatement->fetchColumn();
+        $userRow = $userStatement->fetch(PDO::FETCH_ASSOC);
 
-        if ($currentAlias !== '' && str_starts_with($currentAlias, self::RENOUNCE_INTERNAL_PREFIX)) {
-            return false;
+        if ($userRow === false) {
+            return false; // El titular desapareció entre lectura y escritura.
         }
 
-        // Purga de los BORRADORES no validados del renunciante (enmienda
-        // RF-09.4, que materializa íntegramente la purga de «borradores no
-        // validados» ya exigida por RF-09.1): los conjuros en estado draft
-        // son privados y mueren con su autor; los experimentales, validados
-        // y demás estados públicos sobreviven para el legado y la moderación.
-        $draftPurgeStatement = $this->pdo->prepare(
-            "DELETE FROM spells WHERE author_id = :userId AND status = 'draft'"
-        );
-        $draftPurgeStatement->execute([':userId' => $userId]);
+        $currentAlias = (string) $userRow['alias'];
+        if ($currentAlias !== '' && str_starts_with($currentAlias, self::RENOUNCE_INTERNAL_PREFIX)) {
+            return false; // Renuncia ya consumada (RF-09.3).
+        }
 
-        // Purga del pergamino activo (si lo hubiera) y sustitución de
-        // datos personales por opacos irrecuperables (RF-09.1). El alias
-        // técnico interno es ÚNICO (RF-09.3): rótulo común + sufijo opaco
-        // derivado del id, de modo que NINGUNA segunda renuncia colisione
-        // con users.alias UNIQUE; la representación pública de este alias
-        // es siempre el rótulo común (SpellQueryService::displayAlias).
-        $internalAlias = self::RENOUNCE_INTERNAL_PREFIX . substr(hash('sha256', $userId), 0, 16);
-        $anonymizeStatement = $this->pdo->prepare(
-            'UPDATE users
-             SET alias = :alias,
-                 email = :email,
-                 password_hash = :passwordHash,
-                 recovery_token_hash = \'\',
-                 recovery_token_expires_at = NULL,
-                 updated_at = :updatedAt
-             WHERE id = :userId'
-        );
-        $anonymizeStatement->execute([
-            ':alias'        => $internalAlias,
-            ':email'        => 'ancestral+' . $userId . '@olvidado.sanctuario',
-            ':passwordHash' => str_repeat('0', 60), // No es un hash BCRYPT válido: jamás verificará.
-            ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
-            ':userId'       => $userId,
-        ]);
+        // Transacción de la renuncia (enmienda RF-09.5): la anonimización
+        // completa y su asiento de bitácora viven o nada de ellos vive
+        // (RNF-05: el acto sin trazabilidad no existe). Precedente:
+        // changePassphraseAuthenticated.
+        $this->pdo->beginTransaction();
 
-        // Disolución global implícita: todas las sesiones de la cuenta caen.
-        $purgeStatement = $this->pdo->prepare('DELETE FROM user_sessions WHERE user_id = :userId');
-        $purgeStatement->execute([':userId' => $userId]);
+        try {
+            // Purga de los BORRADORES no validados del renunciante (enmienda
+            // RF-09.4, que materializa íntegramente la purga de «borradores no
+            // validados» ya exigida por RF-09.1): los conjuros en estado draft
+            // son privados y mueren con su autor; los experimentales, validados
+            // y demás estados públicos sobreviven para el legado y la moderación.
+            $draftPurgeStatement = $this->pdo->prepare(
+                "DELETE FROM spells WHERE author_id = :userId AND status = 'draft'"
+            );
+            $draftPurgeStatement->execute([':userId' => $userId]);
+
+            // Purga del pergamino activo (si lo hubiera) y sustitución de
+            // datos personales por opacos irrecuperables (RF-09.1). El alias
+            // técnico interno es ÚNICO (RF-09.3): rótulo común + sufijo opaco
+            // derivado del id, de modo que NINGUNA segunda renuncia colisione
+            // con users.alias UNIQUE; la representación pública de este alias
+            // es siempre el rótulo común (SpellQueryService::displayAlias).
+            $internalAlias = self::RENOUNCE_INTERNAL_PREFIX . substr(hash('sha256', $userId), 0, 16);
+            $anonymizeStatement = $this->pdo->prepare(
+                'UPDATE users
+                 SET alias = :alias,
+                     email = :email,
+                     password_hash = :passwordHash,
+                     recovery_token_hash = \'\',
+                     recovery_token_expires_at = NULL,
+                     updated_at = :updatedAt
+                 WHERE id = :userId'
+            );
+            $anonymizeStatement->execute([
+                ':alias'        => $internalAlias,
+                ':email'        => 'ancestral+' . $userId . '@olvidado.sanctuario',
+                ':passwordHash' => str_repeat('0', 60), // No es un hash BCRYPT válido: jamás verificará.
+                ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),
+                ':userId'       => $userId,
+            ]);
+
+            // Disolución global implícita: todas las sesiones de la cuenta caen.
+            $purgeStatement = $this->pdo->prepare('DELETE FROM user_sessions WHERE user_id = :userId');
+            $purgeStatement->execute([':userId' => $userId]);
+
+            // Asiento ACC_LINK_RENOUNCED dentro de la transacción (RF-08.1,
+            // enmienda RF-09.5): INSERT directo por el mismo PDO (el servicio
+            // de auditoría no gestiona transacciones propias). La identidad
+            // es la previa a la purga; la leyenda es fija del servicio (Art.
+            // IV): jamás narra datos personales.
+            $auditStatement = $this->pdo->prepare(
+                'INSERT INTO audit_log
+                    (actor_user_id, actor_alias, actor_role, action_type, target_entity_type, target_entity_id, justification, created_at)
+                 VALUES
+                    (:actorUserId, :actorAlias, :actorRole, :actionType, :targetEntityType, :targetEntityId, :justification, :createdAt)'
+            );
+            $auditStatement->execute([
+                ':actorUserId'      => $userId,
+                ':actorAlias'       => $currentAlias,
+                ':actorRole'        => (string) $userRow['role'],
+                ':actionType'       => 'ACC_LINK_RENOUNCED',
+                ':targetEntityType' => 'user',
+                ':targetEntityId'   => $userId,
+                ':justification'    => 'Renuncia al Vínculo: el iniciado solicitó su derecho al olvido y su legado pasa al seudónimo común «Erudito Ancestral (Legado Anónimo)».',
+                ':createdAt'        => $instant->format('Y-m-d\TH:i:s\Z'),
+            ]);
+
+            $this->pdo->commit();
+        } catch (\Throwable $renounceFailure) {
+            $this->pdo->rollBack();
+            throw $renounceFailure;
+        }
 
         return true;
     }
