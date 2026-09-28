@@ -39,7 +39,7 @@ El desarrollo del santuario se encuentra blindado por la [**Constitución del Gr
 
 ## ✨ Módulos y Funcionalidades Núcleo
 
-El proyecto se estructura en 15 grandes especificaciones técnicas implementadas y verificadas:
+El proyecto se estructura en 15 grandes especificaciones técnicas implementadas y verificadas, más una enmienda de superficie ratificada en curso de implementación (07b):
 
 ```
 specs/
@@ -50,6 +50,7 @@ specs/
 ├── 05-grimoire-simulator.spec.md        # Simulador de Grimorio, Canvas y Web Speech API
 ├── 06-elemental-affinity-combos.spec.md # Códice de Afinidades, Rueda Rúnica y Combos
 ├── 07-clans-lineages.spec.md            # Linajes Arcanos, Hermandades y Dominio Semanal
+├── 07b-clan-foundation-interface.spec.md # El Umbral de la Fundación: interfaz de creación de clanes (RATIFICADA, en implementación)
 ├── 08-moderation-two-step.spec.md       # Cónclave de Moderación Solemne en Dos Pasos
 ├── 09-lineage-oath-first-access.spec.md # Juramento de Linaje bloqueante en el primer acceso
 ├── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes

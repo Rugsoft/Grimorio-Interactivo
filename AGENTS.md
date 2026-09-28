@@ -88,6 +88,7 @@ specs/
 ├── 05-grimoire-simulator.spec.md        # Simulador de grimorio, Canvas partículas y Web Speech
 ├── 06-elemental-affinity-combos.spec.md # Matriz elemental y motor de validación de combos
 ├── 07-clans-lineages.spec.md            # Linajes mágicos y cálculo de Dominio semanal
+├── 07b-clan-foundation-interface.spec.md # El Umbral de la Fundación: interfaz de creación de clanes (enmienda de superficie de SPEC-07 RF-01.2; RATIFICADA — implementación pendiente)
 ├── 08-moderation-two-step.spec.md       # Flujo de moderación (experimental -> 3 firmas -> validado)
 ├── 09-lineage-oath-first-access.spec.md # Juramento de linaje bloqueante en el primer acceso (enmienda SPEC-03; tríada SDD completa — implementada, 19/19 tareas cerradas)
 ├── 10-clan-adhesion-ceremony.spec.md    # Vestíbulo de las Hermandades: adhesión a clanes del propio linaje (enmienda SPEC-07; tríada SDD completa — implementada y formalmente cerrada por test_spec10_closure: EXITO)
