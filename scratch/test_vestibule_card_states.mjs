@@ -310,6 +310,67 @@ assertCondition(emptyText.includes('Podrás ser quien funde la primera.'), 'la i
 assertCondition(emptyState.element.getAttribute('role') === 'status', 'el vacío se verbaliza por cortesía (región viva, RNF-03)');
 
 // =====================================================================
+// [6] Dictamen ouroboros unificado (auditoría heráldica; patrón userProfileBadge)
+// =====================================================================
+console.log('\n[6] Dictamen heráldico del sello: elemento rector, no clave de linaje');
+
+/** Localiza el sello SVG forjado dentro de la tarjeta. */
+function findSeal(cardElement) {
+  return findDescendant(cardElement, (node) => node.attributes?.get('data-heraldic-charge') !== undefined);
+}
+
+// Linaje conocido → carga elemental canónica (NO ouroboros).
+const casaFuego = createVestibuleClanCardComponent(clanDto({ lineageType: 'primordialFlame' }), {
+  elementFactory: factory,
+  documentRef: svgDocument,
+});
+const selloFuego = findSeal(casaFuego.element);
+assertCondition(selloFuego !== null && selloFuego !== undefined, 'la casa de la Llama forja su sello');
+assertCondition(
+  selloFuego?.attributes?.get('data-heraldic-charge') === 'flame',
+  'linaje primordialFlame → carga flame (elemento rector, no la clave de linaje)',
+);
+
+const casaMareas = createVestibuleClanCardComponent(clanDto(), {
+  elementFactory: factory,
+  documentRef: svgDocument,
+});
+assertCondition(
+  findSeal(casaMareas.element)?.attributes?.get('data-heraldic-charge') === 'tide',
+  'linaje celestialTides → carga tide',
+);
+
+// Linaje desconocido / vacío → OUROBOROS del Arcano Puro: jamás un cuadro vacío.
+const casaArcanas = createVestibuleClanCardComponent(clanDto({ lineageType: 'linajeFantasma' }), {
+  elementRegistry: undefined,
+  elementFactory: factory,
+  documentRef: svgDocument,
+});
+assertCondition(
+  findSeal(casaArcanas.element)?.attributes?.get('data-heraldic-charge') === 'ouroboros',
+  'linaje desconocido → ouroboros (dictamen unificado, jamás vacío)',
+);
+
+const casaSinLinaje = createVestibuleClanCardComponent(clanDto({ lineageType: '' }), {
+  elementFactory: factory,
+  documentRef: svgDocument,
+});
+assertCondition(
+  findSeal(casaSinLinaje.element)?.attributes?.get('data-heraldic-charge') === 'ouroboros',
+  'linaje no declarado → ouroboros (sello siempre presente)',
+);
+
+// coatOfArms vacío: el sello subsiste con la huella del nombre de la casa.
+const casaSinBlason = createVestibuleClanCardComponent(clanDto({ coatOfArms: '' }), {
+  elementFactory: factory,
+  documentRef: svgDocument,
+});
+assertCondition(
+  findSeal(casaSinBlason.element)?.attributes?.get('data-heraldic-charge') === 'tide',
+  'coatOfArms vacío → el sello subsiste (huella por houseName)',
+);
+
+// =====================================================================
 // Resumen
 // =====================================================================
 console.log(`\n== RESUMEN == Asertos superados: ${assertsPassed}, fallidos: ${assertsFailed}`);

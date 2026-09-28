@@ -38,6 +38,26 @@ import {
   RUNE_SEAL_STATES,
 } from './runeSealComponent.js';
 
+/**
+ * Índice local de los 8 Linajes Canónicos (espejo del canon de SPEC-07;
+ * MISMA heráldica que userProfileBadge): afinidad elemental rectora por
+ * clave de linaje. El DTO del Vestíbulo viaja con `lineageType` (SPEC-10),
+ * así que la forja del sello resuelve aquí el `rulingElement` elemental —
+ * ante clave desconocida o linaje no declarado, `?? ''` degrada al
+ * OUROBOROS del Arcano Puro en el núcleo (runeSealComponent): jamás un
+ * sello sin carga, jamás un cuadro vacío.
+ */
+const VESTIBULE_LINEAGE_ELEMENTS = Object.freeze(Object.fromEntries([
+  ['primordialFlame', 'fire'],
+  ['celestialTides', 'water'],
+  ['eternalTempest', 'lightning'],
+  ['worldRoots', 'earth'],
+  ['dawnWinds', 'wind'],
+  ['solarCrown', 'light'],
+  ['abyssalShadows', 'darkness'],
+  ['aetherWeavers', 'pureArcane'],
+]));
+
 /** Rótulos castellanos del estado del adepto ante la casa (RF-01.3, RF-01.7). */
 export const VESTIBULE_CARD_RELATION_LABELS = Object.freeze({
   none: 'Sin vínculo con esta casa',
@@ -124,10 +144,13 @@ export function createVestibuleClanCardComponent(clanDto, componentOptions = {})
     : dto.isRegent === true
       ? RUNE_SEAL_STATES.REGENT
       : RUNE_SEAL_STATES.ACTIVE;
+  // Dictamen ouroboros unificado: la carga nace del ELEMENTO rector del
+  // linaje (no de su clave de linaje); ante linaje desconocido o vacío, el
+  // núcleo forja el ouroboros del Arcano Puro — sello siempre presente.
   const seal = createRuneSeal({
     houseName: String(dto.name ?? ''),
     coatOfArms: String(dto.coatOfArms ?? ''),
-    rulingElement: String(dto.lineageType ?? ''),
+    rulingElement: VESTIBULE_LINEAGE_ELEMENTS[String(dto.lineageType ?? '')] ?? '',
     state: sealState,
     role: 'house',
     document: documentRef,
