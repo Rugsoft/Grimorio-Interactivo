@@ -1,0 +1,190 @@
+/*
+ * clan-foundation.css — Liturgia visual del Umbral de la Fundación
+ * (SPEC-07b, Tarea 1; enmienda de superficie de SPEC-07 RF-01.2).
+ *
+ * Los tokens viven en tokens.css (Artículo I): aquí solo se consumen.
+ * Cero colores hex crudos, cero fuentes ajenas al canon.
+ *
+ * Constitución:
+ *   - Artículo I (Dogma Vanilla): CSS3 nativo con Custom Properties.
+ *   - Artículo IV: atmósfera solemne de grimorio (pergamino y oro arcano).
+ *   - Artículo V: clases BEM en inglés camelCase.
+ */
+
+/* =======================================================================
+   1. El diálogo anfitrión (hereda la base .modal de components.css)
+   ======================================================================= */
+
+.modal--foundation .foundation-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 1rem);
+  min-width: min(92vw, 34rem);
+}
+
+/* =======================================================================
+   2. Campos y contador del Nombre Canónico (RF-10.2.1)
+   ======================================================================= */
+
+.foundation-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+}
+
+.foundation-modal__field-label {
+  font-family: var(--font-display, serif);
+  font-size: var(--font-size-ink-small, 0.95rem);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-strong, #1c1916);
+}
+
+.foundation-modal__input {
+  font-family: var(--font-body, serif);
+  font-size: var(--font-size-ink-body, 1rem);
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border: 1px solid var(--gold-dim, #a4874b);
+  border-radius: var(--radius-soft, 4px);
+  background: var(--parchment, #f4ecd8);
+  color: var(--ink-body, #2a2521);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.foundation-modal__input:focus-visible {
+  outline: 2px solid var(--gold-strong, #d4a94e);
+  outline-offset: 1px;
+  border-color: var(--gold-strong, #d4a94e);
+}
+
+.foundation-modal__field-hint {
+  margin: 0;
+  font-size: var(--font-size-ink-small, 0.95rem);
+  font-style: italic;
+  color: var(--ink-muted, #5a5248);
+}
+
+.foundation-modal__field-counter {
+  margin: 0;
+  align-self: flex-end;
+  font-size: var(--font-size-ink-small, 0.95rem);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted, #5a5248);
+}
+
+/* El contador viste tinta de advertencia cuando el canon no se cumple. */
+.foundation-modal__field-counter--over {
+  color: var(--ember, #8c3b2e);
+  font-weight: 600;
+}
+
+/* =======================================================================
+   3. Los Ocho Linajes: sangre propia viva, sangre ajena vedada (RF-10.2.3)
+   ======================================================================= */
+
+.foundation-modal__lineage-group,
+.foundation-modal__admission-group {
+  border: 1px solid var(--gold-dim, #a4874b);
+  border-radius: var(--radius-soft, 4px);
+  padding: var(--space-3, 0.75rem);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.foundation-modal__lineage-option,
+.foundation-modal__admission-option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2, 0.5rem);
+  flex-wrap: wrap;
+}
+
+/* La opción vedada se apaga: el veto es visible antes de enviar (RF-10.2.3). */
+.foundation-modal__lineage-option--foreign {
+  opacity: 0.45;
+}
+
+.foundation-modal__lineage-option--foreign input[type='radio'] {
+  cursor: not-allowed;
+}
+
+.foundation-modal__lineage-option-label {
+  font-family: var(--font-display, serif);
+  color: var(--ink-strong, #1c1916);
+}
+
+.foundation-modal__lineage-option-hint,
+.foundation-modal__admission-option-hint {
+  margin: 0;
+  flex-basis: 100%;
+  font-size: var(--font-size-ink-small, 0.95rem);
+  color: var(--ink-muted, #5a5248);
+}
+
+/* =======================================================================
+   4. La voz de los vetos (RF-10.5): región viva sobre el pergamino
+   ======================================================================= */
+
+.foundation-modal__veto {
+  margin: 0;
+  min-height: 1.4em;
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border-left: 3px solid var(--ember, #8c3b2e);
+  background: color-mix(in srgb, var(--ember, #8c3b2e) 8%, transparent);
+  font-size: var(--font-size-ink-small, 0.95rem);
+  color: var(--ink-strong, #1c1916);
+}
+
+/* =======================================================================
+   5. Los gestos del Umbral (RF-10.3 / RF-10.7)
+   ======================================================================= */
+
+.foundation-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3, 0.75rem);
+}
+
+.foundation-modal__submit {
+  cursor: pointer;
+}
+
+/* El sello en vuelo: el botón queda ocupado mientras el rito viaja (RF-10.3). */
+.foundation-modal__submit:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.foundation-modal__dismiss {
+  cursor: pointer;
+}
+
+/* =======================================================================
+   6. El gesto en la cabecera del Salón y la invitación del Vestíbulo
+   ======================================================================= */
+
+.lineage-hall__foundation {
+  margin-left: auto;
+}
+
+/* El gesto vedado por el canon se apaga sin desaparecer (RF-10.1). */
+.lineage-hall__foundation--vetoed {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.vestibule-empty__foundation {
+  margin-top: var(--space-3, 0.75rem);
+}
+
+/* =======================================================================
+   7. Movimiento reducido (RNF-02, canon del santuario)
+   ======================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .foundation-modal__input {
+    transition: none;
+  }
+}

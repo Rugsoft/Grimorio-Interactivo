@@ -102,6 +102,10 @@ function ordinalLabel(position) {
  * @param {() => void} [options.onOpenVestibule] Llamamiento al Vestíbulo de
  *        las Hermandades (SPEC-10, Tarea 4.2): el CTA de la cabecera.
  * @param {(clanId: string) => void} [options.onClanSelect] Selección de una casa.
+ * @param {{open: () => void, verdict: () => {enabled: boolean, legend: string}}|undefined} [options.foundationGesture]
+ *        El Umbral de la Fundación (SPEC-07b, RF-10.1): el gesto de la
+ *        cabecera. La VISTA aporta el veredicto de la sesión; sin opción
+ *        (visitante anónimo en arnés) el gesto no se monta.
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica
  *        inyectable (arneses sin navegador).
  * @param {Document} [options.documentRef] Documento anfitrión de los sellos
@@ -116,6 +120,7 @@ export function createLineageHallComponent(mountRoot, options = {}) {
     onRetry,
     onOpenVestibule,
     onClanSelect,
+    foundationGesture,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
   } = options;
@@ -264,6 +269,35 @@ export function createLineageHallComponent(mountRoot, options = {}) {
     const title = appendTextElement(header, 'h1', 'lineage-hall__title', LINEAGE_HALL_TITLE);
     title.setAttribute('id', 'lineageHallTitle');
     appendTextElement(header, 'p', 'lineage-hall__hint', LINEAGE_HALL_HINT);
+
+    // El Umbral de la Fundación (SPEC-07b, RF-10.1): el gesto de alzar una
+    // casa vive en la cabecera del Salón. El veredicto de la sesión lo trae
+    // la VISTA (habilitado/inhabilitado con su leyenda); sin opción (arnés
+    // sin sesión) el gesto no se monta.
+    if (foundationGesture && typeof foundationGesture.open === 'function') {
+      const verdict = typeof foundationGesture.verdict === 'function'
+        ? foundationGesture.verdict()
+        : { enabled: true, legend: 'Fundar una hermandad propia' };
+
+      const foundationButton = track(elementFactory('button'));
+      foundationButton.type = 'button';
+      foundationButton.className = verdict.enabled
+        ? 'lineage-hall__foundation button button--primary'
+        : 'lineage-hall__foundation lineage-hall__foundation--vetoed button button--secondary';
+      foundationButton.textContent = 'Fundar una hermandad propia';
+      foundationButton.setAttribute('data-action', 'foundation');
+      if (!verdict.enabled) {
+        // El veto de interfaz es REAL (RNF-04): ningún gesto vedado
+        // despacha petición.
+        foundationButton.disabled = true;
+        foundationButton.setAttribute('aria-disabled', 'true');
+      }
+      foundationButton.setAttribute('title', verdict.legend ?? '');
+      foundationButton.addEventListener('click', () => {
+        if (!foundationButton.disabled) foundationGesture.open();
+      });
+      header.appendChild(foundationButton);
+    }
 
     // Llamamiento al Vestíbulo (SPEC-10, Tarea 4.2 — doble vía de acceso):
     // la contemplación pública del Salón ofrece el paso a la gestión de

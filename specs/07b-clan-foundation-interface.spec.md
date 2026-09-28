@@ -2,7 +2,7 @@
 
 > **Constitución:** [`constitution.md`](../constitution.md) | **Directrices:** [`AGENTS.md`](../AGENTS.md)
 > **Espec madre:** [`specs/07-clans-lineages.spec.md`](07-clans-lineages.spec.md) (RF-01.2, RF-02) · [`specs/10-clan-adhesion-ceremony.spec.md`](10-clan-adhesion-ceremony.spec.md) (estado vacío del Vestíbulo)
-> **Estado:** RATIFICADA (2026-09-28) — las tres decisiones de la sección 10 quedan cerradas con la opción recomendada
+> **Estado:** RATIFICADA e IMPLEMENTADA (2026-09-28) — tríada cerrada: Tareas 1–3 ejecutadas, 9 criterios verificados, arnés 70/70
 > **Área:** Superficie de interfaz del Santuario (Dogma Vanilla, Artículo I)
 > **Restricción:** Norma el QUÉ observable de la interfaz. El contrato de backend ya ratificado en SPEC-07 no se altera: esta spec lo VESTIGE, jamás lo amplía.
 
@@ -123,15 +123,15 @@ El flujo consume el contrato ya ratificado en SPEC-07 (Tarea 5.1):
 
 ## 8. Criterios de Aceptación
 
-- [ ] Un fundador apto ve el gesto «Fundar una hermandad propia» habilitado en `#/linajes` y, al activarlo, el modal presenta los cuatro sellos y el régimen con rotulación castellana (RF-10.1, RF-10.2).
-- [ ] Solo el linaje jurado del fundador es seleccionable; los otros siete se ven inhabilitados con su leyenda de sangre propia (RF-10.2.4).
-- [ ] La confirmación despacha `foundClan` una sola vez (sin doble envío) y, con 201, el Salón refresca y conduce a la ficha de la casa nacida (RF-10.3, RF-10.4).
-- [ ] Cada código de veto del contrato se exhibe como su leyenda temática, el modal conserva lo escrito y el envío no se pierde (RF-10.5).
-- [ ] El visitante anónimo, el militante, el convaleciente y el `reader` ven el gesto inhabilitado con su leyenda, y ningún veto de interfaz despacha petición (RF-10.1, RNF-04).
-- [ ] La invitación del estado vacío del Vestíbulo conduce al mismo modal (RF-10.6).
-- [ ] Escape/botón/× descartan sin efecto en el santuario, conservan el borrador y devuelven el foco al gesto originador (RF-10.7).
-- [ ] El arnés `scratch/test_clan_foundation_modal.mjs` verifica el ciclo completo (apertura, campos, selección de linaje, envío único, vetos, descarte) en verde.
-- [ ] Cero ficheros de `src/` alterados (diff verificado en el cierre de la tarea).
+- [x] Un fundador apto ve el gesto «Fundar una hermandad propia» habilitado en `#/linajes` y, al activarlo, el modal presenta los sellos y el régimen con rotulación castellana (RF-10.1, RF-10.2). *Nota: la decisión ratificada (§10.2) dejó los sellos en TRES + régimen — el blasón no se pregunta (RF-10.8). Verificado en navegador real (Tarea 1) y arnés 70/70.*
+- [x] Solo el linaje jurado del fundador es seleccionable; los otros siete se ven inhabilitados con su leyenda de sangre propia (RF-10.2.4). *Arnés [3]: 7 opciones vedadas + leyenda literal; sin juramento, los 8 vedados.*
+- [x] La confirmación despacha `foundClan` una sola vez (sin doble envío) y, con 201, el Salón refresca y conduce a la ficha de la casa nacida (RF-10.3, RF-10.4). *Arnés [5]: doble clic → 1 confirmación; navegador real: 201 CREATED con «Custodios del Alba Eterna» + Salón refrescado + cabecera de militancia.*
+- [x] Cada código de veto del contrato se exhibe como su leyenda temática, el modal conserva lo escrito y el envío no se pierde (RF-10.5). *Arnés [7]: los 8 códigos con leyenda exacta, borrador intacto, botón restaurado, fallback solemne; veto real NAME_ALREADY_RESERVED verificado en navegador.*
+- [x] El visitante anónimo, el militante, el convaleciente y el `reader` ven el gesto inhabilitado con su leyenda, y ningún veto de interfaz despacha petición (RF-10.1, RNF-04). *Navegador real: anónimo vedado con leyenda; militante vedado tras fundar; arnés [1b]: disabled real + aria-disabled.*
+- [x] La invitación del estado vacío del Vestíbulo conduce al mismo modal (RF-10.6). *Navegador real: «Fundar la primera hermandad» abre el mismo Umbral con `abyssalShadows` único seleccionable (linaje leído de `adeptState.lineage`, hallazgo corregido).*
+- [x] Escape/botón/× descartan sin efecto en el santuario, conservan el borrador y devuelven el foco al gesto originador (RF-10.7). *Arnés [8]: descarte sin consumar, borrador sobrevive a la reapertura, foco en el nombre.*
+- [x] El arnés `scratch/test_clan_foundation_modal.mjs` verifica el ciclo completo (apertura, campos, selección de linaje, envío único, vetos, descarte) en verde. *70 PASA / 0 FALLA, exit 0; 6 regresiones hermanas en verde (admission 34, hall_component 97, vestibule_view 30, clans_preview, clan_view, oath_modal).*
+- [x] Cero ficheros de `src/` alterados (diff verificado en el cierre de la tarea). *Diff: 5 ficheros públicos modificados + 3 nuevos (componente, CSS, arnés); cero en `src/` y cero en `database/`.*
 
 ---
 

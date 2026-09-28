@@ -43,6 +43,8 @@
   <link rel="stylesheet" href="assets/css/components/lineage-hall.css">
   <!-- Vestíbulo de las Hermandades: tarjeta solemne y estado vacío (SPEC-10). -->
   <link rel="stylesheet" href="assets/css/components/vestibule.css">
+  <!-- El Umbral de la Fundación: rito de creación de clanes (SPEC-07b). -->
+  <link rel="stylesheet" href="assets/css/components/clan-foundation.css">
   <!-- Biblioteca, Portal, extravío, Bitácora y salas de clan (SPEC-01/07). -->
   <link rel="stylesheet" href="assets/css/components/library.css">
   <link rel="stylesheet" href="assets/css/components/audit.css">
@@ -190,6 +192,15 @@
        El panel lo forja oathModalComponent (Tarea 4.2) al abrir.
        ============================================================ -->
   <dialog id="oathModal" class="modal modal--oath" aria-labelledby="oathModalTitle"></dialog>
+
+  <!-- ============================================================
+       Diálogo del Umbral de la Fundación (SPEC-07b, RF-10.1): el rito
+       de alzar una hermandad propia. El panel lo forja
+       clanFoundationModalComponent (Tarea 1) al abrir; el gesto vive en
+       la cabecera del Salón de los Linajes y en la invitación del
+       estado vacío del Vestíbulo (RF-10.6: un rito, dos puertas).
+       ============================================================ -->
+  <dialog id="foundationModal" class="modal modal--foundation" aria-labelledby="foundationModalTitle"></dialog>
 </body>
 
 </html>

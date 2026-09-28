@@ -28,8 +28,9 @@
  * @module views/vestibuleView
  */
 
-import { createVestibuleClanCardComponent } from '../components/vestibuleClanCardComponent.js';
+import { createVestibuleClanCardComponent, createVestibuleEmptyState } from '../components/vestibuleClanCardComponent.js';
 import { createAdmissionModalComponent } from '../components/admissionModalComponent.js';
+import { createClanFoundationModalComponent } from '../components/clanFoundationModalComponent.js';
 import { createPetitionComposerComponent } from '../components/petitionComposerComponent.js';
 import { createPetitionInventoryComponent } from '../components/petitionInventoryComponent.js';
 import { ceremonialLegendFor } from '../api/vestibuleClient.js';
@@ -73,6 +74,10 @@ export const VESTIBULE_VIEW_EVENTS = Object.freeze({
  * @param {Document} [options.documentRef] Documento anfitrión.
  * @param {EventTarget} [options.eventTarget] Bus del plan §4 (por defecto,
  *        la raíz de montaje).
+ * @param {HTMLDialogElement|null} [options.foundationDialog] El `<dialog>`
+ *        del Umbral de la Fundación (SPEC-07b, RF-10.6): la invitación del
+ *        estado vacío abre el MISMO rito que el Salón. Ausente = la
+ *        invitación conserva solo su rótulo (comportamiento previo).
  * @returns {Object} API: { render, destroy, retry }.
  */
 export function createVestibuleView(mountRoot, options = {}) {
@@ -81,6 +86,7 @@ export function createVestibuleView(mountRoot, options = {}) {
     clanClient,
     onMembershipChanged,
     onVerdictsAcknowledged,
+    foundationDialog = null,
     documentRef = globalThis.document,
   } = options;
 
@@ -261,9 +267,9 @@ export function createVestibuleView(mountRoot, options = {}) {
     const clans = Array.isArray(currentState.clans) ? currentState.clans : [];
 
     if (clans.length === 0) {
-      // Estado vacío de la Tarea 5.1 (RF-01.4).
-      cardsHost.appendChild(createVestibuleClanCardComponent.emptyState?.().element
-        ?? buildFallbackEmptyState());
+      // Estado vacío de la Tarea 5.1 (RF-01.4), con la puerta del Umbral
+      // (SPEC-07b, RF-10.6): la invitación abre el MISMO rito que el Salón.
+      cardsHost.appendChild(buildFoundationInvitation());
       return;
     }
 
@@ -282,6 +288,76 @@ export function createVestibuleView(mountRoot, options = {}) {
     box.className = 'vestibule-empty__legend';
     box.textContent = 'Ninguna hermandad ruega aún tu linaje.';
     return box;
+  }
+
+  /* =====================================================================
+     El Umbral de la Fundación (SPEC-07b, RF-10.6): la invitación del
+     estado vacío abre el MISMO rito que el Salón.
+     ===================================================================== */
+
+  /** El Umbral vivo de esta vista (forja perezosa en la primera apertura). */
+  let foundationModal = null;
+
+  /** Linaje jurado del adepto: vive en `adeptState.lineage` del sobre
+   *  (Endpoint 1 de SPEC-10); el estado superior no lo porta. */
+  function foundationLineage() {
+    const lineage = currentState?.adeptState?.lineage
+      ?? currentState?.lineage
+      ?? currentState?.userLineage
+      ?? null;
+    return typeof lineage === 'string' && lineage !== '' ? lineage : '';
+  }
+
+  /** Despacha el rito al santuario (mismo contrato que en el Salón). */
+  async function dispatchFoundation(payload) {
+    if (typeof clanClient?.foundClan !== 'function') {
+      foundationModal?.reportError(null);
+      return;
+    }
+
+    try {
+      const result = await clanClient.foundClan(payload);
+      if (result?.success) {
+        foundationModal?.closeAfterSuccess();
+        // La casa nació: el Vestíbulo se repinta y el shell resincroniza
+        // el vínculo del mago (mismo flujo que un ingreso consumado).
+        emit(VESTIBULE_VIEW_EVENTS.membershipCreated, { clanId: result.data?.id ?? null });
+        await retry();
+        onMembershipChanged?.();
+        return;
+      }
+      foundationModal?.reportError(result);
+    } catch (foundationFailure) {
+      foundationModal?.reportError(null);
+    }
+  }
+
+  /** La invitación del estado vacío conduce al Umbral (RF-10.6). */
+  function buildFoundationInvitation() {
+    const emptyState = createVestibuleEmptyState({ elementFactory });
+
+    if (foundationDialog !== null) {
+      const callButton = elementFactory('button');
+      callButton.type = 'button';
+      callButton.className = 'vestibule-empty__foundation button button--primary';
+      callButton.textContent = 'Fundar la primera hermandad';
+      callButton.setAttribute('data-action', 'foundation');
+      callButton.addEventListener('click', () => {
+        if (foundationModal === null) {
+          foundationModal = createClanFoundationModalComponent(foundationDialog, {
+            documentRef,
+            userLineage: foundationLineage(),
+            onConfirm: (payload) => {
+              void dispatchFoundation(payload);
+            },
+          });
+        }
+        foundationModal.open();
+      });
+      emptyState.element.appendChild(callButton);
+    }
+
+    return emptyState.element;
   }
 
   /** Conduce la intención de la tarjeta al rito que corresponda. */
@@ -508,6 +584,8 @@ export function createVestibuleView(mountRoot, options = {}) {
 
     admissionModal?.destroy?.();
     admissionModal = null;
+    foundationModal?.destroy?.();
+    foundationModal = null;
     inventory?.destroy?.();
     inventory = null;
 

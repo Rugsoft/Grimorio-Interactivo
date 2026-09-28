@@ -24,6 +24,7 @@
  */
 
 import { createLineageHallComponent } from '../components/lineageHallComponent.js';
+import { createClanFoundationModalComponent } from '../components/clanFoundationModalComponent.js';
 
 /** Evento del plan 4.1: alguien acaba de acreditar PDA a su hermandad. */
 const POINTS_AWARDED_EVENT = 'dominion:points-awarded';
@@ -60,6 +61,11 @@ export function createLineageHallView(mountRoot, options = {}) {
     store = null,
     onClanSelect,
     onOpenVestibule,
+    // SPEC-07b (Tarea 1): el Umbral de la Fundación. El dialog anfitrión lo
+    // aporta el orquestador (shell); clanClient despacha el rito; el catálogo
+    // de linajes jurados alimenta la selección de sangre propia.
+    clanClient = null,
+    foundationDialog = null,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
   } = options;
@@ -88,6 +94,114 @@ export function createLineageHallView(mountRoot, options = {}) {
   function track(node) {
     mountedNodes.push(node);
     return node;
+  }
+
+  /* =====================================================================
+     El Umbral de la Fundación (SPEC-07b, Tarea 1; RF-10.1–10.5)
+     ===================================================================== */
+
+  /** El Umbral vivo (se forja perezosamente en la primera apertura). */
+  let foundationModal = null;
+
+  /** Sesión vigente según el store (o la del visitante anónimo). */
+  function foundationViewerState() {
+    const session = store?.getState?.() ?? {};
+    const user = session?.currentUser ?? null;
+    return {
+      isAuthenticated: session?.isAuthenticated === true,
+      role: typeof session?.userRole === 'string' ? session.userRole : 'reader',
+      lineage: typeof session?.userLineage === 'string' ? session.userLineage : '',
+      clanId: typeof session?.userClan?.id === 'string' ? session.userClan.id : '',
+      convalescenceExpiresAt: typeof user?.convalescenceExpiresAt === 'string'
+        ? user.convalescenceExpiresAt
+        : '',
+    };
+  }
+
+  /** ¿Sigue viva la convalecencia marcada por el instante ISO dado? */
+  function hasActiveConvalescence(isoStamp) {
+    if (typeof isoStamp !== 'string' || isoStamp.trim() === '') return false;
+    const expiry = new Date(isoStamp);
+    return !Number.isNaN(expiry.getTime()) && expiry.getTime() > Date.now();
+  }
+
+  /**
+   * Veredicto de la interfaz ante el gesto (RF-10.1): quien el canon veta ve
+   * el gesto INHABILITADO con su leyenda — el veto es real (RNF-04) y el
+   * backend es la última muralla.
+   */
+  function judgeFoundationGesture() {
+    const viewer = foundationViewerState();
+
+    if (!viewer.isAuthenticated) {
+      return {
+        enabled: false,
+        legend: 'El Umbral de la Fundación pide vínculo: conságrate o renueva el tuyo antes de alzar una casa.',
+      };
+    }
+    if (viewer.role === 'reader') {
+      return { enabled: false, legend: 'Los neófitos sin pluma no alzan estandartes: tu rango aún no alcanza la fundación.' };
+    }
+    if (viewer.clanId !== '') {
+      return { enabled: false, legend: 'La lealtad mágica es indivisible: ya militas bajo otro estandarte.' };
+    }
+    if (hasActiveConvalescence(viewer.convalescenceExpiresAt)) {
+      return { enabled: false, legend: 'Tu esencia aún sana en Convalecencia Arcana: espera a que remita su hechizo.' };
+    }
+    return { enabled: true, legend: 'Fundar una hermandad propia' };
+  }
+
+  /** Despacha el rito al santuario (RF-10.3) y consume el veredicto. */
+  async function dispatchFoundation(payload) {
+    if (typeof clanClient?.foundClan !== 'function') {
+      foundationModal?.reportError(null);
+      return;
+    }
+
+    try {
+      const result = await clanClient.foundClan(payload);
+
+      if (result?.success) {
+        foundationModal?.closeAfterSuccess();
+        // La casa nació: el Salón se repinta (RF-10.4) y el fundador es
+        // conducido a la ficha de su estandarte si el orquestador lo permite.
+        await load();
+        if (typeof onClanSelect === 'function' && typeof result.data?.id === 'string') {
+          onClanSelect(result.data.id);
+        }
+        return;
+      }
+
+      // Veto del canon: el modal permanece abierto con el borrador (RF-10.5).
+      foundationModal?.reportError(result);
+    } catch (foundationFailure) {
+      foundationModal?.reportError(null);
+    }
+  }
+
+  /** Abre el Umbral si el veredicto de la interfaz es favorable (RF-10.1). */
+  function openFoundation() {
+    const verdict = judgeFoundationGesture();
+    if (!verdict.enabled) return; // El veto de interfaz es REAL (RNF-04).
+
+    if (foundationModal === null && foundationDialog !== null) {
+      const viewer = foundationViewerState();
+      foundationModal = createClanFoundationModalComponent(foundationDialog, {
+        documentRef,
+        userLineage: viewer.lineage,
+        onConfirm: (payload) => {
+          void dispatchFoundation(payload);
+        },
+        onClose: null,
+      });
+    }
+
+    foundationModal?.open();
+  }
+
+  /** Expone el veredicto del gesto para el arnés y las pruebas del Salón. */
+  function foundationGestureVerdict() {
+    return judgeFoundationGesture();
   }
 
   /** Consulta los dos endpoints públicos y alimenta el componente. */
@@ -179,6 +293,11 @@ export function createLineageHallView(mountRoot, options = {}) {
       onClanSelect: typeof onClanSelect === 'function' ? onClanSelect : undefined,
       // Doble vía de acceso al Vestíbulo (SPEC-10, Tarea 4.2).
       onOpenVestibule: typeof onOpenVestibule === 'function' ? onOpenVestibule : undefined,
+      // El Umbral de la Fundación (SPEC-07b, RF-10.1): el gesto vive en la
+      // cabecera del Salón cuando la vista aporta el veredicto de la sesión.
+      foundationGesture: foundationDialog !== null
+        ? { open: openFoundation, verdict: foundationGestureVerdict }
+        : undefined,
       elementFactory,
       documentRef,
     });
@@ -210,6 +329,11 @@ export function createLineageHallView(mountRoot, options = {}) {
     hall?.destroy?.();
     hall = null;
 
+    // El Umbral vive mientras viva la vista (RF-10.7: su borrador perece
+    // con ella, jamás con un descarte).
+    foundationModal?.destroy?.();
+    foundationModal = null;
+
     for (const node of mountedNodes.splice(0)) {
       node.remove?.();
     }
@@ -226,5 +350,5 @@ export function createLineageHallView(mountRoot, options = {}) {
     if (removeFromMount) isDestroyed = true;
   }
 
-  return { render, destroy, retry, setDominionClient };
+  return { render, destroy, retry, setDominionClient, foundationGestureVerdict };
 }

@@ -229,6 +229,9 @@ export function createGrimoireApp(options = {}) {
   let detailModal = null;
   let accessModal = null;
   let sessionBadge = null;
+  /** El Umbral de la Fundación (SPEC-07b): dialog anfitrión del shell.
+   *  No es opción inyectable: el <dialog> pertenece al shell canónico. */
+  const foundationModalDialog = globalThis.document?.getElementById?.('foundationModal') ?? null;
   let convalescenceNotice = null;
   let historyManager = null;
 
@@ -383,6 +386,11 @@ export function createGrimoireApp(options = {}) {
       const hallView = createLineageHallView(appRoot, {
         dominionClient,
         store,
+        // El Umbral de la Fundación (SPEC-07b, RF-10.1): el gesto vive en la
+        // cabecera del Salón; su <dialog> anfitrión reside en el shell y
+        // clanClient despacha el rito al santuario.
+        clanClient,
+        foundationDialog: foundationModalDialog,
         // Pulsar una casa del podio abre su ficha (Tarea 6.4).
         onClanSelect: (clanId) => {
           void navigate('clan', { clanId });
@@ -587,6 +595,8 @@ export function createGrimoireApp(options = {}) {
       const vestibuleView = createVestibuleView(appRoot, {
         vestibuleClient,
         clanClient,
+        // La invitación del estado vacío abre el MISMO Umbral (SPEC-07b, RF-10.6).
+        foundationDialog: foundationModalDialog,
         // Un ingreso consumado muda el vínculo del mago: la cabecera y los
         // rótulos del shell se resincronizan (plan §4).
         onMembershipChanged: () => {
