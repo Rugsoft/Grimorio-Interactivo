@@ -287,6 +287,17 @@ congelaría la IP compartida del hosting ni afectar solo a tu ensayo).
   La cuenta de ensayo queda como legado anónimo (RF-09.3), conforme al
   procedimiento. Sin captura del valor de cookie en ningún registro (RNF-02).
 
+- **RE-VERIFICACIÓN POST-RF-09.5 (2026-09-28, tras subir los 2 ficheros de
+  la enmienda de atomicidad — `src/Services/AuthService.php` y
+  `src/Controllers/AuthController.php`): 21 asertos superados, 0 fallidos
+  — exit 0.** El flujo de renuncia ATÓMICO (transacción renuncia+asiento,
+  enmienda RF-09.5 de SPEC-03) opera en producción sin degradar ningún
+  contrato de SPEC-15: consagración 201, cookie íntegra, disolución con
+  Set-Cookie expiratorio de alcance idéntico, renuncia 200 con el mismo
+  cierre visible, tokens muertos tras ambas revocaciones y sin filtración.
+  Con esta ejecución, producción queda ALINEADA con el árbol actual del
+  repositorio (`a598f2b`) en todo lo relativo a sesión y renuncia.
+
 ## Solución de problemas
 
 | Síntoma | Causa probable | Remedio |
