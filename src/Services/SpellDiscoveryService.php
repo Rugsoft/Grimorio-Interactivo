@@ -318,7 +318,9 @@ final class SpellDiscoveryService
             static fn (array $row): ClanLegacySpellDto => ClanLegacySpellDto::fromSpell(
                 Spell::fromDatabaseRow($row),
                 (int) ($row['circle'] ?? 0),
-                (string) ($row['author_alias'] ?? ''),
+                // Legado del clan (RF-09.2/09.3): la autoría renunciada se
+                // exhibe bajo el rótulo común, jamás el alias técnico interno.
+                \Grimorio\Services\SpellAliasService::displayAlias((string) ($row['author_alias'] ?? '')),
             ),
             $rows,
         );

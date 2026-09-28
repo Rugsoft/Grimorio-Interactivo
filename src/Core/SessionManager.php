@@ -205,6 +205,24 @@ final class SessionManager
     }
 
     /**
+     * Expira la cookie portadora de la petición actual en el navegador
+     * (Tarea 3.2 de TASKS-15, SPEC-15 RF-04.1/RF-04.3): operación acotada
+     * para que las revocaciones GLOBALES (disolución de todos los vínculos,
+     * renuncia) cierren la cookie por el MISMO canal seguro que la emisión,
+     * sin duplicar la política de atributos fuera del gestor.
+     *
+     * El plan §3.4 fija el orden: la expiración solo procede DESPUÉS de una
+     * revocación exitosa en base de datos; una revocación fallida jamás
+     * llega a invocarla (el controlador la llama tras confirmar el éxito).
+     *
+     * @return void Idempotente: caducar una cookie ausente no es error.
+     */
+    public function expireSessionCookie(): void
+    {
+        $this->expireCookie();
+    }
+
+    /**
      * Retiene la ruta pedida por el peregrino en el VÍNCULO activo
      * (SPEC-09, RF-05.3; enmienda de la Tarea 9.2 de SPEC-11).
      *
@@ -259,35 +277,70 @@ final class SessionManager
     }
 
     /**
-     * Emite la cookie de sesión con las banderas de seguridad exigidas:
-     * HttpOnly, SameSite=Strict, Path=/ y caducidad a 14 días.
-     * La bandera Secure se activa solo si la petición llega por HTTPS
-     * (en desarrollo local sobre http no debe bloquear la cookie).
+     * Forja las opciones comunes de emisión y expiración de la cookie
+     * (Tarea 3.1 de TASKS-15, SPEC-15 RF-01/RF-04.3): UN solo punto de
+     * política para que el alcance de la cookie emitida y el de la
+     * expirada jamás diverjan. Ambas llamadas nativas de cookie del gestor
+     * (emisión y borrado) beben exclusivamente de este forjador.
+     *
+     * La bandera `Secure` se determina EXCLUSIVAMENTE por:
+     *   1. Señal DIRECTA de servidor: `$_SERVER['HTTPS']` (Apache la
+     *      rellena bajo TLS; en la topología verificada de InfinityFree
+     *      es la señal canónica, Tarea 0.2 de TASKS-15).
+     *   2. Refuerzo explícito de despliegue: `GRIMORIO_COOKIE_SECURE=true`
+     *      (canal env.php de la Tarea 2.3), para topologías con offload
+     *      que ocultara la señal. La constante JAMÁS se define a `false`
+     *      en la configuración de producción aprobada (PLAN-15 §4).
+     *
+     * Ninguna cabecera controlable por el cliente (protocolo reenviado,
+     * visitante de CDN, ...) participa JAMÁS en la decisión (RF-01.3,
+     * §8 caso 2): este método no consulta cabeceras, luego un cliente no
+     * puede activar ni degradar `Secure`.
+     *
+     * Sin atributo `Domain` (PLAN-15 §9.5): presente solo si un requisito
+     * ratificado lo exigiera, y entonces idéntico al emitir y expirar.
+     *
+     * @return array<string, int|bool|string> Opciones nativas para la emisión de cookie.
      */
-    private function emitSecureCookie(string $rawToken, DateTimeImmutable $expiresAt): void
+    private function forgeCookieOptions(int $expiresAt): array
     {
+        // Señal directa de servidor (no vacía y distinta de 'off').
         $isHttps = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? 'off') !== 'off';
 
-        setcookie(self::COOKIE_NAME, $rawToken, [
-            'expires'  => $expiresAt->getTimestamp(),
+        // Refuerzo de despliegue: solo el valor true explícito fuerza
+        // Secure; cualquier otra ausencia/tipo deja la señal natural.
+        if (defined('GRIMORIO_COOKIE_SECURE') && GRIMORIO_COOKIE_SECURE === true) {
+            $isHttps = true;
+        }
+
+        return [
+            'expires'  => $expiresAt,
             'path'     => '/',
             'secure'   => $isHttps,
             'httponly' => true,
             'samesite' => 'Strict',
-        ]);
+        ];
     }
 
     /**
-     * Expira la cookie en el navegador al disolver el vínculo.
+     * Emite la cookie de sesión con la política única del forjador:
+     * HttpOnly, SameSite=Strict, Path=/, caducidad a 14 días y `Secure`
+     * según la señal de servidor o el refuerzo de despliegue (en desarrollo
+     * local sobre http la cookie nace sin `Secure`: excepción ratificada,
+     * RF-01.4, que jamás afecta a la configuración de producción).
+     */
+    private function emitSecureCookie(string $rawToken, DateTimeImmutable $expiresAt): void
+    {
+        setcookie(self::COOKIE_NAME, $rawToken, $this->forgeCookieOptions($expiresAt->getTimestamp()));
+    }
+
+    /**
+     * Expira la cookie en el navegador al disolver el vínculo, con el
+     * MISMO alcance que la emisión (RF-04.3: mismo nombre, Path=/,
+     * HttpOnly, SameSite=Strict y Secure determinado por la misma política).
      */
     private function expireCookie(): void
     {
-        setcookie(self::COOKIE_NAME, '', [
-            'expires'  => time() - 3600,
-            'path'     => '/',
-            'secure'   => ($_SERVER['HTTPS'] ?? 'off') !== 'off',
-            'httponly' => true,
-            'samesite' => 'Strict',
-        ]);
+        setcookie(self::COOKIE_NAME, '', $this->forgeCookieOptions(time() - 3600));
     }
 }

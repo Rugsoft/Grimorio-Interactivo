@@ -57,8 +57,17 @@ final class AuthService
     /** Hash señuelo BCRYPT coste 12 real: garantiza el mismo coste computacional que un hash legítimo. */
     private const DUMMY_HASH = '$2y$12$Xu9Bc1oVv7Oe2Pq0rTn5Y.dK3wZ8sH6gJ4fL2mN9qR1tC5vB8xWyK';
 
-    /** Seudónimo solemne del registro anonimizado (RF-09.2, auditoría 5.3). */
-    private const RENOUNCE_ANONYMOUS_ALIAS = 'Erudito Ancestral';
+    /** Seudónimo solemne del registro anonimizado (RF-09.2, auditoría 5.3;
+     *  enmienda RF-09.3: es el RÓTULO PÚBLICO COMÚN de todas las renuncias,
+     *  nunca el alias técnico almacenado). */
+    private const RENOUNCE_PUBLIC_LABEL = 'Erudito Ancestral';
+
+    /** Prefijo del alias técnico interno de las cuentas renunciadas
+     *  (enmienda RF-09.3): las identidades internas son ÚNICAS no
+     *  colisionables (users.alias UNIQUE), y su representación pública es
+     *  siempre el rótulo común. El sufijo opaco deriva del identificador
+     *  del usuario: determinista, no re-adivinable desde el alias público. */
+    private const RENOUNCE_INTERNAL_PREFIX = 'Erudito Ancestral · ';
 
     /** Conexión PDO al plano arcano. */
     private PDO $pdo;
@@ -423,18 +432,34 @@ final class AuthService
 
         $userId = (string) $ownerId;
 
-        // Defensa anti-doble-renuncia: el seudónimo solemne identifica a
-        // las cuentas ya anonimizadas; una segunda renuncia no prospera.
+        // Defensa anti-doble-renuncia (enmienda RF-09.3): una cuenta ya
+        // anonimizada porta el alias técnico interno con el prefijo del
+        // rótulo común; una segunda renuncia no prospera.
         $userStatement = $this->pdo->prepare('SELECT alias FROM users WHERE id = :userId');
         $userStatement->execute([':userId' => $userId]);
-        $currentAlias = $userStatement->fetchColumn();
+        $currentAlias = (string) $userStatement->fetchColumn();
 
-        if ($currentAlias === false || $currentAlias === self::RENOUNCE_ANONYMOUS_ALIAS) {
+        if ($currentAlias !== '' && str_starts_with($currentAlias, self::RENOUNCE_INTERNAL_PREFIX)) {
             return false;
         }
 
+        // Purga de los BORRADORES no validados del renunciante (enmienda
+        // RF-09.4, que materializa íntegramente la purga de «borradores no
+        // validados» ya exigida por RF-09.1): los conjuros en estado draft
+        // son privados y mueren con su autor; los experimentales, validados
+        // y demás estados públicos sobreviven para el legado y la moderación.
+        $draftPurgeStatement = $this->pdo->prepare(
+            "DELETE FROM spells WHERE author_id = :userId AND status = 'draft'"
+        );
+        $draftPurgeStatement->execute([':userId' => $userId]);
+
         // Purga del pergamino activo (si lo hubiera) y sustitución de
-        // datos personales por opacos irrecuperables (RF-09.1).
+        // datos personales por opacos irrecuperables (RF-09.1). El alias
+        // técnico interno es ÚNICO (RF-09.3): rótulo común + sufijo opaco
+        // derivado del id, de modo que NINGUNA segunda renuncia colisione
+        // con users.alias UNIQUE; la representación pública de este alias
+        // es siempre el rótulo común (SpellQueryService::displayAlias).
+        $internalAlias = self::RENOUNCE_INTERNAL_PREFIX . substr(hash('sha256', $userId), 0, 16);
         $anonymizeStatement = $this->pdo->prepare(
             'UPDATE users
              SET alias = :alias,
@@ -446,7 +471,7 @@ final class AuthService
              WHERE id = :userId'
         );
         $anonymizeStatement->execute([
-            ':alias'        => self::RENOUNCE_ANONYMOUS_ALIAS,
+            ':alias'        => $internalAlias,
             ':email'        => 'ancestral+' . $userId . '@olvidado.sanctuario',
             ':passwordHash' => str_repeat('0', 60), // No es un hash BCRYPT válido: jamás verificará.
             ':updatedAt'    => $instant->format('Y-m-d\TH:i:s\Z'),

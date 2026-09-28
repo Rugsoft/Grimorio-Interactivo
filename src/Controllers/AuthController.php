@@ -61,14 +61,19 @@ final class AuthController
     /** Bitácora inmutable de auditoría (Tarea 2.5, RF-08.1). */
     private AuditService $auditService;
 
+    /** Gestor de sesiones para las operaciones de cookie del controlador
+     *  (SPEC-15, Tarea 3.2: expiración de la portadora tras revocar). */
+    private SessionManager $sessionManager;
+
     public function __construct(PDO $pdo, SessionManager $sessionManager, RateLimiter $rateLimiter)
     {
         // El AuthService porta su propio SessionManager; este controlador
         // recibe ambos alineados sobre la misma conexión PDO.
-        $this->pdo          = $pdo;
-        $this->authService  = new AuthService($pdo, $sessionManager);
-        $this->rateLimiter  = $rateLimiter;
-        $this->auditService = new AuditService($pdo);
+        $this->pdo            = $pdo;
+        $this->authService    = new AuthService($pdo, $sessionManager);
+        $this->rateLimiter    = $rateLimiter;
+        $this->auditService   = new AuditService($pdo);
+        $this->sessionManager = $sessionManager;
     }
 
     // -----------------------------------------------------------------
@@ -250,7 +255,11 @@ final class AuthController
 
     /**
      * Disuelve TODOS los vínculos del titular en todos sus dispositivos
-     * (RF-02.4): revocación completa en base de datos.
+     * (RF-02.4): revocación completa en base de datos y, SOLO tras el
+     * éxito, expiración de la cookie portadora (SPEC-15 RF-04.1/RF-04.3,
+     * Tarea 3.2 de TASKS-15): la respuesta porta Set-Cookie expiratorio
+     * con el mismo alcance que la emisión, forjado por el SessionManager.
+     * Una revocación fallida jamás llega a tocar la cookie del navegador.
      */
     public function dissolveAll(Request $request): Response
     {
@@ -262,6 +271,10 @@ final class AuthController
         if (!$this->authService->dissolveAll($rawToken)) {
             return $this->forgeUnauthorized();
         }
+
+        // Cierre del vínculo en el navegador (RF-04.1): solo tras la
+        // revocación exitosa; la política de atributos vive en el gestor.
+        $this->sessionManager->expireSessionCookie();
 
         return Response::json([
             'success' => true,
@@ -444,13 +457,16 @@ final class AuthController
             actionType: 'ACC_LINK_RENOUNCED',
             targetEntityType: 'user',
             targetEntityId: $renouncer['id'],
-            justification: 'Renuncia al Vínculo: el iniciado solicitó su derecho al olvido y su legado pasa al seudónimo «Erudito Ancestral».',
+            justification: 'Renuncia al Vínculo: el iniciado solicitó su derecho al olvido y su legado pasa al seudónimo común «Erudito Ancestral (Legado Anónimo)».',
         );
 
-        // Expiración de la cookie portadora: la sesión ya no existe en
-        // BD; la cookie se marca caducada para el navegador vía el
-        // SessionManager (expiración negativa). Sin ella, el vínculo
-        // muerto viaja una última vez y el middleware degrada a anónimo.
+        // Expiración de la cookie portadora (SPEC-15 RF-04.2/RF-04.3,
+        // Tarea 3.3): SOLO tras completar la renuncia y su asiento de
+        // auditoría, por el mismo canal seguro del gestor (forjador único,
+        // mismo alcance que la emisión). Sin ella, el vínculo muerto viaja
+        // una última vez y el middleware degrada a anónimo.
+        $this->sessionManager->expireSessionCookie();
+
         return Response::json([
             'success' => true,
             'data'    => [

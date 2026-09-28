@@ -302,10 +302,25 @@ $setCookieCalls = substr_count($sessionManagerSource, 'setcookie(');
 assertArcane($setCookieCalls === 2, 'El gestor solo emite cookies en dos puntos: emisión y expiración');
 
 $expireCookieSource = substr($sessionManagerSource, (int) strpos($sessionManagerSource, 'function expireCookie'));
+// Tarea 3.1 de TASKS-15 (SPEC-15): la política de atributos vive en el
+// FORJADOR ÚNICO (forgeCookieOptions), del que emisión y expiración beben.
+// El canal de borrado es seguro POR CONSTRUCCIÓN: usa el mismo forjador
+// que la emisión, no una copia literal que pudiera divergir.
 assertArcane(
-    str_contains($expireCookieSource, "'httponly' => true")
-    && str_contains($expireCookieSource, "'samesite' => 'Strict'"),
-    'La cookie de expiración porta HttpOnly y SameSite=Strict (el canal de borrado es tan seguro como el de emisión)'
+    str_contains($sessionManagerSource, 'private function forgeCookieOptions')
+    && str_contains($expireCookieSource, 'forgeCookieOptions'),
+    'La expiración bebe del forjador único de política (forgeCookieOptions, Tarea 3.1 de SPEC-15)'
+);
+assertArcane(
+    str_contains($sessionManagerSource, "'httponly' => true")
+    && str_contains($sessionManagerSource, "'samesite' => 'Strict'"),
+    'El forjador único porta HttpOnly y SameSite=Strict (el canal de borrado es tan seguro como el de emisión)'
+);
+// Ninguna cabecera de cliente participa en la decisión de Secure (SPEC-15 RF-01.3).
+assertArcane(
+    stripos($sessionManagerSource, "X-Forwarded-Proto") === false
+    && stripos($sessionManagerSource, 'CF-Visitor') === false,
+    'La política de Secure jamás consulta cabeceras controlables por el cliente (RF-01.3)'
 );
 
 // ---------------------------------------------------------------------

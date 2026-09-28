@@ -167,7 +167,11 @@ final readonly class GrimoirePageDto implements JsonSerializable
                 'crowdControlType' => $readString('crowd_control_type') !== '' ? $readString('crowd_control_type') : 'none',
             ],
             description: $readString('description'),
-            authorAlias: $readString('author_alias'),
+            // Presentación pública de la autoría (enmienda RF-09.3 de
+            // SPEC-03): el alias técnico interno de las cuentas renunciadas
+            // se exhibe bajo el rótulo común «Erudito Ancestral (Legado
+            // Anónimo)», jamás el sufijo opaco interno.
+            authorAlias: \Grimorio\Services\SpellAliasService::displayAlias($readString('author_alias')),
             clanName: $readString('clan_name'),
             status: $readString('status') !== '' ? $readString('status') : 'draft',
             // El estado del adepto jamás nace de la base: lo porta la
