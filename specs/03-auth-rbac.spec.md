@@ -1,6 +1,6 @@
 # SPEC-03: Autenticación, Sesiones y Control de Acceso (RBAC)
 
-> **Estado:** Aprobada y Blindada tras Revisión QA  
+> **Estado:** Aprobada y Blindada tras Revisión QA — enmendada por SPEC-09 (juramento de linaje) y por SPEC-15 y decisiones de producto ratificadas (2026-09-28: cookie segura y expiración, ventana acumulada del limitador, recuperación fuera de servicio, seudónimo de renuncia compartido, procedencia de red confiable)   
 > **Prioridad:** Fundamental (Seguridad, Gobernanza de Linajes e Identidad Arcana)  
 > **Enfoque:** QUÉ y POR QUÉ (Requisitos Funcionales, Matriz RBAC y Criterios EARS)  
 
@@ -48,13 +48,15 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 
 * **HU-04 (Protección contra Intrusiones Místicas sin Bloqueo de Cuentas):**  
   *Como* custodio de la seguridad,  
-  *quiero* que tras 5 intentos fallidos consecutivos se congele temporalmente la procedencia/IP atacante con respuestas neutras anti-enumeración,  
-  *para* repeler ataques de fuerza bruta sin permitir que terceros provoquen la denegación de servicio a usuarios legítimos.
+  *quiero* que tras 5 intentos fallidos acumulados en una ventana de 15 minutos se congele temporalmente la procedencia/IP atacante con respuestas neutras anti-enumeración,  
+  *para* repeler ataques de fuerza bruta sin permitir que terceros provoquen la denegación de servicio a usuarios legítimos.  
+  *[Enmienda ratificada, 2026-09-28: la ventana es ACUMULADA, no de fallos «consecutivos»; ver RF-03.2.]*
 
 * **HU-05 (Recuperación y Preservación del Legado):**  
   *Como* miembro consagrado,  
   *quiero* poder recuperar mi palabra secreta extraviada mediante un pergamino seguro a mi correo y saber que si alguna vez renuncio al vínculo, mis hechizos validados se conservarán como legado anónimo del clan,  
-  *para* no temer por la pérdida de mi cuenta ni por la mutilación de la biblioteca colectiva.
+  *para* no temer por la pérdida de mi cuenta ni por la mutilación de la biblioteca colectiva.  
+  *[Enmienda ratificada, 2026-09-28: la recuperación de contraseña queda FUERA DE SERVICIO hasta que se ratifique un canal de entrega seguro; ver RF-04. La preservación del legado se refina en RF-09.3 y RF-09.4.]*
 
 * **HU-06 (Transparencia Total en la Bitácora de Auditoría):**  
   *Como* cualquier persona de la comunidad (sea visitante o iniciado),  
@@ -83,17 +85,22 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
   El sistema DEBERÁ permitir que una misma cuenta mantenga sesiones activas concurrentes en múltiples dispositivos y navegadores sin invalidarse entre sí.
 * **RF-02.4 [Dirigido por Eventos]:**  
   CUANDO el usuario active «Disolver Vínculo», el sistema DEBERÁ destruir la sesión en el dispositivo actual y restituirlo al rol de `reader`; SI el usuario activa «Disolver todos los vínculos activos», ENTONCES el sistema DEBERÁ revocar de forma inmediata todas las sesiones activas asociadas a la cuenta en todos los dispositivos.
+* **RF-02.5 [Ubicuo] [Enmienda SPEC-15 ratificada — Bandera `Secure` de la cookie]:**  
+  El sistema DEBERÁ emitir la cookie de vínculo (`grimorio_session`) con los atributos `Secure`, `HttpOnly`, `SameSite=Strict` y `Path=/`. La bandera `Secure` se determinará EXCLUSIVAMENTE a partir de una señal directa del servidor (p. ej. `$_SERVER['HTTPS']` en despliegues con TLS terminado en el propio servidor web) o de una configuración de despliegue explícita (`GRIMORIO_COOKIE_SECURE=true`); NUNCA a partir de cabeceras controlables por el cliente (p. ej. `X-Forwarded-Proto`). El desarrollo local sobre HTTP plano podrá preservar la emisión sin `Secure` para no bloquear el entorno de pruebas.
+* **RF-02.6 [Dirigido por Eventos] [Enmienda SPEC-15 ratificada — Expiración de la cookie al revocar]:**  
+  CUANDO la disolución global («Disolver todos los vínculos activos») o la renuncia al vínculo (RF-09) se complete con éxito en el servidor, el sistema DEBERÁ devolver en esa misma respuesta una cabecera `Set-Cookie` que expire la cookie portadora usando los mismos atributos de alcance (nombre `grimorio_session`, `Path=/`, `HttpOnly`, `SameSite=Strict`), de modo que el navegador la descarte de inmediato y el token revocado deje de circular. Una revocación fallida NO DEBERÁ producir respuesta de éxito ni caducar la cookie de una sesión ajena. La expiración se verificará sobre HTTP real (cabecera `Set-Cookie` observada), no mediante introspección en CLI.
 
 ### RF-03: Seguridad contra Intrusión, Anti-Enumeración y Anti-DoS
 * **RF-03.1 [No Deseado / Excepción]:**  
   SI el usuario introduce credenciales no coincidentes al intentar renovar el vínculo, ENTONCES el sistema DEBERÁ emitir una respuesta genérica de rechazo (*«Las runas no reconocen este vínculo o la palabra secreta es errónea»*) con un tiempo de respuesta computacional uniforme.
-* **RF-03.2 [No Deseado / Excepción]:**  
-  SI se registran cinco (5) intentos fallidos consecutivos de acceso procedentes de una misma dirección o cliente, ENTONCES el sistema DEBERÁ congelar temporalmente las solicitudes de dicha procedencia durante quince (15) minutos (*«La corriente de maná se ha sobrecargado por exceso de intentos; el umbral permanecerá cerrado durante 15 minutos»*), **sin bloquear la cuenta de usuario legítima** para impedir ataques de denegación de servicio a administradores o maestros.
+* **RF-03.2 [No Deseado / Excepción] [Enmienda ratificada — ventana acumulada]:**  
+  SI se registran cinco (5) intentos fallidos de acceso procedentes de una misma dirección o cliente DENTRO de una ventana de quince (15) minutos, ENTONCES el sistema DEBERÁ congelar temporalmente las solicitudes de dicha procedencia durante quince (15) minutos (*«La corriente de maná se ha sobrecargado por exceso de intentos; el umbral permanecerá cerrado durante 15 minutos»*), **sin bloquear la cuenta de usuario legítima** para impedir ataques de denegación de servicio a administradores o maestros. La ventana es **ACUMULADA**, no de fallos consecutivos: un acceso exitoso NO DEBERÁ borrar los fallos aún vigentes dentro de la ventana, y solo el transcurso del tiempo los purga.
 
 ### RF-04: Recuperación de Acceso («Pergamino de Restablecimiento»)
-* **RF-04.1 [Dirigido por Eventos]:**  
+> **[Enmienda ratificada por decisión de producto, 2026-09-28 — FUERA DE SERVICIO.]** La recuperación de contraseña queda **deshabilitada** hasta que se apruebe y configure un canal de entrega seguro del pergamino (no existe hoy transporte de correo operativo ni entrega verificable del token). En consecuencia, RF-04.1 y RF-04.2 quedan **en suspenso normativo**: no deberá existir endpoint de recuperación activo ni interfaz operativa cableada (el componente huérfano de la Torre deberá permanecer desconectado o ser retirado en la próxima tarea que lo toque). Su reactivación exigirá una enmienda futura que norme el canal de entrega; no forma parte del alcance de SPEC-15.
+* **RF-04.1 [Dirigido por Eventos] [SUSPENDIDO]:**  
   CUANDO un usuario solicite la recuperación de credenciales mediante su correo registrado, el sistema DEBERÁ generar un «Pergamino de Restablecimiento» (enlace firmado criptográficamente de un solo uso con vigencia de sesenta minutos) y remitirlo al correo electrónico sin alterar el estado actual de la cuenta.
-* **RF-04.2 [Dirigido por Eventos]:**  
+* **RF-04.2 [Dirigido por Eventos] [SUSPENDIDO]:**  
   CUANDO el usuario acceda mediante un enlace de restablecimiento válido y defina una nueva frase de paso, el sistema DEBERÁ actualizar las credenciales, invalidar el enlace utilizado y revocar preventivamente todas las sesiones activas previas.
 
 ### RF-05: Matriz de Control de Acceso (RBAC) y Jerarquía Sagrada
@@ -135,6 +142,10 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
   CUANDO un miembro consagrado solicite la eliminación definitiva de su cuenta («Renuncia al Vínculo»), el sistema DEBERÁ purgar de forma irreversible sus datos personales, credenciales y borradores no validados.
 * **RF-09.2 [Ubicuo]:**  
   El sistema DEBERÁ conservar permanentemente en el catálogo público todos los conjuros que ya hayan sido validados con anterioridad, reasignando su autoría al seudónimo solemne de *«Erudito Ancestral (Legado Anónimo)»* para salvaguardar la integridad de la biblioteca colectiva y la puntuación de su clan.
+* **RF-09.3 [Ubicuo] [Enmienda SPEC-15 ratificada — Seudónimo público común]:**  
+  El seudónimo público *«Erudito Ancestral (Legado Anónimo)»* DEBERÁ ser COMÚN y compartido por todas las cuentas renunciadas: ante la comunidad, toda autoría legada se exhibirá bajo ese único rótulo sin distinción de origen. Para respetar la unicidad técnica del alias (`users.alias` UNIQUE), el sistema DEBERÁ mantener internamente identidades de renuncia únicas no colisionables (p. ej. alias reservados con sufijo opaco) cuya representación pública sea siempre el seudónimo común. La segunda y sucesivas renuncias NO DEBERÁN fallir por colisión de unicidad del alias.
+* **RF-09.4 [Dirigido por Eventos] [Enmienda SPEC-15 ratificada — Purga de borradores y cierre del vínculo]:**  
+  CUANDO se complete la renuncia, el sistema DEBERÁ, además de lo exigido por RF-09.1: (a) purgar los borradores de conjuros (estado `draft`) del renunciante, materializando íntegramente la purga de «borradores no validados» ya exigida por RF-09.1; y (b) devolver la expiración de la cookie portadora conforme a RF-02.6, de modo que el navegador descarte el vínculo de la cuenta disuelta.
 
 ---
 
@@ -150,6 +161,8 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
   La verificación de validez de sesión y rol en cada interacción de la API deberá resolverse en menos de 50 milisegundos.
 * **RNF-05 (Soberanía Lingüística y Dualidad Constitucional):**  
   Identificadores de roles y claves técnicas en inglés `camelCase` (`reader`, `editor`, `master`, `supremeAdmin`); y toda la experiencia visible en pantalla, advertencias y motivos expresados en noble castellano.
+* **RNF-06 (Procedencia de Red Confiable) [Enmienda SPEC-15 ratificada]:**  
+  La dirección de procedencia empleada por el control anti-fuerza bruta (RF-03.2) se determinará EXCLUSIVAMENTE a partir del par conectado (`REMOTE_ADDR`) validado como IPv4/IPv6. Las cabeceras reenviadas (p. ej. `X-Forwarded-For`) se IGNORARÁN salvo que el par conectado pertenezca a una lista de proxies confiables declarada explícitamente en la configuración de despliegue (canal `env.php`, `GRIMORIO_TRUSTED_PROXY_IPS`); por defecto la lista es VACÍA: ninguna cabecera controlable por el cliente podrá determinar la procedencia efectiva ni la identidad registrada por el limitador. Si el hosting acreditara en el futuro proxies intermedios con saneamiento verificado, la lista solo podrá poblarse con evidencia registrada en TASKS-15.
 
 ---
 
@@ -180,15 +193,15 @@ El sistema reconoce cuatro rangos jerárquicos sagrados con identificadores téc
 - [x] La consagración exige únicamente alias único, correo válido y frase de paso segura, otorgando el rol `editor`: la cuenta nace PEREGRINA (sin linaje ni clan), pues la identidad arcana se jura en la ceremonia bloqueante del primer acceso (enmienda de SPEC-09). La respuesta ante identidad reclamada es neutra (409 anti-enumeración) y el titular de la identidad recibe un aviso discreto cuyo contenido nace de `AuthService::buildDuplicateOwnerNotice()` — función pura que nombra al titular, jamás al pretendiente, y queda tras la puerta anti-DoS. *Evidencia: `scratch/test_auth_service.php`, `scratch/test_lineage_consecration.php`, `scratch/test_discreet_duplicate_notice.php` (20/0).*
 - [ ] La sesión tiene vigencia de 14 días renovables con actividad hasta un tope absoluto de 30 días, con soporte multidispositivo.
 - [ ] Existe la opción de «Disolver Vínculo» (dispositivo actual) y «Disolver todos los vínculos activos» (global).
-- [ ] Tras 5 intentos fallidos consecutivos de una procedencia/IP, el acceso se congela durante 15 minutos sin bloquear cuentas legítimas.
-- [ ] Existe el flujo de «Pergamino de Restablecimiento» por correo (1 hora de vigencia de un solo uso).
+- [ ] Tras 5 intentos fallidos acumulados por una procedencia/IP dentro de una ventana de 15 minutos (los éxitos no purgan fallos vigentes; enmienda ratificada de RF-03.2), el acceso se congela durante 15 minutos sin bloquear cuentas legítimas.
+- [x] La recuperación de contraseña («Pergamino de Restablecimiento») permanece FUERA DE SERVICIO por decisión ratificada (2026-09-28): sin endpoint activo ni UI cableada hasta que una enmienda futura norme el canal de entrega. *(Enmienda de RF-04; el criterio original de existencia del flujo queda suspendido con ella.)*
 - [ ] La matriz RBAC aplica estrictamente los 4 roles técnicos (`reader`, `editor`, `master`, `supremeAdmin`) con rechazo temático.
 - [x] El conflicto de intereses bloquea en interfaz y en autorización a Maestros del mismo clan o que hayan pertenecido a dicho clan en los últimos 30 días: las tres leyendas literales del validador (linaje actual, histórico de 30 días, propia pluma) viajan intactas del backend a la alerta viva de la Torre, el botón de firma nace inhabilitado (`disabled` + `aria-disabled`) y el gesto vetado jamás alcanza el bus. *Evidencia: `scratch/test_ethical_conflict_ui.mjs` (22/0), `scratch/test_clan_conflict.php`, `scratch/test_auth_rbac.php`.*
 - [x] El vínculo de sesión viaja como credencial que blinda las mutaciones (AGENTS.md 6.1, CSRF): la cookie porta íntegras sus cuatro banderas (HttpOnly, SameSite=Strict, Path=/, Max-Age de 14 días), las mutaciones sin credencial jamás mutan, un token falsificado no resuelve sesión y la contemplación pública no se degrada. *Evidencia: `scratch/test_csrf_cookie_shield.php` (19/0, sonda HTTP real), `scratch/test_auth_rbac.php`, `scratch/test_security_audit.php`.*
 - [x] Si la sesión expira durante la redacción de un conjuro (caso límite 3), el borrador se retiene en memoria local, el 401 jamás lo borra ni blanquea el formulario, y la reanudación del vínculo lo restaura íntegro para guardar sin pérdida de texto. *Evidencia: `scratch/test_draft_session_expiry.mjs` (22/0), `scratch/test_spell_creator_view.mjs`.*
 - [ ] Los cambios de clan se restringen a la ventana de tregua de 24 horas y los puntos históricos quedan adscritos al clan de origen.
 - [ ] La Bitácora de Auditoría es 100% pública, inmutable y auditable por cualquier persona.
-- [ ] Al eliminar una cuenta, los conjuros validados se preservan como legado anónimo del clan sin romper la biblioteca.
+- [ ] Al eliminar una cuenta, los conjuros validados se preservan como legado anónimo del clan sin romper la biblioteca, bajo el seudónimo público común «Erudito Ancestral (Legado Anónimo)» con identidades internas únicas (RF-09.3), purgando además los borradores `draft` del renunciante (RF-09.4) y expirando su cookie (RF-02.6).
 - [x] Se cumple estrictamente la dualidad lingüística y el velo arcano en castellano: cero literales de UI en inglés y cero referencias técnicas (RF-xx, RNF-xx, Art., SPEC-xx) en los módulos de la superficie de autenticación; claves JSON en camelCase; roles técnicos rotulados en castellano solo en la capa de presentación. *Evidencia: `scratch/test_auth_language_sovereignty.php` (21/0), `scratch/test_audit_log_view.mjs`.*
 
 ---
