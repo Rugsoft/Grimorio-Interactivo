@@ -240,15 +240,27 @@ assertArcane(
 // Incluso con credenciales VÁLIDAS, la IP congelada es rechazada (Art. III).
 assertArcane(!isset($frozenBody['data']), 'La IP congelada no vincula ni con credenciales correctas');
 
-// Otra procedencia (IP distinta) NO hereda el bloqueo: getClientIp()
-// respeta el encadenado X-Forwarded-For (primer salto), que es la vía
-// realista para simular una procedencia distinta bajo CLI.
+// Otra procedencia (IP distinta) NO hereda el bloqueo: tras la enmienda
+// SPEC-15 (RNF-06), getClientIp() usa REMOTE_ADDR como única autoridad y
+// JAMÁS las cabeceras reenviadas del cliente; la segunda procedencia se
+// simula por la variable de servidor, la vía realista en conexión directa.
+$remoteAddrBackup = $_SERVER['REMOTE_ADDR'] ?? '';
+$_SERVER['REMOTE_ADDR'] = '203.0.113.77';
 $otherSessionManager = new SessionManager($pdo, '203.0.113.77', 'Víctima/1.0');
 $otherController = new AuthController($pdo, $otherSessionManager, $rateLimiter);
 $victimResponse = $otherController->bind(forgeJsonRequest('POST', '/api/v1/auth/bind',
     ['identity' => 'frieren@sanctuario.arc', 'passphrase' => 'palabra-secreta-del-mago'],
-    ['X-Forwarded-For' => '203.0.113.77']));
+    ['X-Forwarded-For' => '203.0.113.99']));
+$_SERVER['REMOTE_ADDR'] = $remoteAddrBackup;
 assertArcane($victimResponse->getStatusCode() === 200, 'Otra procedencia NO queda bloqueada (el castigo es de la IP, no de la cuenta)');
+// Refuerzo SPEC-15: una cabecera falsificada desde la CONEXIÓN CONGELADA
+// tampoco elude el bloqueo ni lo traslada (el cliente no elige su clave);
+// bajo CLI la conexión original resuelve a 0.0.0.0 (REMOTE_ADDR ausente →
+// procedencia controlada, el contrato del getClientIp enmendado).
+$frozenAgainResponse = $controller->bind(forgeJsonRequest('POST', '/api/v1/auth/bind',
+    ['identity' => 'frieren@sanctuario.arc', 'passphrase' => 'palabra-secreta-del-mago'],
+    ['X-Forwarded-For' => '203.0.113.99']));
+assertArcane($frozenAgainResponse->getStatusCode() === 429, 'La cabecera falsificada no elude el bloqueo de la conexión congelada (SPEC-15 RF-03.4)');
 
 // ---------------------------------------------------------------------
 // 4. Endpoint 4: GET /api/v1/auth/session (plan 2.2).

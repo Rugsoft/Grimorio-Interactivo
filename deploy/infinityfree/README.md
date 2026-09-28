@@ -107,6 +107,43 @@ ya eleva todo el tráfico HTTP a HTTPS con redirección 301; la cookie de
 sesión de SPEC-03 exige HTTPS (`secure = true`), así que sin este paso
 no habrá sesión que funcione.
 
+## 7b. Seguridad de sesión y procedencia (SPEC-15)
+
+Estado de las garantías de sesión en este hosting (verificado el
+2026-09-28 con la sonda del entorno y la evidencia del panel):
+
+- **Topología:** apache2handler (PHP 8.4), SSL automático en subdominios,
+  SIN Cloudflare propio ni offload TLS hacia PHP. La señal `HTTPS=on`
+  que PHP recibe es **directa del servidor**: no hay cabecera intermedia
+  de la que fiarse (o desconfiar) para el esquema.
+- **Cookie de sesión:** `grimorio_session` ya se emite con `Secure`,
+  `HttpOnly`, `SameSite=Strict` y `Path=/` (RF-01 de SPEC-15). No requiere
+  acción del custodio.
+- **Procedencia del limitador (RF-03):** la única autoridad es
+  `REMOTE_ADDR` validada. Las cabeceras reenviadas (`X-Forwarded-For` y
+  semejantes) se **ignoran por completo**: en este hosting llegan
+  idénticas a `REMOTE_ADDR` (o ausentes) y ningún cliente puede elegir su
+  clave en el limitador enviando una cabecera.
+
+**Configuración (deploy/infinityfree/env.php):**
+
+- `GRIMORIO_TRUSTED_PROXY_IPS` — lista de proxies confiables. Permanece
+  **VACÍA por política ratificada** (no existe evidencia de proxies
+  intermedios). Solo se poblará si el soporte del hosting acredita IPs
+  estables de sus proxies y el saneamiento de sus cabeceras, registrando
+  esa evidencia en TASKS-15. Valores válidos: strings IPv4/IPv6 exactas
+  (sin CIDR, sin hostnames).
+- `GRIMORIO_COOKIE_SECURE` — refuerzo opcional para forzar `Secure`.
+  Innecesario en la topología actual (la señal directa ya es fiable);
+  reservado para un futuro offload TLS que ocultara `HTTPS=on`. Jamás
+  establecerlo a `false` en producción.
+
+**Límite conocido (no verificable sin staging):** al agrupar el limitador
+por `REMOTE_ADDR`, muchos visitantes detrás de una misma IP compartida
+(NAT corporativo, CGNAT móvil) comparten la misma ventana de bloqueo de
+fuerza bruta. Es la contrapartida aceptada de no confiar en cabeceras
+falsificables (RNF-01); se reevaluará solo con evidencia de proxy.
+
 ## 8. Primera visita
 
 Abre `https://TU_SUBDOMINIO.infinityfreeapp.com/`:

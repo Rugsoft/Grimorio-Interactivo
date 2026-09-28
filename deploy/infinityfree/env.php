@@ -65,3 +65,40 @@ if (!defined('GRIMORIO_DB_DSN')) {
 // if (!defined('GRIMORIO_AVATARS_ROOT')) {
 //     define('GRIMORIO_AVATARS_ROOT', $projectRoot . '/storage/avatars');
 // }
+
+// ---------------------------------------------------------------------
+// Seguridad de sesión y procedencia (SPEC-15 — Tarea 2.3 de TASKS-15).
+// ---------------------------------------------------------------------
+
+// Bandera `Secure` de la cookie de vínculo (SPEC-15 RF-01, RF-02):
+//
+// En la topología verificada de este hosting (apache2handler, HTTPS=on
+// como señal DIRECTA de servidor, sin Cloudflare propio ni offload TLS
+// hacia PHP), la detección nativa de SessionManager ya es fiable y esta
+// constante NO es necesaria. DESCOMENTAR solo como REFUERZO explícito
+// (o si la topología cambiara a un offload que ocultara la señal):
+//
+// if (!defined('GRIMORIO_COOKIE_SECURE')) {
+//     define('GRIMORIO_COOKIE_SECURE', true);
+// }
+//
+// REGLA DE ORO (PLAN-15 §4): esta constante jamás podrá establecerse a
+// false en la configuración de producción aprobada; ninguna cabecera
+// controlable por el cliente (X-Forwarded-Proto, CF-Visitor, ...) participa
+// jamás en la decisión de `Secure`.
+
+// Lista de proxies confiables para la procedencia del limitador
+// (SPEC-15 RF-03, RNF-06; Tarea 2.2 de TASKS-15):
+//
+// La POLÍTICA RATIFICADA (Tarea 0.3 de TASKS-15, con la evidencia del
+// hosting: X-Forwarded-For idéntica a REMOTE_ADDR, cabeceras de Cloudflare
+// ausentes) es la LISTA VACÍA: ninguna cabecera reenviada se consulta y
+// la única autoridad de procedencia es REMOTE_ADDR validada. NO POBLAR
+// esta lista sin evidencia nueva del soporte del hosting (lista de IPs
+// estables de sus proxies y saneamiento verificado de sus cabeceras);
+// cualquier valor iría como array de strings IPv4/IPv6 EXACTAS (sin CIDR,
+// sin hostnames) y solo tras registrar esa evidencia en TASKS-15:
+//
+// if (!defined('GRIMORIO_TRUSTED_PROXY_IPS')) {
+//     define('GRIMORIO_TRUSTED_PROXY_IPS', []); // Vacía por defecto (política ratificada).
+// }

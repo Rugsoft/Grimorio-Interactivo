@@ -248,20 +248,38 @@ final class Request
     }
 
     /**
-     * Procedencia del cliente (RF-03.2): IP directa o el primer salto del
-     * encadenado X-Forwarded-For cuando hay proxy de por medio. El valor
-     * jamás se confía para nada más que para el registro de intentos.
+     * Procedencia del cliente (RF-03.2; enmienda SPEC-15 RNF-06): la IP
+     * se resuelve EXCLUSIVAMENTE a través del resolvedor de proxies
+     * confiables (TrustedProxyResolver, Tarea 2.2 de TASKS-15), conforme
+     * al contrato ratificado en PLAN-15 §3.1:
+     *
+     *   - Sin proxies confiables declarados (el DEFAULT del despliegue:
+     *     GRIMORIO_TRUSTED_PROXY_IPS ausente o vacía), la única autoridad
+     *     es el par conectado (`REMOTE_ADDR`) validado: toda cabecera
+     *     reenviada se ignora y ningún cliente elige su clave en el
+     *     limitador (RF-03.3/03.4, §8 caso 3).
+     *   - Solo cuando el despliegue declare proxies confiables y la
+     *     conexión proceda de uno de ellos, la cadena reenviada se
+     *     interpreta conforme a las reglas del resolvedor (error cerrado:
+     *     cadena malformada → par conectado).
+     *   - Sin IP válida alguna, la procedencia es `0.0.0.0`: valor
+     *     controlado y estable, compatible con `login_attempts.ip_address`.
      */
     public function getClientIp(): string
     {
-        $forwardedFor = $this->getHeader('X-Forwarded-For');
-        if ($forwardedFor !== null && $forwardedFor !== '') {
-            $firstHop = trim(explode(',', $forwardedFor)[0]);
-            if ($firstHop !== '') {
-                return $firstHop;
-            }
-        }
+        // Lista de proxies confiables del canal de despliegue (deploy/
+        // infinityfree/env.php o define() equivalente). Ausencia equivale
+        // a lista vacía: NINGÚN proxy es confiable hasta que se declare
+        // con evidencia (política ratificada, Tarea 0.3 de TASKS-15).
+        $trustedProxyAddresses = defined('GRIMORIO_TRUSTED_PROXY_IPS')
+            && is_array(GRIMORIO_TRUSTED_PROXY_IPS)
+            ? GRIMORIO_TRUSTED_PROXY_IPS
+            : [];
 
-        return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+        return TrustedProxyResolver::resolveClientIp(
+            (string) ($_SERVER['REMOTE_ADDR'] ?? ''),
+            $this->getHeader('X-Forwarded-For'),
+            $trustedProxyAddresses
+        );
     }
 }
