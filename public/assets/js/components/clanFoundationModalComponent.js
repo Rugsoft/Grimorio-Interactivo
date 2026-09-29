@@ -76,6 +76,26 @@ export const CANONICAL_LINEAGE_TYPES = Object.freeze([
   'aetherWeavers',
 ]);
 
+/**
+ * Rótulos ceremoniales castellanos de los Ocho (RNF-01, soberanía
+ * lingüística): espejo EXACTO del vocabulario del Salón de Linajes y del
+ * distintivo (userProfileBadge.js, UserPanelDto::LINEAGE_LABELS, doctrina
+ * sembrada en lineage_doctrines). Hallazgo de la verificación visual
+ * 2026-09-28: el modal imprimía la clave técnica en inglés en vez del
+ * rótulo solemne. La clave técnica viaja SOLO en el value del radio; el
+ * label muestra el nombre ceremonial.
+ */
+export const CANONICAL_LINEAGE_LABELS = Object.freeze({
+  primordialFlame: 'Linaje de la Llama Primordial',
+  celestialTides: 'Linaje de las Mareas Celestiales',
+  eternalTempest: 'Linaje de la Tempestad Eterna',
+  worldRoots: 'Linaje de las Raíces del Mundo',
+  dawnWinds: 'Linaje de los Vientos del Alba',
+  solarCrown: 'Linaje de la Corona Solar',
+  abyssalShadows: 'Linaje de las Sombras Abisales',
+  aetherWeavers: 'Linaje de los Tejedores del Éter',
+});
+
 /* Leyendas temáticas de los vetos (RF-10.5), por código canónico del contrato. */
 export const FOUNDATION_VETO_LEGENDS = Object.freeze({
   INSUFFICIENT_RANK: 'Los neófitos sin pluma no alzan estandartes: tu rango aún no alcanza la fundación.',
@@ -270,7 +290,7 @@ export function createClanFoundationModalComponent(dialog, componentOptions = {}
       const optionLabel = documentRef.createElement('label');
       optionLabel.setAttribute('class', CSS.lineageOptionLabel);
       optionLabel.setAttribute('for', radio.id);
-      optionLabel.textContent = lineageType;
+      optionLabel.textContent = CANONICAL_LINEAGE_LABELS[lineageType] ?? lineageType;
       option.appendChild(optionLabel);
 
       const optionHint = documentRef.createElement('p');

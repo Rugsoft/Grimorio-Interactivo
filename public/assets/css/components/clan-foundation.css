@@ -4,10 +4,14 @@
  *
  * Los tokens viven en tokens.css (Artículo I): aquí solo se consumen.
  * Cero colores hex crudos, cero fuentes ajenas al canon.
+ * TEMA OSCURO: el diálogo hereda .modal (fondo --color-surface-raised,
+ * texto claro) — las tintas de este archivo son CLARAS sobre ese fondo
+ * (hallazgo de la verificación visual 2026-09-28: los nombres de tokens
+ * inexistentes activaban fallbacks oscuros ilegibles sobre el modal).
  *
  * Constitución:
  *   - Artículo I (Dogma Vanilla): CSS3 nativo con Custom Properties.
- *   - Artículo IV: atmósfera solemne de grimorio (pergamino y oro arcano).
+ *   - Artículo IV: atmósfera solemne de grimorio (oro arcano sobre noche).
  *   - Artículo V: clases BEM en inglés camelCase.
  */
 
@@ -18,8 +22,9 @@
 .modal--foundation .foundation-modal__form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4, 1rem);
+  gap: var(--space-ink-3);
   min-width: min(92vw, 34rem);
+  color: var(--color-text-light);
 }
 
 /* =======================================================================
@@ -29,52 +34,52 @@
 .foundation-modal__field {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1, 0.25rem);
+  gap: var(--space-ink-1);
 }
 
 .foundation-modal__field-label {
-  font-family: var(--font-display, serif);
-  font-size: var(--font-size-ink-small, 0.95rem);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-ink-small);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-strong, #1c1916);
+  color: var(--color-gold-arcane);
 }
 
 .foundation-modal__input {
-  font-family: var(--font-body, serif);
-  font-size: var(--font-size-ink-body, 1rem);
-  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
-  border: 1px solid var(--gold-dim, #a4874b);
-  border-radius: var(--radius-soft, 4px);
-  background: var(--parchment, #f4ecd8);
-  color: var(--ink-body, #2a2521);
+  font-family: var(--font-arcane-body);
+  font-size: var(--font-size-ink-base);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+  background-color: var(--color-bg-obsidian-surface);
+  color: var(--color-text-light);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .foundation-modal__input:focus-visible {
-  outline: 2px solid var(--gold-strong, #d4a94e);
+  outline: 2px solid var(--color-gold-arcane);
   outline-offset: 1px;
-  border-color: var(--gold-strong, #d4a94e);
+  border-color: var(--color-gold-arcane);
 }
 
 .foundation-modal__field-hint {
   margin: 0;
-  font-size: var(--font-size-ink-small, 0.95rem);
+  font-size: var(--font-size-ink-small);
   font-style: italic;
-  color: var(--ink-muted, #5a5248);
+  color: var(--color-text-light-muted);
 }
 
 .foundation-modal__field-counter {
   margin: 0;
   align-self: flex-end;
-  font-size: var(--font-size-ink-small, 0.95rem);
+  font-size: var(--font-size-ink-small);
   font-variant-numeric: tabular-nums;
-  color: var(--ink-muted, #5a5248);
+  color: var(--color-text-light-muted);
 }
 
 /* El contador viste tinta de advertencia cuando el canon no se cumple. */
 .foundation-modal__field-counter--over {
-  color: var(--ember, #8c3b2e);
+  color: var(--color-ember-red);
   font-weight: 600;
 }
 
@@ -84,26 +89,26 @@
 
 .foundation-modal__lineage-group,
 .foundation-modal__admission-group {
-  border: 1px solid var(--gold-dim, #a4874b);
-  border-radius: var(--radius-soft, 4px);
-  padding: var(--space-3, 0.75rem);
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+  padding: var(--space-ink-3);
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2, 0.5rem);
+  gap: var(--space-ink-2);
 }
 
 .foundation-modal__lineage-option,
 .foundation-modal__admission-option {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2, 0.5rem);
+  gap: var(--space-ink-2);
   flex-wrap: wrap;
 }
 
 /* La opción vedada se apaga: el veto es visible antes de enviar (RF-10.2.3). */
 .foundation-modal__lineage-option--foreign {
-  opacity: 0.45;
+  opacity: 0.55;
 }
 
 .foundation-modal__lineage-option--foreign input[type='radio'] {
@@ -111,30 +116,30 @@
 }
 
 .foundation-modal__lineage-option-label {
-  font-family: var(--font-display, serif);
-  color: var(--ink-strong, #1c1916);
+  font-family: var(--font-arcane-title);
+  color: var(--color-text-light);
 }
 
 .foundation-modal__lineage-option-hint,
 .foundation-modal__admission-option-hint {
   margin: 0;
   flex-basis: 100%;
-  font-size: var(--font-size-ink-small, 0.95rem);
-  color: var(--ink-muted, #5a5248);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-light-muted);
 }
 
 /* =======================================================================
-   4. La voz de los vetos (RF-10.5): región viva sobre el pergamino
+   4. La voz de los vetos (RF-10.5): región viva sobre la noche
    ======================================================================= */
 
 .foundation-modal__veto {
   margin: 0;
   min-height: 1.4em;
-  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
-  border-left: 3px solid var(--ember, #8c3b2e);
-  background: color-mix(in srgb, var(--ember, #8c3b2e) 8%, transparent);
-  font-size: var(--font-size-ink-small, 0.95rem);
-  color: var(--ink-strong, #1c1916);
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border-left: 3px solid var(--color-ember-red);
+  background: color-mix(in srgb, var(--color-ember-red) 12%, transparent);
+  font-size: var(--font-size-ink-small);
+  color: var(--color-text-light);
 }
 
 /* =======================================================================
@@ -144,7 +149,7 @@
 .foundation-modal__actions {
   display: flex;
   justify-content: flex-end;
-  gap: var(--space-3, 0.75rem);
+  gap: var(--space-ink-3);
 }
 
 .foundation-modal__submit {
@@ -176,7 +181,7 @@
 }
 
 .vestibule-empty__foundation {
-  margin-top: var(--space-3, 0.75rem);
+  margin-top: var(--space-ink-3);
 }
 
 /* =======================================================================

@@ -175,6 +175,7 @@ function findByClass(root, className, found = []) {
 const {
   createClanFoundationModalComponent,
   CANONICAL_LINEAGE_TYPES,
+  CANONICAL_LINEAGE_LABELS,
   FOUNDATION_VETO_LEGENDS,
   FOUNDATION_NAME_MAX_LENGTH,
   FOUNDATION_NAME_LENGTH_LEGEND,
@@ -227,6 +228,23 @@ console.log('[1] Componente agnóstico del actor y canon de los 8 linajes');
 assertCondition(CANONICAL_LINEAGE_TYPES.length === 8, 'el catálogo del Umbral porta EXACTAMENTE los 8 linajes canónicos (SPEC-07 RF-02.1)');
 assertCondition(Object.isFrozen(CANONICAL_LINEAGE_TYPES), 'el catálogo de linajes es inmutable (Object.freeze)');
 assertCondition(FOUNDATION_NAME_MAX_LENGTH === 50, 'el tope del Nombre Canónico coincide con ClanDto (50)');
+
+// Soberanía lingüística (hallazgo visual 2026-09-28): los rótulos de los
+// linajes son los nombres ceremoniales castellanos del canon compartido
+// (userProfileBadge.js / UserPanelDto::LINEAGE_LABELS); la clave técnica
+// viaja SOLO en el value del radio.
+assertCondition(
+  CANONICAL_LINEAGE_LABELS !== undefined && Object.keys(CANONICAL_LINEAGE_LABELS).length === 8,
+  'el mapa de rótulos ceremoniales cubre los 8 linajes (RNF-01)'
+);
+assertCondition(
+  Object.isFrozen(CANONICAL_LINEAGE_LABELS)
+  && CANONICAL_LINEAGE_LABELS.primordialFlame === 'Linaje de la Llama Primordial'
+  && CANONICAL_LINEAGE_LABELS.celestialTides === 'Linaje de las Mareas Celestiales'
+  && CANONICAL_LINEAGE_LABELS.abyssalShadows === 'Linaje de las Sombras Abisales'
+  && CANONICAL_LINEAGE_LABELS.aetherWeavers === 'Linaje de los Tejedores del Éter',
+  'los rótulos ceremoniales son el espejo EXACTO del vocabulario del Salón (RNF-01)'
+);
 assertCondition(
   FOUNDATION_VETO_LEGENDS.INSUFFICIENT_RANK !== undefined
   && FOUNDATION_VETO_LEGENDS.NAME_ALREADY_RESERVED !== undefined
@@ -271,6 +289,16 @@ console.log('\n[3] Los 8 linajes: sangre propia viva, sangre ajena vedada');
 
 const lineageOptionsA = findLineageRadios(dialogA);
 assertCondition(lineageOptionsA.length === 8, 'los 8 linajes se presentan al fundador');
+// Soberanía lingüística (hallazgo visual 2026-09-28): cada label muestra el
+// rótulo ceremonial castellano y JAMÁS la clave técnica en inglés.
+assertCondition(
+  lineageOptionsA.every((option) => option.label === CANONICAL_LINEAGE_LABELS[option.value]),
+  'cada option pinta el rótulo ceremonial castellano de su linaje (RNF-01)'
+);
+assertCondition(
+  lineageOptionsA.every((option) => !/^[a-z][A-Z]/.test(option.label)),
+  'ningún label exhibe la clave técnica camelCase (soberanía lingüística)'
+);
 const ownOption = lineageOptionsA.find((option) => option.value === 'solarCrown');
 const foreignOptions = lineageOptionsA.filter((option) => option.value !== 'solarCrown');
 assertCondition(ownOption !== undefined && ownOption.radio.disabled === false, 'el linaje JURADO es seleccionable');
