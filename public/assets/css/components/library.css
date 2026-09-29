@@ -349,6 +349,14 @@
   margin-top: var(--space-ink-2);
 }
 
+/* Cuando no hay acto pendiente el botón NO se crea (RF-17.4), de modo que
+   esta regla es la red de seguridad para quien lo esconda por `hidden` en
+   vez de retirarlo: en ambos casos el héroe no reserva hueco, y el espacio
+   entre la presentación y la galería no se queda fingiendo un botón. */
+.landing-hero__cta[hidden] {
+  display: none;
+}
+
 /* ---------------------------------------------------------------------
    4. Vista de extravío: mensajes y botones de rescate
    --------------------------------------------------------------------- */

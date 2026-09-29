@@ -34,6 +34,9 @@ import { createNavbarComponent } from './components/navbarComponent.js';
 import { createSpellDetailModalComponent } from './components/spellDetailModalComponent.js';
 import { createAccessModalComponent } from './components/accessModalComponent.js';
 import { createLandingView } from './views/landingView.js';
+// SPEC-17: el CTA del héroe se resuelve FUERA de la vista, que no conoce la
+// sesión. La resolución es una función pura y su arnés corre sin navegador.
+import { resolveHeroCallToAction } from './components/heroCallToAction.js';
 import { createLibraryView } from './views/libraryView.js';
 // SPEC-01 (Tarea 5.6) legó la vista provisional de lectura pública de
 // linajes (`clansPreviewView.js`); desde SPEC-07 (Tarea 6.3) la ruta del
@@ -238,6 +241,8 @@ export function createGrimoireApp(options = {}) {
    * enlace reservado seguía interceptando al erudito YA vinculado.
    */
   let unsubscribeSessionWatch = null;
+  /** Baja propia de la suscripción del CTA del héroe (SPEC-17, RF-17.6). */
+  let unsubscribeHeroCallToAction = null;
   let navbarSessionFlag = false;
 
   /**
@@ -375,6 +380,10 @@ export function createGrimoireApp(options = {}) {
         dominionClient,
         onReservedAction: handleReservedAction,
         onSpellSelect: (slug, originElement) => openSpellDetailBySlug(slug, { originElement }),
+        // SPEC-17, RF-17.1: la portada no sabe quién mira, así que el
+        // orquestador resuelve el CTA y se lo entrega ya resuelto.
+        heroCallToAction: resolveHeroCallToAction(store.getState()),
+        onNavigateRequest: (viewName) => { void navigate(viewName); },
         elementFactory,
         // El blasón se forja como SVG en línea (SPEC-02 RF-07): el documento viaja.
         documentRef,
@@ -1400,6 +1409,27 @@ export function createGrimoireApp(options = {}) {
       void refreshVestibuleBadge();
     });
 
+    // CTA del héroe (SPEC-17, RF-17.6): el Umbral se completa sobre una
+    // portada que tiene detrás, así que el botón tiene que cambiar DE RÓTULO
+    // —o desaparecer— sin recarga.
+    //
+    // Su propia baja, no la de las anteriores: las tres suscripciones previas
+    // comparten variable y solo la última se da de baja en destroy(), de modo
+    // que las otras dos sobreviven al desmontaje. Ese defecto es preexistente
+    // y NO se arregla aquí (sería alcance de más); lo que se hace es no
+    // sumarle una cuarta.
+    let lastHeroCallToActionState = 'sin-resolver';
+    unsubscribeHeroCallToAction = store.subscribe((nextState) => {
+      const nextDescriptor = resolveHeroCallToAction(nextState);
+      const nextFingerprint = nextDescriptor === null ? 'ninguno' : nextDescriptor.state;
+      if (nextFingerprint === lastHeroCallToActionState) return;
+      lastHeroCallToActionState = nextFingerprint;
+      // Solo si la portada es la vista viva: si el adepto está en la
+      // biblioteca, no hay botón que rehidratar (riesgo nº3 de TASKS-17).
+      if (currentView?.name !== 'landing') return;
+      currentView?.instance?.setHeroCallToAction?.(nextDescriptor);
+    });
+
     /** Resuelve la vista correspondiente a un hash de navegación (#/...). */
     function resolveViewFromHash(rawHash) {
       if (typeof rawHash !== 'string') return null;
@@ -1458,6 +1488,8 @@ export function createGrimoireApp(options = {}) {
     destroyCurrentView();
     errorView?.destroy?.();
     unsubscribeSessionWatch?.();
+    unsubscribeHeroCallToAction?.();
+    unsubscribeHeroCallToAction = null;
     if (windowHashListener !== null && typeof windowRef?.removeEventListener === 'function') {
       windowRef.removeEventListener('hashchange', windowHashListener);
       windowHashListener = null;

@@ -422,6 +422,77 @@ returnLink6.dispatch('click');
 await wait(20);
 assertCondition(byClass(shell1.appRoot, 'library-view') !== null, 'El retorno conduce de vuelta a la biblioteca (rescate completo)');
 
+// --- FASE 6b: SPEC-17 — el CTA del héroe sigue a la sesión, sin repintar ---
+// Esta es la cadena COMPLETA: store → suscriptor → resolveHeroCallToAction →
+// setHeroCallToAction → DOM. Las pruebas de la vista (test_landing_view) y de
+// la función pura (test_hero_call_to_action) cubren las dos puntas; este
+// eslabón es el que faltaba y el que solo se puede ver con la app montada.
+console.log('\nFASE 6b: SPEC-17 — el CTA del héroe cambia con la sesión (RF-17.6)');
+
+const ctaText = () => byClass(shell1.appRoot, 'landing-hero__cta')?.textContent ?? null;
+
+// Vuelve a la portada para tener el héroe montado. Hace falta hacerlo ANTES de
+// tocar la sesión: el guard del suscriptor solo rehidrata si la portada es la
+// vista viva, que es justo lo que el riesgo nº3 de TASKS-17 advertía. Sin esta
+// navegación, la fase fallaría por el motivo equivocado y culparía al guard de
+// algo que funciona.
+findNavLink(shell1, 'landing').dispatch('click');
+await wait(400);
+assertCondition(
+  app1.store.getState().currentView === 'landing' && byClass(shell1.appRoot, 'landing-hero') !== null,
+  'La portada queda montada antes de medir el CTA (si no, el guard de rehidratación hace bien en negarse)',
+);
+
+const ctaAtStart = ctaText();
+assertCondition(
+  ctaAtStart === null,
+  'Con la cuenta de prueba (jurada y con hermandad) el héroe NO ofrece ningún CTA (RF-17.4)',
+);
+
+app1.store.setSession({ id: 'usr_1', alias: 'friki', role: 'editor', lineage: 'primordialFlame' });
+await wait(20);
+assertCondition(
+  ctaText() === 'Vincularse a una Hermandad',
+  'Perder la hermandad hace NACER el CTA del Vestíbulo en caliente, sin recarga (RF-17.6)',
+);
+
+app1.store.setSession({ id: 'usr_1', alias: 'friki', role: 'editor' });
+await wait(20);
+assertCondition(
+  ctaText() === 'Consagrar Linaje',
+  'Perder el juramento devuelve el rótulo del peregrino, sin repintar la portada (RF-17.6)',
+);
+
+app1.store.clearSession();
+await wait(20);
+assertCondition(
+  ctaText() === 'Cruzar el Umbral',
+  'Sin sesión, el CTA vuelve a ser el del umbral: es el único estado que abre «Cruzar el Umbral» (RF-17.1, RF-17.3)',
+);
+
+app1.store.setSession({ id: 'usr_1', alias: 'friki', role: 'editor', lineage: 'primordialFlame', clanId: 'cln_primordial', clanName: 'Custodios del Fuego Primordial' });
+await wait(20);
+assertCondition(
+  ctaText() === null,
+  'Recuperar la hermandad RETIRA el CTA en caliente (RF-17.4, RF-17.6)',
+);
+assertCondition(
+  allByClass(shell1.appRoot, 'landing-hero__cta').length === 0,
+  'El CTA retirado no deja un botón vacío ni deshabilitado en el DOM (RF-17.4)',
+);
+
+// El cursor: volver a-connectar repinta, pero no duplica escuchas.
+app1.store.setSession({ id: 'usr_1', alias: 'friki', role: 'editor' });
+await wait(20);
+app1.store.setSession({ id: 'usr_1', alias: 'friki', role: 'editor', lineage: 'primordialFlame' });
+await wait(20);
+app1.store.setSession({ id: 'usr_1', alias: 'friki', role: 'editor' });
+await wait(20);
+assertCondition(
+  allByClass(shell1.appRoot, 'landing-hero__cta').length === 1,
+  'Tres cambios seguidos de estado dejan UN solo CTA: la rehidratación no acumula botones (RF-17.4)',
+);
+
 // --- FASE 7: destroy() global limpio (RNF-05) ---
 console.log('\nFASE 7: destroy() del orquestador');
 

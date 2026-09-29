@@ -314,6 +314,131 @@ landing6.destroy();
 const cardsAfterDestroy = querySelectorAllByClass(root6, 'spell-card');
 assertCondition(cardsAfterDestroy.length === 0, 'destroy() limpia la vista del punto de montaje');
 
+// --- FASE 7: SPEC-17 — el CTA del héroe es contextual al estado de sesión ---
+// RF-17.1 (rótulo por estado), RF-17.3 (nadie con sesión abre el Umbral),
+// RF-17.4 (sin CTA no hay nodo), RF-17.6 (rehidratación en caliente).
+console.log('\nFASE 7: SPEC-17 — el CTA nombra solo actos que se pueden hacer');
+
+import { resolveHeroCallToAction, HERO_CTA_STATES } from '../public/assets/js/components/heroCallToAction.js';
+
+/** Monta una portada con el CTA que resolvería la sesión dada. */
+async function mountWithSession(sessionState, extraOptions = {}) {
+  const root = createFakeElement('main');
+  const reserved = [];
+  const navigations = [];
+  const view = createLandingView(root, {
+    spellClient: spellClient1,
+    elementFactory: fakeElementFactory,
+    onReservedAction: (action) => reserved.push(action),
+    onNavigateRequest: (viewName) => navigations.push(viewName),
+    onSpellSelect: () => {},
+    heroCallToAction: resolveHeroCallToAction(sessionState),
+    ...extraOptions,
+  });
+  await view.render();
+  return { root, view, reserved, navigations };
+}
+
+const SESSION_ANON = { isAuthenticated: false, userRole: 'reader', userClan: null, userLineage: null };
+const SESSION_PILGRIM = { isAuthenticated: true, userRole: 'editor', userClan: null, userLineage: null };
+const SESSION_SWORN_LOOSE = { isAuthenticated: true, userRole: 'editor', userClan: null, userLineage: 'abyssalShadows' };
+const SESSION_SWORN_BOUND = { isAuthenticated: true, userRole: 'editor', userClan: { id: 'cln_x', name: 'Casa' }, userLineage: 'abyssalShadows' };
+
+const mountAnon = await mountWithSession(SESSION_ANON);
+const ctaAnon = querySelectorByClass(mountAnon.root, 'landing-hero__cta');
+assertCondition(ctaAnon !== null, 'Anónimo: hay CTA (su único acto es entrar)');
+assertCondition(
+  ctaAnon?.textContent === HERO_CTA_STATES.anonymous.label,
+  'Anónimo: el rótulo es el del estado anónimo, NO «Consagrar Linaje» (RF-17.2)',
+);
+assertCondition(
+  (ctaAnon?.getAttribute('aria-label') ?? '').includes(HERO_CTA_STATES.anonymous.label),
+  'Anónimo: la etiqueta contiene el texto visible (WCAG 2.5.3, RF-17.5)',
+);
+ctaAnon?.dispatch('click');
+assertCondition(
+  mountAnon.reserved.length === 1 && mountAnon.navigations.length === 0,
+  'Anónimo: el clic abre el Umbral con la intención retenida (RF-17.1)',
+);
+
+const mountPilgrim = await mountWithSession(SESSION_PILGRIM);
+const ctaPilgrim = querySelectorByClass(mountPilgrim.root, 'landing-hero__cta');
+assertCondition(
+  ctaPilgrim?.textContent === HERO_CTA_STATES.pilgrim.label,
+  'Peregrino: el rótulo es «Consagrar Linaje», su único acto pendiente (RF-17.2)',
+);
+ctaPilgrim?.dispatch('click');
+assertCondition(
+  mountPilgrim.reserved.length === 0,
+  'Peregrino: el clic NO abre el diálogo de acceso — ya está dentro (RF-17.3, el fallo que motivó la spec)',
+);
+assertCondition(
+  mountPilgrim.navigations.length === 1 && mountPilgrim.navigations[0] === 'juramento',
+  'Peregrino: el clic va directo a la ceremonia del juramento (RF-17.1)',
+);
+
+const mountSworn = await mountWithSession(SESSION_SWORN_LOOSE);
+const ctaSworn = querySelectorByClass(mountSworn.root, 'landing-hero__cta');
+assertCondition(
+  ctaSworn?.textContent === HERO_CTA_STATES.swornLoose.label,
+  'Jurado sin hermandad: el rótulo nombra el acto que le queda abierto (RF-17.2)',
+);
+ctaSworn?.dispatch('click');
+assertCondition(
+  mountSworn.navigations.length === 1 && mountSworn.navigations[0] === 'vestibule',
+  'Jurado sin hermandad: el clic abre el Vestíbulo de las Hermandades (RF-17.1)',
+);
+
+const mountBound = await mountWithSession(SESSION_SWORN_BOUND);
+assertCondition(
+  querySelectorByClass(mountBound.root, 'landing-hero__cta') === null,
+  'Con hermandad: NO se crea el nodo del CTA — la ausencia es real (RF-17.4)',
+);
+const heroBound = querySelectorByClass(mountBound.root, 'landing-hero');
+assertCondition(
+  heroBound !== null && querySelectorAllByClass(heroBound, 'landing-hero__cta').length === 0,
+  'Con hermandad: el héroe no conserva un botón vacío ni deshabilitado (RF-17.4)',
+);
+
+// --- RF-17.6: la rehidratación cambia el rótulo SIN repintar la portada ---
+console.log('\nFASE 8: SPEC-17 — rehidratación en caliente (RF-17.6)');
+
+mountBound.view.setHeroCallToAction(HERO_CTA_STATES.swornLoose);
+const ctaRehydrated = querySelectorByClass(mountBound.root, 'landing-hero__cta');
+assertCondition(
+  ctaRehydrated !== null && ctaRehydrated.textContent === HERO_CTA_STATES.swornLoose.label,
+  'Volver a tener un acto pendiente hace NACER el CTA sin recarga (RF-17.6)',
+);
+
+mountPilgrim.view.setHeroCallToAction(HERO_CTA_STATES.swornLoose);
+assertCondition(
+  querySelectorAllByClass(mountPilgrim.root, 'landing-hero__cta').length === 1,
+  'El CTA se sustituye en su sitio y no se acumula (un solo botón, RF-17.4)',
+);
+
+mountSworn.view.setHeroCallToAction(null);
+assertCondition(
+  querySelectorByClass(mountSworn.root, 'landing-hero__cta') === null,
+  'Perder el último acto pendiente RETIRA el CTA en caliente, no lo deshabilita (RF-17.4, RF-17.6)',
+);
+
+// La ausencia de la opción conserva el contrato de SPEC-01 intacto: sin
+// `heroCallToAction`, el botón sigue siendo el de siempre. Lo que se verifica
+// aquí es que el modo legado NO se rehidrata, porque su contrato es el viejo.
+const mountLegacy = createFakeElement('main');
+const legacyView = createLandingView(mountLegacy, {
+  spellClient: spellClient1,
+  elementFactory: fakeElementFactory,
+  onReservedAction: () => {},
+  onSpellSelect: () => {},
+});
+await legacyView.render();
+legacyView.setHeroCallToAction(null);
+assertCondition(
+  querySelectorByClass(mountLegacy, 'landing-hero__cta') !== null,
+  'Sin la opción `heroCallToAction`, el CTA de SPEC-01 sobrevive intacto: el modo legado no se rehidrata',
+);
+
 // --- Resumen final ---
 console.log('\n== RESUMEN ==');
 console.log(`Asertos superados: ${assertsPassed}`);

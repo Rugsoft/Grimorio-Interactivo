@@ -29,6 +29,25 @@ import { createValidationSigilComponent } from '../components/landingSigilCompon
 export const CONSECRATION_ACTION = 'joinClan';
 
 /**
+ * Descriptor del CTA tal y como SPEC-01 lo fijó, para el modo legado
+ * (opción `heroCallToAction` no pasada).
+ *
+ * SPEC-17 retira este rótulo del camino real: «Consagrar Linaje» solo
+ * describe a un peregrino, y su etiqueta prometía un umbral que no se abría
+ * para quien ya estaba dentro. Se conserva intacto, y con su `aria-label`
+ * histórico, **solo** para que los arneses de SPEC-01 sigan teniendo el
+ * contrato que verifican. Borrarlo no arregla nada: convierte arneses legados
+ * en rojo y esconde el defecto en lugar de corregirlo.
+ */
+const LEGACY_CONSECRATION_DESCRIPTOR = Object.freeze({
+  state: 'legacy',
+  label: 'Consagrar Linaje',
+  ariaLabel: 'Consagrar Linaje: abre el umbral de acceso para vincular tu linaje',
+  action: 'openAccess',
+  target: null,
+});
+
+/**
  * Crea la vista de portada.
  *
  * @param {HTMLElement} mountRoot Punto de montaje (`<main id="app">`).
@@ -44,7 +63,17 @@ export const CONSECRATION_ACTION = 'joinClan';
  * @param {(tagName: string) => HTMLElement} [options.elementFactory] Fábrica inyectable (tests).
  * @param {Document} [options.documentRef] Documento anfitrión del sello forjado
  *        del Clan Regente (arneses sin navegador).
- * @returns {Object} API: { render, destroy }.
+ * @param {Readonly<object>|null} [options.heroCallToAction] CTA **ya resuelto**
+ *        por `resolveHeroCallToAction` (SPEC-17, RF-17.1). Su AUSENCIA se
+ *        distingue de su valor `null` a propósito: no pasarlo conserva el
+ *        comportamiento de SPEC-01 (siempre «Consagrar Linaje»), que es lo que
+ *        mantienen los arneses existentes; pasarlo en `null` significa «esta
+ *        persona no tiene ningún acto pendiente» y el botón **no se crea**
+ *        (RF-17.4). Confundir ambos convertiría cada arnés legado en rojo.
+ * @param {(viewName: string) => void} [options.onNavigateRequest] Pide al
+ *        orquestador navegar a una vista interna. Lo usan los estados de CTA
+ *        que no pasan por el Umbral (RF-17.3).
+ * @returns {Object} API: { render, destroy, setHeroCallToAction }.
  */
 export function createLandingView(mountRoot, options) {
   const {
@@ -55,7 +84,25 @@ export function createLandingView(mountRoot, options) {
     onRegentSelect,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
+    onNavigateRequest,
   } = options;
+
+  // La ausencia de la opción NO es lo mismo que su valor `null` (SPEC-17,
+  // Tarea 2). Sin opción, la vista se comporta como en SPEC-01 y todos los
+  // arneses legados siguen encontrándole su botón. Con `null` explícito, no
+  // hay botón porque no hay acto que ofrecer.
+  const usesLegacyCallToAction = !Object.prototype.hasOwnProperty.call(options, 'heroCallToAction');
+  // UNA sola fuente de verdad para el descriptor efectivo. La versión previa
+  // lo calculaba dentro del manejador del clic, y en modo legado devolvía
+  // `null` —el clic no hacía nada—: un fallo que el arnés de SPEC-01 cazó en
+  // el acto. El descriptor se resuelve al construir la vista y se guarda.
+  let heroCallToAction = usesLegacyCallToAction
+    ? LEGACY_CONSECRATION_DESCRIPTOR
+    : options.heroCallToAction;
+
+  /** Nodos vivos del héroe, para poder rehidratar el CTA sin repintar todo. */
+  let heroSection = null;
+  let heroCtaButton = null;
 
   /** Blasón del Clan Regente montado en la cabecera, si procede (Tarea 5.2). */
   let regentBanner = null;
@@ -79,15 +126,6 @@ export function createLandingView(mountRoot, options) {
     node.textContent = text;
     parent.appendChild(node);
     return track(node);
-  }
-
-  /** Manejador del CTA «Consagrar Linaje»: emite la acción reservada. */
-  function handleConsacration(activationEvent) {
-    if (activationEvent.type === 'keydown') {
-      if (activationEvent.key !== 'Enter' && activationEvent.key !== ' ') return;
-      activationEvent.preventDefault?.();
-    }
-    onReservedAction?.(CONSECRATION_ACTION);
   }
 
   /**
@@ -118,7 +156,101 @@ export function createLandingView(mountRoot, options) {
   }
 
   /**
-   * Construye el héroe: narrativa + CTA de consagración (RF-01.1, RF-01.4).
+   * Despacha el CTA según lo que el descriptor resuelto ordene (SPEC-17).
+   *
+   * `openAccess` es el ÚNICO camino que abre el Umbral, y solo lo usa el estado
+   * anónimo. Los demás navegan dentro del santuario porque quien los pulsa ya
+   * está dentro: mandarle a «cruzar el umbral» era el callejón sin salida que
+   * esta spec vino a cerrar (RF-17.3).
+   *
+   * @param {MouseEvent|KeyboardEvent} activationEvent Evento de activación.
+   */
+  function handleCallToAction(activationEvent) {
+    const descriptor = heroCallToAction;
+    if (descriptor === null || descriptor === undefined) return;
+
+    if (activationEvent.type === 'keydown') {
+      if (activationEvent.key !== 'Enter' && activationEvent.key !== ' ') return;
+      activationEvent.preventDefault?.();
+    }
+
+    if (descriptor.action === 'openAccess') {
+      // Contrato de interceptación con el orquestador (RF-01.4 → Tarea 4.4):
+      // la intención queda retenida y el Umbral se abre.
+      onReservedAction?.(CONSECRATION_ACTION);
+      return;
+    }
+
+    // Acción de navegación interna: la vista pide el destino y el
+    // orquestador decide, que es quien conoce el interceptor de retención de
+    // SPEC-09 y no esta vista.
+    if (typeof descriptor.target === 'string' && descriptor.target !== '') {
+      onNavigateRequest?.(descriptor.target);
+    }
+  }
+
+  /**
+   * Pinta el botón del CTA con el descriptor dado. Nodo nuevo, en su hueco.
+   *
+   * @param {Readonly<object>} descriptor Descriptor resuelto del CTA.
+   * @returns {HTMLElement|null} El botón forjado, o `null` si no hay CTA.
+   */
+  function buildCallToAction(descriptor) {
+    if (descriptor === null || descriptor === undefined) return null;
+    if (typeof descriptor.label !== 'string' || descriptor.label.trim() === '') return null;
+
+    const button = track(elementFactory('button'));
+    button.type = 'button';
+    button.className = 'landing-hero__cta button button--primary';
+    button.textContent = descriptor.label;
+    // Contrato de interceptación con el orquestador (RF-01.4 → Tarea 4.4). No
+    // lo lee ningún código, pero SPEC-01 lo declara y su arnés lo verifica;
+    // quitarlo sin decirlo sería un cambio de contrato disfrazado de refactor.
+    button.setAttribute('data-reserved', 'true');
+    button.setAttribute('aria-label', descriptor.ariaLabel ?? descriptor.label);
+    button.addEventListener('click', handleCallToAction);
+    button.addEventListener('keydown', handleCallToAction);
+    return button;
+  }
+
+  /**
+   * Rehidrata el CTA sin repintar la portada (SPEC-17, RF-17.6).
+   *
+   * Es lo que permite que el Umbral, al completarse, cambie el rótulo de la
+   * portada que tenía detrás sin recarga. La AUSENCIA también se alcanza en
+   * caliente: si el nuevo descriptor es `null`, el botón se retira del DOM en
+   * lugar de quedar deshabilitado (RF-17.4).
+   *
+   * @param {Readonly<object>|null} descriptor Descriptor ya resuelto, o `null`.
+   */
+  function setHeroCallToAction(descriptor) {
+    if (usesLegacyCallToAction) return;
+    heroCallToAction = descriptor ?? null;
+    // Antes de que el héroe exista no hay nada que rehidratar: `render()`
+    // leerá el descriptor nuevo al construirlo. Tocar el DOM antes de que
+    // exista es justo el fallo que el riesgo nº3 anticipa.
+    if (heroSection === null) return;
+
+    const nextButton = buildCallToAction(heroCallToAction);
+    if (nextButton === null) {
+      heroCtaButton?.remove?.();
+      heroCtaButton = null;
+      return;
+    }
+    if (heroCtaButton === null) {
+      heroSection.appendChild(nextButton);
+      heroCtaButton = nextButton;
+      return;
+    }
+    // El botón ya existe: se le cambia el rótulo y la etiqueta en su sitio, y
+    // se retira el anterior para no acumular escuchas.
+    heroCtaButton.remove?.();
+    heroSection.appendChild(nextButton);
+    heroCtaButton = nextButton;
+  }
+
+  /**
+   * Construye el héroe: narrativa + CTA (RF-01.1, RF-01.4, SPEC-17 RF-17.1).
    */
   function buildHero() {
     const hero = track(elementFactory('section'));
@@ -136,20 +268,13 @@ export function createLandingView(mountRoot, options) {
       'Un santuario de saber arcano, forjado por los linajes que aún recuerdan los conjuros antiguos.',
     );
 
-    const consacrationButton = track(elementFactory('button'));
-    consacrationButton.type = 'button';
-    consacrationButton.className = 'landing-hero__cta button button--primary';
-    consacrationButton.textContent = 'Consagrar Linaje';
-    // Contrato de interceptación con el orquestador (RF-01.4 → Tarea 4.4):
-    consacrationButton.setAttribute('data-reserved', 'true');
-    consacrationButton.setAttribute(
-      'aria-label',
-      'Consagrar Linaje: abre el umbral de acceso para vincular tu linaje',
-    );
-    consacrationButton.addEventListener('click', handleConsacration);
-    consacrationButton.addEventListener('keydown', handleConsacration);
-    hero.appendChild(consacrationButton);
+    const callToAction = buildCallToAction(heroCallToAction);
+    if (callToAction !== null) {
+      hero.appendChild(callToAction);
+      heroCtaButton = callToAction;
+    }
 
+    heroSection = hero;
     return hero;
   }
 
@@ -280,6 +405,8 @@ export function createLandingView(mountRoot, options) {
    */
   function destroy(removeFromRoot = true) {
     // El blasón primero: cancela cualquier consulta suya en vuelo (Tarea 5.2).
+    heroSection = null;
+    heroCtaButton = null;
     sigil?.destroy?.();
     sigil = null;
     regentBanner?.destroy?.();
@@ -297,5 +424,5 @@ export function createLandingView(mountRoot, options) {
     }
   }
 
-  return { render, destroy };
+  return { render, destroy, setHeroCallToAction };
 }
