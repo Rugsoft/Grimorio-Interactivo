@@ -298,6 +298,93 @@ congelaría la IP compartida del hosting ni afectar solo a tu ensayo).
   Con esta ejecución, producción queda ALINEADA con el árbol actual del
   repositorio (`a598f2b`) en todo lo relativo a sesión y renuncia.
 
+## 9c. Despliegue del Umbral de la Fundación (SPEC-07b)
+
+> Interfaz de creación de clanes (enmienda de superficie de SPEC-07
+> RF-01.2). **Superficie pura de frontend**: 0 ficheros en `src/` y
+> 0 en `database/` (verificado por diff dirigido en el cierre
+> `5278990`). No hay migración de esquema: la tabla `clans` ya vive en
+> producción desde las semillas. Basta subir los ficheros públicos.
+
+### 1. Ficheros a subir a `htdocs/` (7, todos bajo `public/`)
+
+| Fichero en el repo | Destino en el hosting | Estado |
+|---|---|---|
+| `public/index.html` | `htdocs/public/index.html` | Sobrescribir (añade `<dialog id="foundationModal">` y el `<link>` al CSS nuevo) |
+| `public/assets/css/components/clan-foundation.css` | `htdocs/public/assets/css/components/clan-foundation.css` | **NUEVO** (crear) |
+| `public/assets/js/components/clanFoundationModalComponent.js` | `htdocs/public/assets/js/components/clanFoundationModalComponent.js` | **NUEVO** (crear) |
+| `public/assets/js/components/lineageHallComponent.js` | `htdocs/public/assets/js/components/lineageHallComponent.js` | Sobrescribir (gesto de fundación en cabecera del Salón) |
+| `public/assets/js/views/lineageHallView.js` | `htdocs/public/assets/js/views/lineageHallView.js` | Sobrescribir (veredicto de sesión + despacho `foundClan`) |
+| `public/assets/js/views/vestibuleView.js` | `htdocs/public/assets/js/views/vestibuleView.js` | Sobrescribir (segunda puerta RF-10.6 en el estado vacío) |
+| `public/assets/js/main.js` | `htdocs/public/assets/js/main.js` | Sobrescribir (inyección `foundationDialog`) |
+
+> Consejo de orden: sube primero el CSS y los JS nuevos/modificados y
+> `index.html` AL FINAL — el shell referencia el CSS nuevo, y así
+> ningún visitante intermedio ve un shell que pide un asset que aún
+> no existe. Al terminar, recarga con caché forzada (Ctrl+F5): los
+> assets no llevan versión en la URL.
+
+### 2. Verificación con cuenta de ensayo (bajo impacto)
+
+Requiere autorización del custodio; JAMÁS muta datos de cuentas reales.
+La lógica ya está verificada localmente (arnés
+`scratch/test_clan_foundation_modal.mjs`, 70/70, y regresiones hermanas
+en verde); esto valida el despliegue real.
+
+**Preparación:** consagra una cuenta de ensayo (patrón del §9b) y
+consume el juramento de linaje (SPEC-09): el gesto de fundación exige
+adepto JURADO — `lector`, `militante` y `convaleciente` lo tienen vedado
+con `disabled` real (RNF-04).
+
+**Comprobaciones (en orden):**
+
+1. **Regresión del catálogo:** `https://TU_SUBDOMINIO/api/v1/spells`
+   sigue respondiendo `success: true` (el shell y `main.js` nuevos no
+   rompen la SPA).
+2. **Assets servidos:** abre en el navegador
+   `/assets/js/components/clanFoundationModalComponent.js` y
+   `/assets/css/components/clan-foundation.css` → ambos deben servir el
+   contenido (no 404; el funnel solo blinda `src/`, `database/` y
+   `storage/`, jamás `public/assets/`).
+3. **Primera puerta (Salón, RF-10.1/10.2):** con la cuenta de ensayo
+   jurada, entra en `#/linajes`. La opción de fundación debe aparecer
+   HABILITADA en la cabecera; al abrirla, el modal despliega los tres
+   sellos (blasón oculto por decisión §10.2 — el payload viaja con
+   `coatOfArms: ''` y el blasón lo viste después el Patriarca) y el
+   régimen.
+4. **Fundación real (RF-10.3):** nombra el clan de ensayo con un rótulo
+   inequívoco de prueba (p. ej. `Ensayo Umbral <fecha>`), lema y régimen,
+   y consagra. Debe responder **201**, el Salón se refresca mostrando el
+   clan fundado y el gesto queda VEDADO por lealtad (un adepto solo
+   funda una vez).
+5. **Segunda puerta + veto real (RF-10.6/10.5):** consagra una SEGUNDA
+   cuenta de ensayo jurada del mismo linaje y entra por el Vestíbulo:
+   el estado vacío debe invitar a fundar (mismo modal). Intenta fundar
+   con el nombre EXACTO del clan del paso 4 → la API responde el veto
+   `NAME_ALREADY_RESERVED` y **el borrador (nombre/lema) permanece
+   intacto** en el modal.
+6. **Sello anti-doble-envío (RNF):** durante el paso 4, el botón de
+   consagración debe quedar deshabilitado tras el primer envío (no deben
+   nacer dos clanes gemelos).
+
+**Nota de honestidad sobre los datos de ensayo:** la fundación crea
+DATOS REALES en producción. El clan de ensayo y su cuenta persistirán
+como legado; si el custodio desea limpiarlo, debe hacerlo como
+`admin_supremo` desde el panel de moderación. No intentes borrar por
+base: el hosting no ofrece CLI sobre SQLite/MySQL de la demo.
+
+**Plantilla de veredicto (a registrar tras ejecutar):**
+
+- Assets servidos (CSS + componente): PENDIENTE de confirmar.
+- Fundación 201 con Salón refrescado y gesto vedado: PENDIENTE.
+- Segunda puerta con veto `NAME_ALREADY_RESERVED` y borrador intacto:
+  PENDIENTE.
+- Sello anti-doble-envío: PENDIENTE.
+
+Mientras quede algún PENDIENTE, SPEC-07b queda en producción como
+«desplegada, no verificada» (misma doctrina de honestidad de §9b).
+Registra aquí fecha, veredictos y limitaciones tras la ejecución.
+
 ## Solución de problemas
 
 | Síntoma | Causa probable | Remedio |
