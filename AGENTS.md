@@ -96,7 +96,8 @@ specs/
 ├── 12-user-panel.spec.md                # Panel del Adepto: morada personal, efigie (avatar) y bitácora (tríada SDD completa — implementada, 22/22 tareas cerradas)
 ├── 13-mysql-dialect-parity.spec.md      # Paridad de dialecto MySQL/MariaDB: gemelo dialectal database/schema-mysql.sql, portabilidad del backend y Regla de los Gemelos (enmienda de despliegue — implementada, 20/20 comprobaciones EXITO en MariaDB 10.4)
 ├── 14-avatar-production-deployment.spec.md # La Efigie en Producción: paridad de despliegue de la efigie propia (SPEC-12) en InfinityFree — chemin de storage/, privacidad por funnel, sonda de diagnóstico GD/topes (enmienda de despliegue — RATIFICADA)
-└── 15-session-security-production-deployment.spec.md # Seguridad de sesión en producción: cookies HTTPS, proxies confiables y procedencia del limitador (ratificada; verificación del hosting pendiente)
+├── 15-session-security-production-deployment.spec.md # Seguridad de sesión en producción: cookies HTTPS, proxies confiables y procedencia del limitador (ratificada; verificación del hosting pendiente)
+└── 16-portal-composition-and-navigation.spec.md # El Gran Portal y la Cabecera Ajustada: recomposición de la portada (sello de validación, cinta del Regente) y navegación agrupada en tres dominios (BORRADOR, pendiente de ratificación)
 
 ---
 

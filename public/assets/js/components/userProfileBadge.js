@@ -157,6 +157,10 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   /** Distintivo y menú forjados (retirados en clearUser/destroy). */
   let badgeElement = null;
   let menuElement = null;
+  /** Panel del desplegable: rótulo de identidad + menú (SPEC-16, RF-17.2). */
+  let panelElement = null;
+  /** Rótulo de identidad, hermano del menú dentro del panel. */
+  let identityElement = null;
   let toggleButton = null;
   let menuIsOpen = false;
   let isDestroyed = false;
@@ -172,6 +176,8 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     badgeElement?.remove();
     badgeElement = null;
     menuElement = null;
+    panelElement = null;
+    identityElement = null;
     toggleButton = null;
     menuIsOpen = false;
   }
@@ -209,6 +215,10 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     menuIsOpen = false;
     toggleButton?.setAttribute('aria-expanded', 'false');
     if (menuElement) menuElement.setAttribute('aria-hidden', 'true');
+    // El panel entero se repliega (SPEC-16, RF-17.2): si sobreviviera
+    // abierto, el linaje jurado quedaría leyéndose en la cabecera —justo
+    // lo que la Tarea 3 vino a quitar.
+    if (panelElement) panelElement.setAttribute('data-open', 'false');
   }
 
   /** ¿Vive el nodo dentro del distintivo? Recorrido de padres que funciona
@@ -239,6 +249,7 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
   function openMenu() {
     menuIsOpen = true;
     toggleButton?.setAttribute('aria-expanded', 'true');
+    if (panelElement) panelElement.setAttribute('data-open', 'true');
     if (menuElement) {
       menuElement.removeAttribute('aria-hidden');
       const firstOption = menuElement.children?.[0]?.children?.[0] ?? menuElement.children?.[0];
@@ -267,9 +278,21 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     // Navegación de menú (RNF-03, WCAG): flechas circulan por las opciones,
     // Inicio/Fin saltan a los extremos y Tab abandona el menú repliegándolo.
     if (!menuIsOpen || !menuElement) return;
+    // SPEC-16 (RF-17.2): el desplegable abre con una cabecera de identidad
+    // que NO es una opción. Tomar `children[0]` a secas la habría contado
+    // como pulsable y las flechas habrían saltado a un <span> que no
+    // admite foco. Se recorren SOLO los <li> que forjan un botón.
+    const isFocusableOption = (child) => {
+      if (child === null || child === undefined) return false;
+      // El DOM real expone tagName; los simulados de los arneses, no
+      // siempre: si falta, se acepta el nodo salvo que se haya marcado
+      // explícitamente como cabecera de identidad.
+      if (typeof child.tagName === 'string') return child.tagName === 'BUTTON';
+      return child.getAttribute?.('class') !== 'user-profile__identity-text';
+    };
     const optionButtons = (menuElement.children ?? [])
       .map((optionItem) => optionItem.children?.[0])
-      .filter((child) => child !== null && child !== undefined);
+      .filter(isFocusableOption);
     const currentIndex = optionButtons.indexOf(event.target);
     if (currentIndex < 0) return;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -331,18 +354,29 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     toggleButton.setAttribute('aria-expanded', 'false');
     toggleButton.setAttribute('aria-controls', 'userProfileMenu');
     const hasClan = user.clanId !== '' && typeof user.clanName === 'string' && user.clanName !== '';
-    // El rótulo visible: alias + clan (SPEC-07), o alias + estado solemne.
-    // El sufijo « — menú» del nombre accesible anuncia el desplegable SIN
-    // contaminar el rótulo visible ( WCAG: el contenido del aria-label
-    // debe contener el texto visible del botón).
-    const displayLegend = hasClan
+    // La IDENTIDAD COMPLETA (SPEC-16, RF-17.1): alias + hermandad (SPEC-07),
+    // o alias + linaje jurado, o alias + estado de peregrino iniciático.
+    // Esta cadena es la que el botón declara por su nombre accesible y la
+    // que el desplegable muestra en su cabecera.
+    const fullLegend = hasClan
       ? `${user.alias} — ${user.clanName}`
       : oathLineage !== null
         ? `${user.alias} — ${lineageProfile?.name ?? UNKNOWN_LINEAGE_LEGEND}`
         : `${user.alias} — ${PILGRIM_LEGEND}`;
+
+    // El RÓTULO VISIBLE es SOLO el alias (SPEC-16, RF-17.1). Antes competía
+    // en la cabecera con los enlaces de navegación: medido, «Vestibulo7b —
+    // Linaje de las Sombras Abisales» ocupaba 493 px de los 1423 y era la
+    // causa de que la cabecera se partiera en tres filas. La identidad no
+    // se pierde —baja al desplegable y sigue en el nombre accesible—, solo
+    // deja de ocupar la fila.
+    const displayLegend = String(user.alias ?? '');
+
     // Identidad accesible completa (nombre accesible + oficio + convo);
-    // el rol técnico jamás se imprime en el rótulo visible (Art. V).
-    const ariaLabel = `${displayLegend} — ${roleLegend(String(user.role ?? ''))}${
+    // el rol técnico jamás se imprime en el rótulo visible (Art. V). El
+    // nombre accesible DEBE contener el texto visible del botón (WCAG
+    // 2.5.3 Label in Name), y lo contiene: empieza por el alias.
+    const ariaLabel = `${fullLegend} — ${roleLegend(String(user.role ?? ''))}${
       MODERATION_ROLES.has(String(user.role ?? '')) ? ' (facultado para moderar)' : ''
     }. Abrir el menú arcano`;
     toggleButton.setAttribute('aria-label', ariaLabel);
@@ -388,11 +422,37 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
     // Menú desplegable arcano con las opciones canónicas (RF-02.4).
     // Semántica de menú (WCAG/APG): role=menu en el desplegable y role=none
     // en los li porta-botones (el rol menuitem vive en el propio botón).
+    // El PANEL del desplegable (SPEC-16, RF-17.2): un solo pergamino que
+    // contiene el rótulo de identidad y el menú. Antes cada uno era un
+    // absoluto con su propio anclaje y había que sincronizarlos a mano
+    // —con el resultado de que se solapaban 131 px—. Siendo hermanos
+    // dentro del panel, el apilado es estructural: no hay nada que
+    // sincronizar ni nada que pueda desincronizarse.
+    panelElement = documentRef.createElement?.('div');
+    if (panelElement) {
+      panelElement.setAttribute('class', 'user-profile__panel');
+      panelElement.setAttribute('data-open', 'false');
+      badgeElement.appendChild(panelElement);
+    }
+
+    // El rótulo de identidad es HERMANO del <ul role="menu">, no hijo suyo,
+    // y por un motivo que no es cosmético: un <ul role="menu"> solo admite
+    // <li role="none"> que envuelven un menuitem. Un <li> de texto plano
+    // dentro del menú rompe la semántica para los lectores de pantalla y
+    // falsea la navegación por flechas, que recorre los hijos del <ul>.
+    // El rótulo de un menú no es una opción del menú.
+    identityElement = documentRef.createElement?.('div');
+    if (identityElement) {
+      identityElement.setAttribute('class', 'user-profile__identity');
+      identityElement.textContent = fullLegend;
+      panelElement?.appendChild?.(identityElement);
+    }
+
     menuElement = documentRef.createElement?.('ul');
     menuElement.setAttribute('id', 'userProfileMenu');
     menuElement.setAttribute('role', 'menu');
     menuElement.setAttribute('aria-hidden', 'true');
-    badgeElement.appendChild(menuElement);
+    panelElement?.appendChild?.(menuElement);
 
     for (const menuOption of MENU_OPTIONS) {
       const optionItem = documentRef.createElement?.('li');
@@ -475,10 +535,6 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
    * @param {User} user Sesión hidratada (linaje jurado para el sello).
    */
   function applyAvatarImage(avatarNode, kind, reference, url, user) {
-    if (kind !== 'own' && kind !== 'catalog') {
-      avatarNode.removeAttribute('style');
-      return;
-    }
     if (kind === 'own') {
       const resolvedUrl = url !== null && url !== ''
         ? url
@@ -486,6 +542,13 @@ export function createMemoryBadgeRoot(badgeRoot, options = {}) {
       avatarNode.setAttribute('style', `--avatar-image: url('${resolvedUrl}')`);
       return;
     }
+    // SPEC-16 (RF-17.5): el kind canónico por defecto DEGRADA AL OUROBOROS
+    // DEL ARCANO PURO. Antes este caso hacía removeAttribute('style') y
+    // retornaba, dejando un cuadro de 46×46 completamente vacío —medido en
+    // producción como un rectángulo muerto junto al nombre—. El comentario
+    // de este bloque ya prometía «jamás un cuadro vacío»: el código, no.
+    // Cualquier kind desconocido cae aquí también, de modo que un valor
+    // venidero del contrato degrada con dignidad en vez de desaparecer.
     // Efigie heráldica del canon: el sello nace del sufijo del
     // linaje en la referencia (seal_primordialFlame → fire…). Las
     // efigies no heráldicas (custodio, peregrino) degradan al

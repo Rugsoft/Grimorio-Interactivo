@@ -149,7 +149,21 @@ const component = createNavbarComponent(nav, {
 component.render();
 
 // El componente debe poblar la lista con un enlace por NAV_LINKS.
-const renderedLinks = linksList.children.filter((child) => child.tagName === 'A');
+// ADAPTACIÓN SPEC-16 (Tarea 1, documentada en el riesgo nº1 de TASKS-16):
+// con la cabecera agrupada, los enlaces ya no son hijos DIRECTOS de la
+// lista — viven dentro de los <li> de cada dominio. El requisito que este
+// arnés verifica («se renderizan los diez destinos persistentes») NO ha
+// cambiado; lo que cambia es CÓMO se localizan. Bajar a un barrido
+// recursivo es fiel al contrato nuevo: si mañana se volviera al plano,
+// este aserto seguiría valiendo.
+function collectAnchors(node, found = []) {
+  for (const child of node.children ?? []) {
+    if (child.tagName === 'A') found.push(child);
+    collectAnchors(child, found);
+  }
+  return found;
+}
+const renderedLinks = collectAnchors(linksList);
 assertCondition(renderedLinks.length === NAV_LINKS.length, `Renderiza exactamente ${NAV_LINKS.length} enlaces persistentes`);
 
 // Cada enlace porta texto temático en castellano y atributos de accesibilidad.
@@ -175,7 +189,7 @@ const visitorComponent = createNavbarComponent(nav, {
 });
 visitorComponent.render();
 
-const visitorLinks = linksList.children.filter((child) => child.tagName === 'A');
+const visitorLinks = collectAnchors(linksList);
 const creatorElement = visitorLinks.find((link) => link.getAttribute('data-action') === VISITOR_LINK_ACTIONS.openCreator);
 
 // Click sobre el Creador siendo visitante:
@@ -209,7 +223,7 @@ const authComponent = createNavbarComponent(nav, {
 
 // Re-render con rol autenticado:
 authComponent.render();
-const authLinks = linksList.children.filter((child) => child.tagName === 'A');
+const authLinks = collectAnchors(linksList);
 const authCreator = authLinks.find((link) => link.getAttribute('data-action') === VISITOR_LINK_ACTIONS.openCreator);
 
 authCreator.dispatch('click');
@@ -280,7 +294,9 @@ const navComponent = createNavbarComponent(nav, {
 mobileComponent.destroy();
 navComponent.render();
 toggleButton.dispatch('click'); // abrir
-const publicLink = linksList.children.filter((c) => c.tagName === 'A')[0];
+// ADAPTACIÓN SPEC-16: mismo barrido recursivo que en la FASE 2 — la
+// agrupación depth-first mantiene el orden de documento del primer destino.
+const publicLink = collectAnchors(linksList)[0];
 publicLink.dispatch('click');
 assertCondition(
   toggleButton.getAttribute('aria-expanded') === 'false',

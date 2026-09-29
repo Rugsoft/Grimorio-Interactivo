@@ -294,8 +294,15 @@ assertCondition(innerHTMLRejected, 'innerHTML está prohibido también en este �
 
 // Usuario sin clan: el distintivo se muestra sin clan fantasma.
 badge5.setUser({ id: 'usr_solitario', alias: 'Andarin', role: 'editor', clanId: '', clanName: '' });
+// ADAPTACIÓN SPEC-16 (Tarea 3, RF-17.1/RF-17.2): el alias aparece ahora en
+// DOS hojas —el botón de la cabecera y el rótulo de identidad del desplegable
+// (donde baja el linaje/estado)—, así que contar «1 ocurrencia» ya no describe
+// el contrato. Lo que este aserto vigila es que NO haya clan fantasma: ese
+// requisito no ha cambiado. Se afirma sobre el BOTÓN, que es la superficie
+// que la spec gobierna.
+const aliasButtonNode = byId(shell5.badgeRoot, 'userProfileToggle');
 assertCondition(
-  findByText(shell5.badgeRoot, 'Andarin').length === 1 && findByText(shell5.badgeRoot, 'Eruditos Astrales').length === 0,
+  (aliasButtonNode?.textContent ?? '') === 'Andarin' && findByText(shell5.badgeRoot, 'Eruditos Astrales').length === 0,
   'Un vinculado sin linaje muestra solo su alias (sin clan fantasma, RF-01.1)',
 );
 

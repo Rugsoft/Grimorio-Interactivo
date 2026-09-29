@@ -136,6 +136,156 @@ body {
   padding: 0;
 }
 
+/* ---------------------------------------------------------------------
+   2bis. La cabecera ajustada (SPEC-16, RF-16.1): navegación agrupada
+   ---------------------------------------------------------------------
+   Diez destinos no caben en una fila sin agrupar (medido: 1423 px de
+   cabecera y tres hileras de enlaces). La solución no es encoger el
+   texto —eso degrada la legibilidad de los rótulos— sino declarar a qué
+   dominio pertenece cada destino y dejar que el rótulo del dominio sea
+   lo único que se lee en la fila.
+
+   El bloque de grupos es el ÚNICO que cede espacio (flex: 1 1 auto con
+   min-width: 0); la marca y el distintivo son FIOS. Ese reparto es
+   deliberado: comprimir un rótulo de dominio es peor que no mostrarlo.
+   --------------------------------------------------------------------- */
+
+.site-nav__groups {
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: var(--space-ink-1);
+}
+
+/* Rótulo de dominio: un botón sobrio, no un botón primario. La jerarquía
+   va por el ORO y el borde, nunca por el relleno. */
+.site-nav__group-trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-ink-2);
+  gap: var(--space-ink-1);
+
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-scroll);
+
+  color: var(--color-text-light-muted);
+  font-family: var(--font-arcane-seal);
+  font-size: 0.92rem;
+  letter-spacing: var(--letter-spacing-seal);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition-arcane),
+              background-color var(--transition-arcane),
+              border-color var(--transition-arcane);
+}
+
+.site-nav__group-trigger:hover,
+.site-nav__group-trigger:focus-visible {
+  color: var(--color-gold-arcane);
+  background-color: var(--color-surface-raised);
+}
+
+/* El rótulo abierto se declara por su propio borde: el usuario sabe qué
+   panel tiene debajo sin tener que apuntar. */
+.site-nav__group-trigger[aria-expanded='true'] {
+  color: var(--color-gold-arcane);
+  border-color: var(--color-gold-arcane-dim);
+  background-color: var(--color-surface-raised);
+}
+
+/* Flecha de apertura: glifo tipográfico, sin librería de iconos. */
+.site-nav__group-trigger::after {
+  content: '▾';
+  font-size: 0.7em;
+  opacity: 0.65;
+  transition: transform var(--transition-arcane);
+}
+
+.site-nav__group-trigger[aria-expanded='true']::after {
+  transform: rotate(180deg);
+}
+
+/* Panel del dominio. Flota sobre el contenido: el backdrop lo hace
+   layout.css, no el panel (debe ser absolute, no fixed, para viajar con
+   su rótulo). */
+.site-nav__group-menu {
+  position: absolute;
+  top: calc(100% + var(--space-ink-1));
+  left: 0;
+  z-index: 60;
+
+  display: none;
+  min-width: 13rem;
+  padding: var(--space-ink-1);
+  list-style: none;
+  margin: 0;
+
+  background-color: var(--color-surface-raised);
+  border: var(--border-ink-strong);
+  border-radius: var(--radius-scroll);
+  box-shadow: var(--shadow-arcane);
+}
+
+/* El estado abierto lo gobierna el COMponente (aria-expanded + data-open),
+   de modo que el panel y su rótulo nunca puedan discrepar. */
+.site-nav__group-menu[data-open='true'] {
+  display: block;
+}
+
+/* El contenedor del grupo es el ancla del panel. */
+.site-nav__group {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.site-nav__group-menu a {
+  display: block;
+  width: 100%;
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border-radius: var(--radius-scroll);
+  color: var(--color-text-light);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--transition-arcane), background-color var(--transition-arcane);
+}
+
+.site-nav__group-menu a:hover,
+.site-nav__group-menu a:focus-visible {
+  color: var(--color-gold-arcane);
+  background-color: var(--color-surface);
+}
+
+/* El distintivo de dictámenes (SPEC-10) también vive en los paneles. */
+.site-nav__group-menu .nav-link__badge {
+  display: block;
+  margin: 0 var(--space-ink-2) var(--space-ink-1);
+  padding: 0 0.45rem;
+  border: 1px solid var(--color-gold-arcane-dim);
+  border-radius: var(--radius-scroll);
+  color: var(--color-gold-arcane);
+  font-size: var(--font-size-ink-small);
+  line-height: 1.4;
+}
+
+.site-nav__group-menu .nav-link__badge[data-count] {
+  display: block;
+}
+
+/* Modo plano (RF-16.5): por debajo del quiebre rigen los enlaces sueltos
+   de RF-02.4; los grupos no existen en el DOM y aquí no se visten. */
+.site-nav__links--flat {
+  flex-wrap: wrap;
+}
+
+/* NOTA: el colapso por dominio (max-width: 1023.9px) se declara MÁS ABAJO,
+   después de la regla base de .site-nav__toggle, para que la del medio
+   gane por cascada. Ver la sección «El colapso arcano arranca donde acaban
+   los dominios». */
+
 .site-nav__links a {
   display: inline-flex;
   align-items: center;
@@ -299,46 +449,30 @@ body {
     padding-inline: var(--space-ink-3);
   }
 
-  /* Enlaces colapsados: ocultos hasta abrir el menú (nodos viven en DOM). */
-  .site-nav__links {
-    display: none;
-
-    /* Al abrirse: panel vertical sobre la cabecera, ancho completo y scroll contenido. */
-    position: absolute;
-    top: 100%;
-    inset-inline: 0;
-    max-height: calc(100vh - 100%);
-    max-height: calc(100dvh - 100%);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
-    flex-direction: column;
-    align-items: stretch;
-    padding: var(--space-ink-2) var(--space-ink-3) var(--space-ink-3);
-    background-color: var(--color-surface);
-    border-bottom: var(--border-ink-strong);
-    box-shadow: var(--shadow-arcane);
+  /* La MARCA cede en la franja estrecha (SPEC-16). Medido: «Grimorio
+     Interactivo» a 20 px con tracking de sello ocupa 270 px, y sumada al
+     distintivo (216 px) empuja el botón ☰ fuera de una pantalla de 390 px
+     (quedaba en x=518 sobre un nav de 373). En móvil la marca es un
+     ancla, no un titular: baja al tamaño del cuerpo y, si aún así no
+     cabe, se trunca con elipsis. La versión larga sigue siendo el texto
+     del enlace, así que la identidad no se pierde para lectores ni para
+     quien busca con Ctrl+F. */
+  .site-nav__brand {
+    font-size: var(--font-size-ink-base);
+    letter-spacing: 0;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Estado ABIERTO del menú arcano (gobierno de main.js). */
-  .site-nav__links[data-open="true"] {
-    display: flex;
-  }
-
-  .site-nav__links a {
-    justify-content: center;         /* Enlaces centrados, ancho completo. */
-    border-bottom: var(--border-ink);
-  }
-
-  .site-nav__links a:last-child {
-    border-bottom: none;
-  }
-
-  /* El botón del menú arcano entra en escena, táctil y visible. */
-  .site-nav__toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  /* El distintivo NO cede: lleva la efigie, que es identidad y no adorno.
+     Medido: con el distintivo comprimiéndose, la efigie caía a 8 px y se
+     desbordaba fuera de su contenedor. Si algo tiene que truncarse en
+     móvil, es el alias —que aun así conserva su nombre accesible
+     íntegro—, nunca la efigie. */
+  .site-nav__session {
+    flex: 0 0 auto;
   }
 
   /* La rejilla se compacta sin romperse en 320px. */
@@ -361,5 +495,79 @@ body {
 
   .spell-grid {
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+/* ---------------------------------------------------------------------
+   El colapso arcano de la cabecera arranca donde ACABAN los dominios.
+   ---------------------------------------------------------------------
+   El componente cambia de disposición a 1024 px (RF-16.5), así que el CSS
+   debe colapsar en el MISMO punto: si el botón ☰ apareciese más tarde,
+   la franja entre ambos quiebres mostraría los diez enlaces sueltos
+   desparramados y sin forma de recogerlos. Una sola fuente de verdad para
+   el quiebre, y el DOM y el CSS de acuerdo.
+
+   Este bloque va DESPUÉS de las reglas base a propósito: en CSS gana la
+   última regla de igual especificidad, y el botón ☰ nace oculto arriba.
+   --------------------------------------------------------------------- */
+@media (max-width: 1023.9px) {
+  .site-nav__links {
+    display: none;
+
+    /* Al abrirse: panel vertical sobre la cabecera, ancho completo. */
+    position: absolute;
+    top: 100%;
+    inset-inline: 0;
+    max-height: calc(100dvh - 100%);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-ink-2) var(--space-ink-3) var(--space-ink-3);
+    background-color: var(--color-surface);
+    border-bottom: var(--border-ink-strong);
+    box-shadow: var(--shadow-arcane);
+  }
+
+  .site-nav__links[data-open='true'] {
+    display: flex;
+  }
+
+  .site-nav__links a {
+    justify-content: center;
+    border-bottom: var(--border-ink);
+  }
+
+  .site-nav__links a:last-child {
+    border-bottom: none;
+  }
+
+  /* Fuera del escritorio no hay dominios: nada de flechas ni submenús. */
+  .site-nav__group-trigger::after {
+    content: none;
+  }
+
+  .site-nav__toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Menos movimiento: los microgestos de la cabecera se aquietan
+   (SPEC-16, RNF-16.6; coherente con RF-08.5).
+   --------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .site-nav__group-trigger,
+  .site-nav__group-trigger::after,
+  .site-nav__group-menu a {
+    transition: none;
+  }
+
+  .site-nav__group-trigger[aria-expanded='true']::after {
+    transform: none;
   }
 }

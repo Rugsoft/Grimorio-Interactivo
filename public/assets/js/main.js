@@ -206,6 +206,19 @@ export function createGrimoireApp(options = {}) {
 
   const elementFactory = (tagName) => documentRef.createElement(tagName);
 
+  /**
+   * SPEC-16 (RF-16.5): ¿hay ancho para los dominios de la cabecera?
+   * Sin matchMedia (o sin window inyectado, como en arneses) se degrada a
+   * la disposición agrupada, que es la de escritorio y la que el CSS viste
+   * por omisión.
+   * @param {Window} [windowCandidate] Ventana consultable.
+   * @returns {boolean} true si el viewport alcanza el quiebre de 1024 px.
+   */
+  function isWideViewport(windowCandidate = windowRef) {
+    if (typeof windowCandidate?.matchMedia !== 'function') return true;
+    return windowCandidate.matchMedia('(min-width: 1024px)').matches === true;
+  }
+
   /** Estado único de la aplicación (plan 4.1). */
   const store = createStore();
 
@@ -226,6 +239,16 @@ export function createGrimoireApp(options = {}) {
    */
   let unsubscribeSessionWatch = null;
   let navbarSessionFlag = false;
+
+  /**
+   * SPEC-16 (RF-16.5): el oyente de viewport que conmuta la cabecera entre
+   * la disposición agrupada (escritorio) y la lista plana (pantalla estrecha).
+   * Se guardan la consulta y su manejador para poder soltar el oyente en
+   * destroy() sin dejar un matchMedia colgando.
+   */
+  let wideViewportQuery = null;
+  let handleViewportBreak = null;
+  let wideViewportQueryUsesListenerApi = false;
   let detailModal = null;
   let accessModal = null;
   let sessionBadge = null;
@@ -1321,9 +1344,33 @@ export function createGrimoireApp(options = {}) {
       userRole: navbarRole,
       onNavigate: (viewName) => navigate(viewName),
       onReservedAction: (action) => handleReservedAction(action),
+      // SPEC-16 (Tarea 1, RF-16.5): la disposición nace del viewport real.
+      // Sin esto la cabecera se agruparía también en el móvil, donde los
+      // destinos cuelgan de submenús y quedarían inalcanzables.
+      layout: isWideViewport(windowRef) ? 'grouped' : 'flat',
       elementFactory,
     });
     navbar.render();
+
+    // SPEC-16 (RF-16.5): al cruzar el quiebre de 1024 px la cabecera cambia
+    // de disposición EN CALIENTE. El oyente se retira en destroy() para no
+    // dejar un matchMedia colgando tras el desmontaje.
+    wideViewportQuery = typeof windowRef?.matchMedia === 'function'
+      ? windowRef.matchMedia('(min-width: 1024px)')
+      : null;
+    if (wideViewportQuery !== null) {
+      handleViewportBreak = (mediaEvent) => {
+        navbar?.setLayout?.(mediaEvent.matches ? 'grouped' : 'flat');
+      };
+      if (typeof wideViewportQuery.addEventListener === 'function') {
+        wideViewportQuery.addEventListener('change', handleViewportBreak);
+        wideViewportQueryUsesListenerApi = true;
+      } else if (typeof wideViewportQuery.addListener === 'function') {
+        // API antigua (WebKit y Safari previos): mismo contrato, otro nombre.
+        wideViewportQuery.addListener(handleViewportBreak);
+        wideViewportQueryUsesListenerApi = false;
+      }
+    }
 
     unsubscribeSessionWatch = store.subscribe((nextState) => {
       const nextFlag = nextState.isAuthenticated === true;
@@ -1420,6 +1467,16 @@ export function createGrimoireApp(options = {}) {
       windowOathSealedListener = false;
     }
     navbar?.destroy?.();
+    // SPEC-16: el oyente de viewport se baja con el componente.
+    if (wideViewportQuery !== null && handleViewportBreak !== null) {
+      if (wideViewportQueryUsesListenerApi && typeof wideViewportQuery.removeEventListener === 'function') {
+        wideViewportQuery.removeEventListener('change', handleViewportBreak);
+      } else if (typeof wideViewportQuery.removeListener === 'function') {
+        wideViewportQuery.removeListener(handleViewportBreak);
+      }
+    }
+    wideViewportQuery = null;
+    handleViewportBreak = null;
     detailModal?.destroy?.();
     accessModal?.destroy?.();
     historyManager?.destroy?.();

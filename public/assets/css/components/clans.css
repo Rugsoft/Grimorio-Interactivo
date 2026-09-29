@@ -190,6 +190,44 @@
   position: relative;
 }
 
+/* La franja estrecha (SPEC-16, Tarea 3): en móvil el distintivo se recoge
+   al ANCHO DISPONIBLE en vez de al ancho de su contenido. Sin esto, un
+   alias largo empuja el botón ☰ fuera de la pantalla —medido: el toggle
+   quedaba en x=439 sobre un nav de 373 px—. El nombre accesible conserva
+   la identidad íntegra y el desplegable la muestra entera, así que el
+   truncado es solo visual y el texto sigue disponible para quien lo
+   necesite (tooltip nativo del navegador y lectores de pantalla). */
+@media (max-width: 767.9px) {
+  .user-profile {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .user-profile > button {
+    min-width: 0;
+    flex: 0 1 auto;
+    max-width: 5.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* La efigie NO cede: es el ancla mínima del distintivo y su marca de
+     identidad. Sin este flex-shrink: 0, el alias la comprimía hasta los
+     8 px medidos a 390 px y el sello rúnico quedaba ilegible. */
+  .user-profile__avatar,
+  .user-profile__avatar-seal {
+    flex-shrink: 0;
+  }
+
+  /* El sello del linaje jurado se oculta en la franja: con la efigie ya
+     presente, es información redundante que empuja el ancho. Sigue en el
+     DOM y en el nombre accesible del desplegable. */
+  .user-profile__seal {
+    display: none;
+  }
+}
+
 /* Conmutador del distintivo (#userProfileToggle): puerta del menú que
    consume el Kit de Controles (SPEC-02 RF-08), variante de filo. */
 .user-profile > button {
@@ -224,15 +262,30 @@
 /* Menú desplegable (#userProfileMenu): pergamino de obsidiana que
    emerge bajo el distintivo; oculto mientras aria-hidden lo declare. */
 .user-profile ul {
+  position: static;
+  margin: 0;
+  padding: var(--space-ink-2);
+  list-style: none;
+}
+
+.user-profile ul[aria-hidden='true'] {
+  display: none;
+}
+
+/* El PANEL del desplegable: un solo pergamino que contiene el rótulo de
+   identidad y el menú. Antes cada uno era un absoluto y había que
+   sincronizar dos anclajes a mano —con el resultado de que se solapaban
+   131 px—. Al ser el rótulo y el menú hermanos DENTRO del panel, el
+   apilado es estructural: no hay nada que sincronizar.
+   SPEC-16, RF-17.2. */
+.user-profile__panel {
   position: absolute;
   top: calc(100% + var(--space-ink-1));
   right: 0;
   z-index: var(--z-modal-access);
 
   min-width: 16rem;
-  margin: 0;
-  padding: var(--space-ink-2);
-  list-style: none;
+  box-sizing: border-box;
 
   border: var(--border-ink-strong);
   border-radius: var(--radius-seal);
@@ -240,8 +293,25 @@
   box-shadow: var(--shadow-arcane);
 }
 
-.user-profile ul[aria-hidden='true'] {
+/* Recoligido: el panel entero se repliega con él. */
+.user-profile__panel:not([data-open='true']) {
   display: none;
+}
+
+/* Rótulo de identidad: es donde vive ahora el linaje jurado y la
+   hermandad, que la cabecera ya no muestra. NO es una opción del menú —no
+   es un menuitem— sino el rótulo de quien lee esas opciones, y por eso es
+   hermano del <ul> y no hijo suyo: un <ul role="menu"> solo admite
+   <li role="none"> con su menuitem dentro. */
+.user-profile__identity {
+  padding: var(--space-ink-2) var(--space-ink-3);
+  border-bottom: var(--border-ink);
+
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  line-height: var(--line-height-parchment);
 }
 
 /* Opciones del menú: botones fantasma del Kit a ancho completo. */

@@ -31,6 +31,12 @@
  * y luce el distintivo «Tienes dictámenes a la espera», alimentado por el
  * contador del Endpoint 5 vía setVestibuleBadgeCount(). Es SOLO INFORMATIVO:
  * el enlace navega siempre — el distintivo jamás bloquea ni intercepta.
+ *
+ * SPEC-16 (enmienda de RF-02.1, Tarea 1): la cabecera agrupa los destinos en
+ * tres dominios + «Inicio» suelto cuando hay ancho de escritorio, y conserva
+ * la lista plana de RF-02.4 por debajo de 1024 px. La agrupación es de
+ * PRESENTACIÓN: los diez `data-view` de NAV_LINKS no se tocan, de modo que
+ * cualquier consumidor del contrato sigue encontrando los mismos destinos.
  */
 
 /** Enlaces persistentes de la cabecera (orden del plan, RF-02.1). */
@@ -63,6 +69,54 @@ export const VISITOR_LINK_ACTIONS = Object.freeze({
   openCreator: 'openCreator',
 });
 
+/** Índice `view -> enlace` para que los grupos NUNCA dupliquen ni pierdan destinos. */
+const NAV_LINK_INDEX = new Map(NAV_LINKS.map((navLink) => [navLink.view, navLink]));
+
+/**
+ * Resuelve una lista de vistas a enlaces reales de NAV_LINKS. Un `view`
+ * desconocido es un error de programme en el acto, no un destino perdido en
+ * silencio: la grouping jamais puede tragarse un destino.
+ */
+function resolveLinks(views) {
+  return Object.freeze(views.map((view) => {
+    const link = NAV_LINK_INDEX.get(view);
+    if (link === undefined) {
+      throw new Error(`NAV_GROUPS declara la vista desconocida «${view}»`);
+    }
+    return link;
+  }));
+}
+
+/**
+ * Los tres dominios de la cabecera (SPEC-16, RF-16.2).
+ *
+ * El orden de los grupos codifica el orden del DISCURSO, no el de los datos:
+ * primero se lee (lo que el santuario ya sabe), después se pertenece (los
+ * linajes del lector) y por último se trabaja (las herramientas del oficio).
+ *
+ * «Inicio» permanece como grupo suelto de un solo destino: sin submenú, su
+ * rótulo navega directamente (caso límite 2 de la SPEC-16). La Torre de
+ * Deliberación, cuando el rol la concede, se aloja en «Sala de Trabajo»
+ * (RF-16.7) porque es una herramienta del oficio, no un lugar de lectura.
+ */
+export const NAV_GROUPS = Object.freeze([
+  Object.freeze({ id: 'inicio', label: 'Inicio', links: resolveLinks(['landing']) }),
+  Object.freeze({ id: 'biblioteca', label: 'Biblioteca', links: resolveLinks(['library', 'collection', 'codex']) }),
+  Object.freeze({ id: 'linajes', label: 'Linajes', links: resolveLinks(['clans', 'vestibule']) }),
+  Object.freeze({ id: 'oficio', label: 'Sala de Trabajo', links: resolveLinks(['simulator', 'creator', 'experimentalHall', 'auditLog']) }),
+]);
+
+/** Modos de disposición de la cabecera (SPEC-16, RF-16.1 y RF-16.5). */
+export const NAV_LAYOUTS = Object.freeze({ GROUPED: 'grouped', FLAT: 'flat' });
+
+/** Prefijo de id de los submenús de grupo (contrato estable para aria-controls). */
+const GROUP_MENU_ID_PREFIX = 'navGroupMenu_';
+
+/** Id del panel de un grupo: el rótulo lo declara en aria-controls. */
+export function navGroupMenuId(groupId) {
+  return `${GROUP_MENU_ID_PREFIX}${groupId}`;
+}
+
 /**
  * Fábrica del componente de navegación.
  *
@@ -70,11 +124,14 @@ export const VISITOR_LINK_ACTIONS = Object.freeze({
  * @param {object} componentOptions Contratos y fábricas:
  *   - isAuthenticated: ¿hay vínculo activo (rol >= editor)? Bandera INICIAL:
  *     el orquestador la mantiene viva con setSession().
+ *   - userRole: rol técnico del usuario autenticado.
  *   - onNavigate(view): navegación pública a una vista de la SPA.
  *   - onReservedAction(action): interceptación — abrir «Cruzar el Umbral».
+ *   - layout (opcional): 'grouped' (por defecto) o 'flat' (SPEC-16 RF-16.5).
  *   - elementFactory (opcional): fábrica de elementos (por defecto
  *     document.createElement; las pruebas inyectan la suya).
- * @returns {object} { render, setSession, destroy, closeMobileMenu, handleMenuKeydown }.
+ * @returns {object} { render, setSession, destroy, closeMobileMenu,
+ *   handleMenuKeydown, setVestibuleBadgeCount, setLayout, closeGroupMenu }.
  */
 export function createNavbarComponent(navRoot, componentOptions) {
   const {
@@ -82,6 +139,7 @@ export function createNavbarComponent(navRoot, componentOptions) {
     userRole = null,
     onNavigate,
     onReservedAction,
+    layout = NAV_LAYOUTS.GROUPED,
     elementFactory = (tagName) => document.createElement(tagName),
   } = componentOptions;
 
@@ -98,6 +156,13 @@ export function createNavbarComponent(navRoot, componentOptions) {
   let toggleButton = null;
   let menuIsOpen = false;
 
+  /** Disposición viva de la cabecera (SPEC-16): el orquestador la cambia
+   *  con matchMedia al cruzar el quiebre de 1024 px. */
+  let currentLayout = layout === NAV_LAYOUTS.FLAT ? NAV_LAYOUTS.FLAT : NAV_LAYOUTS.GROUPED;
+
+  /** Id del grupo cuyo submenú está desplegado (null = ninguno). */
+  let openGroupId = null;
+
   /** Guardia de binding: los re-renders no apilan listeners duplicados. */
   let shellListenersBound = false;
 
@@ -110,6 +175,14 @@ export function createNavbarComponent(navRoot, componentOptions) {
 
   /** Elemento del distintivo una vez renderizado. */
   let vestibuleBadgeElement = null;
+
+  /** Marca el nodo como escuchable en el barrido de destroy(). */
+  function trackListener(node) {
+    mountedNodes.add(node);
+  }
+
+  /** Nodos con listeners vivos, para la baja limpia de destroy(). */
+  const mountedNodes = new Set();
 
   /**
    * Repinta el distintivo del acceso al Vestíbulo. Idempotente: sin cambio
@@ -145,6 +218,7 @@ export function createNavbarComponent(navRoot, componentOptions) {
     } else if (targetView !== null) {
       // Navegación pública (o Creador ya autenticado): la vista cierra el menú.
       closeMobileMenu();
+      closeGroupMenu();
       onNavigate?.(targetView);
     }
   }
@@ -193,80 +267,257 @@ export function createNavbarComponent(navRoot, componentOptions) {
   }
 
   /**
-   * Escape sobre la navegación recoge el menú (accesibilidad, RNF-03).
+   * Recoge el submenú de grupo desplegado y devuelve el foco a su rótulo
+   * (SPEC-16, RF-16.4). Sin grupo abierto es un no-op: el foco no debe saltar
+   * a ninguna parte si el usuario solo estaba escribiendo en la Biblioteca.
+   */
+  function closeGroupMenu(options = {}) {
+    if (openGroupId === null) return;
+    const groupIdBeingClosed = openGroupId;
+    openGroupId = null;
+
+    for (const trigger of findAllByClass(linksList, 'site-nav__group-trigger')) {
+      if (trigger.getAttribute('data-group') !== groupIdBeingClosed) continue;
+      trigger.setAttribute('aria-expanded', 'false');
+      const panel = findById(linksList, navGroupMenuId(groupIdBeingClosed));
+      if (panel !== null) {
+        panel.setAttribute('aria-hidden', 'true');
+        panel.removeAttribute('data-open');
+      }
+      if (options.restoreFocus === true) {
+        trigger.focus?.();
+      }
+    }
+  }
+
+  /**
+   * Escape sobre la navegación recoge el submenú si hay uno abierto, y si no
+   * el menú móvil, devolviendo el foco al control que los abrió (RNF-03).
    * @param {KeyboardEvent} keydownEvent Evento de teclado del nav.
    */
   function handleMenuKeydown(keydownEvent) {
-    if (keydownEvent.key === 'Escape') {
-      closeMobileMenu();
-      toggleButton?.focus();
+    if (keydownEvent.key !== 'Escape') return;
+    // La prioridad es el submenú: es lo que el usuario acaba de abrir.
+    if (openGroupId !== null) {
+      closeGroupMenu({ restoreFocus: true });
+      return;
+    }
+    closeMobileMenu();
+    toggleButton.focus();
+  }
+
+  /**
+   * Clic o teclado sobre el rótulo de un grupo (SPEC-16, RF-16.3):
+   * despliega su submenú; si ya estaba desplegado, navega al primer
+   * destino del grupo — un rótulo que solo abre y cierra obliga a dos
+   * gestos para llegar a nada.
+   */
+  function handleGroupTriggerActivation(activationEvent) {
+    const trigger = activationEvent.currentTarget ?? activationEvent.target;
+    if (activationEvent.type === 'keydown' && activationEvent.key !== 'Enter' && activationEvent.key !== ' ') {
+      return;
+    }
+    if (activationEvent.type === 'keydown') {
+      activationEvent.preventDefault();
+    }
+
+    const groupId = trigger.getAttribute('data-group');
+    const panelId = trigger.getAttribute('aria-controls');
+    const panel = panelId === null ? null : findById(linksList, panelId);
+
+    if (openGroupId === groupId) {
+      const firstLink = panel === null ? null : firstAnchorIn(panel);
+      if (firstLink !== null) {
+        trigger.setAttribute('aria-expanded', 'false');
+        if (panel !== null) {
+          panel.setAttribute('aria-hidden', 'true');
+          panel.removeAttribute('data-open');
+        }
+        openGroupId = null;
+        activateLink(firstLink);
+        return;
+      }
+    }
+
+    closeGroupMenu();
+    openGroupId = groupId;
+    trigger.setAttribute('aria-expanded', 'true');
+    if (panel !== null) {
+      panel.setAttribute('aria-hidden', 'false');
+      panel.setAttribute('data-open', 'true');
+    }
+  }
+
+  /**
+   * Forja un enlace de navegación con su distintivo de dictámenes cuando le
+   * corresponde (SPEC-10). Mismo contrato de siempre: `data-view`,
+   * `data-action` y el hash de ruta.
+   */
+  function buildLinkElement(navLink) {
+    const linkElement = elementFactory('a');
+    linkElement.setAttribute('href', navLink.hash);
+    linkElement.setAttribute('data-view', navLink.view);
+    linkElement.textContent = navLink.label;
+    // Muelle de rol de menú (WCAG/APG): el rol vive en el enlace.
+    linkElement.setAttribute('role', 'menuitem');
+    linkElement.setAttribute('tabindex', '-1');
+
+    if (navLink.action !== undefined) {
+      // Acción reservada: señal explícita para store/orquestador (RF-05.2).
+      linkElement.setAttribute('data-action', navLink.action);
+      linkElement.setAttribute('data-reserved', 'true');
+    }
+
+    if (navLink.badge === 'vestibuleBadge') {
+      // Distintivo del rótulo (SPEC-10, RF-01.1): portador informático
+      // accesible; nace APAGADO y el orquestador lo enciende con datos.
+      const badgeElement = elementFactory('span');
+      badgeElement.setAttribute('class', 'nav-link__badge');
+      badgeElement.setAttribute('data-badge', 'vestibuleBadge');
+      badgeElement.setAttribute('role', 'status');
+      linkElement.appendChild(badgeElement);
+      vestibuleBadgeElement = badgeElement;
+      renderVestibuleBadge();
+    }
+
+    linkElement.addEventListener('click', handleLinkActivation);
+    linkElement.addEventListener('keydown', handleLinkActivation);
+    trackListener(linkElement);
+    return linkElement;
+  }
+
+  /**
+   * Forja un <li> por cada enlace (modo plano de RF-02.4).
+   */
+  function buildFlatLinkItem(navLink) {
+    const item = elementFactory('li');
+    item.setAttribute('class', 'site-nav__item');
+    item.setAttribute('role', 'none');
+    item.appendChild(buildLinkElement(navLink));
+    return item;
+  }
+
+  /**
+   * Forja un grupo de dominio: rótulo, panel y sus enlaces (SPEC-16).
+   * Un grupo de un solo destino NO lleva submenú (caso límite 2).
+   */
+  function buildGroupItem(group, extraLinks = []) {
+    const groupLinks = [...group.links, ...extraLinks];
+    const item = elementFactory('li');
+    item.setAttribute('class', 'site-nav__group');
+    item.setAttribute('data-group', group.id);
+
+    // Grupo de un solo destino: el rótulo ES el enlace (sin clic inútil).
+    if (groupLinks.length === 1) {
+      const linkElement = buildLinkElement(groupLinks[0]);
+      linkElement.setAttribute('class', 'site-nav__link site-nav__group-link');
+      item.appendChild(linkElement);
+      return item;
+    }
+
+    const menuId = navGroupMenuId(group.id);
+
+    const trigger = elementFactory('button');
+    trigger.setAttribute('type', 'button');
+    trigger.setAttribute('class', 'site-nav__group-trigger');
+    trigger.setAttribute('data-group', group.id);
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-controls', menuId);
+    trigger.textContent = group.label;
+    trigger.addEventListener('click', handleGroupTriggerActivation);
+    trigger.addEventListener('keydown', handleGroupTriggerActivation);
+    trackListener(trigger);
+    item.appendChild(trigger);
+
+    const panel = elementFactory('ul');
+    panel.setAttribute('id', menuId);
+    panel.setAttribute('class', 'site-nav__group-menu');
+    panel.setAttribute('role', 'menu');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.setAttribute('aria-label', group.label);
+    for (const link of groupLinks) {
+      const linkItem = elementFactory('li');
+      linkItem.setAttribute('role', 'none');
+      linkItem.appendChild(buildLinkElement(link));
+      panel.appendChild(linkItem);
+    }
+    item.appendChild(panel);
+
+    return item;
+  }
+
+  /**
+   * Los enlaces condicionales que el rol vigente concede, y el grupo que
+   * los aloja (SPEC-16, RF-16.7). La Torre de Deliberación va a «Sala de
+   * Trabajo» porque es herramienta del oficio, no lugar de lectura.
+   */
+  function conditionalLinksForGroup(groupId) {
+    if (currentUserRole === null || currentUserRole === undefined) return [];
+    return CONDITIONAL_NAV_LINKS.filter(
+      (condLink) => condLink.requiredRoles.includes(currentUserRole) && navGroupForConditional(condLink) === groupId,
+    );
+  }
+
+  /**
+   * Descubre los enlaces que el render actual debe pintar, agrupados o
+   * planos. Se calcula una vez por render para que `setSession` y `render`
+   * no puedan discrepar sobre qué destinos existen.
+   */
+  function buildDestinationPlan() {
+    const conditionalLinks = currentUserRole === null || currentUserRole === undefined
+      ? []
+      : CONDITIONAL_NAV_LINKS.filter((condLink) => condLink.requiredRoles.includes(currentUserRole));
+    return conditionalLinks;
+  }
+
+  /**
+   * Vacía la lista de forma nativa cuando se puede; el splicing cubre el
+   * DOM simulado de los arneses, que carece de replaceChildren.
+   */
+  function clearLinksList() {
+    if (linksList === null) return;
+    if (typeof linksList.replaceChildren === 'function') {
+      linksList.replaceChildren();
+      return;
+    }
+    for (const childNode of [...(linksList.children ?? [])]) {
+      if (typeof childNode.remove === 'function') {
+        childNode.remove();
+      } else {
+        const childIndex = linksList.children.indexOf(childNode);
+        if (childIndex !== -1) linksList.children.splice(childIndex, 1);
+      }
     }
   }
 
   /**
    * Pinta los enlaces persistentes y cablea el botón del menú.
-   * Idempotente: puede relanzarse al cambiar el rol (visitante/autenticado).
+   * Idempotente: puede relanzarse al cambiar el rol (visitante/autenticado)
+   * o la disposición (escritorio/móvil).
    */
   function render() {
     linksList = linksList ?? navRoot.querySelector('#navLinks');
     toggleButton = toggleButton ?? navRoot.querySelector('#navToggle');
 
-    // Reconstrucción limpia de la lista (el rol puede haber cambiado).
-    // replaceChildren() es la vía nativa segura: HTMLCollection.length es
-    // de solo lectura en el DOM real; el simulado carece del método.
-    if (typeof linksList.replaceChildren === 'function') {
-      linksList.replaceChildren();
+    // Reconstrucción limpia (el rol y la disposición pueden haber cambiado).
+    clearLinksList();
+    openGroupId = null;
+
+    const conditionalLinks = buildDestinationPlan();
+
+    if (currentLayout === NAV_LAYOUTS.FLAT) {
+      // RF-02.4: por debajo del quiebre, la lista completa y plana de siempre.
+      linksList.setAttribute('class', 'site-nav__links site-nav__links--flat');
+      const flatLinks = [...NAV_LINKS, ...conditionalLinks];
+      for (const navLink of flatLinks) {
+        linksList.appendChild(buildFlatLinkItem(navLink));
+      }
     } else {
-      // DOM simulado: remove() puede no existir; el splicing garantiza el
-      // vaciado aunque el arnés carezca del método nativo.
-      for (const childNode of [...(linksList.children ?? [])]) {
-        if (typeof childNode.remove === 'function') {
-          childNode.remove();
-        } else {
-          const childIndex = linksList.children.indexOf(childNode);
-          if (childIndex !== -1) linksList.children.splice(childIndex, 1);
-        }
+      // RF-16.2: tres dominios + «Inicio» suelto.
+      linksList.setAttribute('class', 'site-nav__links site-nav__groups');
+      for (const group of NAV_GROUPS) {
+        linksList.appendChild(buildGroupItem(group, conditionalLinksForGroup(group.id)));
       }
-    }
-
-    const activeLinks = [...NAV_LINKS];
-    if (currentUserRole !== null && currentUserRole !== undefined) {
-      for (const condLink of CONDITIONAL_NAV_LINKS) {
-        if (condLink.requiredRoles.includes(currentUserRole)) {
-          activeLinks.push(condLink);
-        }
-      }
-    }
-
-    for (const navLink of activeLinks) {
-      // Fábrica inyectable: el navegador usa document.createElement;
-      // las pruebas suministran su DOM simulado.
-      const linkElement = elementFactory('a');
-      linkElement.setAttribute('href', navLink.hash);
-      linkElement.setAttribute('data-view', navLink.view);
-      linkElement.textContent = navLink.label;
-
-      if (navLink.action !== undefined) {
-        // Acción reservada: señal explícita para store/orquestador (RF-05.2).
-        linkElement.setAttribute('data-action', navLink.action);
-        linkElement.setAttribute('data-reserved', 'true');
-      }
-
-      if (navLink.badge === 'vestibuleBadge') {
-        // Distintivo del rótulo (SPEC-10, RF-01.1): portador informático
-        // accesible; nace APAGADO y el orquestador lo enciende con datos.
-        const badgeElement = elementFactory('span');
-        badgeElement.setAttribute('class', 'nav-link__badge');
-        badgeElement.setAttribute('data-badge', 'vestibuleBadge');
-        badgeElement.setAttribute('role', 'status');
-        linkElement.appendChild(badgeElement);
-        vestibuleBadgeElement = badgeElement;
-        renderVestibuleBadge();
-      }
-
-      linkElement.addEventListener('click', handleLinkActivation);
-      linkElement.addEventListener('keydown', handleLinkActivation);
-      linksList.appendChild(linkElement);
     }
 
     if (toggleButton !== null && !shellListenersBound) {
@@ -307,15 +558,34 @@ export function createNavbarComponent(navRoot, componentOptions) {
     }
   }
 
+  /**
+   * Cambia la disposición de la cabecera (SPEC-16, RF-16.5). El orquestador
+   * la llama al cruzar el quiebre de 1024 px: en escritorio rigen los grupos,
+   * en pantalla estrecha la lista plana de RF-02.4.
+   * @param {string} nextLayout 'grouped' | 'flat'.
+   */
+  function setLayout(nextLayout) {
+    const normalized = nextLayout === NAV_LAYOUTS.FLAT ? NAV_LAYOUTS.FLAT : NAV_LAYOUTS.GROUPED;
+    if (normalized === currentLayout) return;
+    currentLayout = normalized;
+    if (linksList !== null) {
+      render();
+    }
+  }
+
   /** Baja limpia de listeners del componente. */
   function destroy() {
-    for (const linkElement of linksList?.children ?? []) {
-      linkElement.removeEventListener('click', handleLinkActivation);
-      linkElement.removeEventListener('keydown', handleLinkActivation);
+    for (const node of mountedNodes) {
+      node.removeEventListener?.('click', handleLinkActivation);
+      node.removeEventListener?.('keydown', handleLinkActivation);
+      node.removeEventListener?.('click', handleGroupTriggerActivation);
+      node.removeEventListener?.('keydown', handleGroupTriggerActivation);
     }
+    mountedNodes.clear();
     toggleButton?.removeEventListener('click', toggleMobileMenu);
     navRoot.removeEventListener('keydown', handleMenuKeydown);
     shellListenersBound = false;
+    openGroupId = null;
   }
 
   /**
@@ -337,7 +607,76 @@ export function createNavbarComponent(navRoot, componentOptions) {
     destroy,
     // Expuestos para pruebas y orquestador:
     closeMobileMenu,
+    closeGroupMenu,
     handleMenuKeydown,
     setVestibuleBadgeCount,
+    setLayout,
   };
+}
+
+/* ---------------------------------------------------------------------
+   Barridos sobre el DOM que funcionan en el navegador y en los DOM
+   simulados de los arneses (que carecen de querySelectorAll).
+   --------------------------------------------------------------------- */
+
+/**
+ * ¿El nodo porta la clase? El DOM real responde por classList; los DOM
+ * simulados de los arneses guardan las clases en `classes` (vía el setter
+ * `className`) o en el atributo `class` (vía setAttribute, que es la vía
+ * que usa este componente). Consultar los tres evita falsos negativos.
+ */
+function nodeHasClass(node, className) {
+  if (node?.classes?.has?.(className) === true) return true;
+  if (node?.classList?.contains?.(className) === true) return true;
+  const attributeClass = node?.getAttribute?.('class');
+  if (typeof attributeClass !== 'string' || attributeClass === '') return false;
+  return attributeClass.split(/\s+/).filter(Boolean).includes(className);
+}
+
+/** Primer descendiente que porta la clase dada. */
+function findByClass(root, className) {
+  for (const child of root?.children ?? []) {
+    if (nodeHasClass(child, className)) return child;
+    const found = findByClass(child, className);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
+/** Todos los descendientes que portan la clase dada. */
+function findAllByClass(root, className) {
+  const found = [];
+  for (const child of root?.children ?? []) {
+    if (nodeHasClass(child, className)) found.push(child);
+    found.push(...findAllByClass(child, className));
+  }
+  return found;
+}
+
+/** Descendiente con el id dado. */
+function findById(root, elementId) {
+  for (const child of root?.children ?? []) {
+    if (child.getAttribute?.('id') === elementId) return child;
+    const found = findById(child, elementId);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
+/** Primer enlace (<a>) del subárbol, en orden de documento. */
+function firstAnchorIn(root) {
+  for (const child of root?.children ?? []) {
+    if (child.tagName === 'A') return child;
+    const found = firstAnchorIn(child);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
+/**
+ * Casa un enlace condicional con el grupo que debe-lo alojar (SPEC-16,
+ * RF-16.7). La Torre de Deliberación es herramienta del oficio.
+ */
+function navGroupForConditional(condLink) {
+  return condLink.view === 'tower' ? 'oficio' : 'oficio';
 }

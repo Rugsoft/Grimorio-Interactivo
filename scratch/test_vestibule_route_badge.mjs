@@ -142,7 +142,19 @@ const navbar = createNavbarComponent(navRoot, {
 });
 navbar.render();
 
-const hermandadesLink = linksList.children.find((child) => child.getAttribute('data-view') === 'vestibule');
+// ADAPTACIÓN SPEC-16 (Tarea 1, riesgo nº1 de TASKS-16): con la cabecera
+// agrupada los enlaces ya no son hijos directos de la lista; el enlace de
+// «Hermandades» vive en el submenú del dominio «Linajes». El requisito
+// vigilado (el enlace existe y porta su distintivo) no cambia.
+const findLinkByView = (node, viewName) => {
+  for (const child of node.children ?? []) {
+    if (child.getAttribute('data-view') === viewName) return child;
+    const found = findLinkByView(child, viewName);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+};
+const hermandadesLink = findLinkByView(linksList, 'vestibule');
 assertCondition(hermandadesLink !== undefined, 'el enlace «Hermandades» se pinta en la lista de navegación');
 assertCondition(hermandadesLink?.getAttribute('href') === '#/vestibulo', 'el enlace apunta al hash canónico');
 const badgeCarrier = hermandadesLink?.children.find((child) => child.getAttribute('data-badge') === 'vestibuleBadge');
@@ -169,7 +181,14 @@ console.log('\n[4] Apagado al contemplar (RF-03.4) y reencendido idempotente');
 
 navbar.setVestibuleBadgeCount(0);
 assertCondition(badgeCarrier.textContent === '' && !badgeCarrier.hasAttribute('data-count'), 'al contemplar (0): el distintivo se APAGA sin dejar texto');
-assertCondition(hermandadesLink.parentNode === linksList, 'el enlace «Hermandades» sobrevive al apagado (sigue navegable)');
+// ADAPTACIÓN SPEC-16: el enlace ya no cuelga directamente de la lista, sino
+// del <li> de su dominio. Lo que este aserto vigila —que apagar el distintivo
+// NO arranque el enlace de la cabecera— sigue intacto: se comprueba que el
+// enlace continua en el árbol y dentro de la sección de navegación.
+assertCondition(
+  findLinkByView(linksList, 'vestibule') === hermandadesLink,
+  'el enlace «Hermandades» sobrevive al apagado (sigue navegable)',
+);
 
 navbar.setVestibuleBadgeCount(3);
 assertCondition(badgeCarrier.textContent.includes('3 dictámenes'), 'reencendido con 3: el ciclo apagado/encendido es repetible');

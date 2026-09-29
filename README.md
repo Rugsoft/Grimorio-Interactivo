@@ -58,7 +58,8 @@ specs/
 ├── 12-user-panel.spec.md                # Panel del Adepto: morada, efigie y bitácora
 ├── 13-mysql-dialect-parity.spec.md      # Paridad de dialecto MySQL/MariaDB (gemelos DDL)
 ├── 14-avatar-production-deployment.spec.md # La Efigie en producción (InfinityFree)
-└── 15-session-security-production-deployment.spec.md # Cookies HTTPS, procedencia y revocación
+├── 15-session-security-production-deployment.spec.md # Cookies HTTPS, procedencia y revocación
+└── 16-portal-composition-and-navigation.spec.md # Recomposición de portada y navegación agrupada (borrador)
 ```
 
 ### 🌌 1. Gran Portal y Navegación SPA Fluida (`#/`)
@@ -140,7 +141,8 @@ GrimorioInteractivo/
 │   ├── 01-portal-and-navigation.spec.md
 │   ├── 02-design-system-layout.spec.md
 │   ├── ...
-│   └── 15-session-security-production-deployment.spec.md
+│   ├── 15-session-security-production-deployment.spec.md
+│   └── 16-portal-composition-and-navigation.spec.md
 ├── public/                              # Raíz pública del servidor web
 │   ├── index.php                        # Front Controller y enrutador REST
 │   ├── index.html                       # Shell principal de la Single Page Application (SPA)

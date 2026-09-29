@@ -373,9 +373,24 @@ function buildApp(shell, { authClient, grimoireClient } = {}) {
   });
 }
 
-/** Enlaces del navbar identificados por data-view. */
+/**
+ * Enlaces del navbar identificados por data-view.
+ *
+ * ADAPTACIÓN SPEC-16 (Tarea 1, riesgo nº1 de TASKS-16): con la cabecera
+ * agrupada los enlaces ya no son hijos directos de la lista, viven en los
+ * <li> de cada dominio. El requisito vigilado («este enlace existe y
+ * está cableado») no cambia; baja a un barrido recursivo.
+ */
 function findNavLink(shell, viewName) {
-  return shell.linksList.children.find((link) => link.getAttribute('data-view') === viewName) ?? null;
+  const search = (node) => {
+    for (const child of node.children ?? []) {
+      if (child.getAttribute('data-view') === viewName) return child;
+      const found = search(child);
+      if (found !== null) return found;
+    }
+    return null;
+  };
+  return search(shell.linksList);
 }
 
 /** Botón del menú del badge por data-action. */
