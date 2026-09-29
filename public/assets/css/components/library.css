@@ -268,13 +268,25 @@
   gap: var(--space-ink-4);
 }
 
-.landing-view__featured,
-.landing-view__regent {
+.landing-view__featured {
   padding: var(--space-ink-4);
   border: var(--border-ink-strong);
   border-radius: var(--radius-seal);
   background-color: var(--color-bg-obsidian-surface);
   color: var(--color-text-primary);
+}
+
+/* La cinta del Regente NO comparte caja con los destacados (SPEC-16, RF-18.7,
+   remedio de D4). Antes los dos selectores iban agrupados y la cinta heredaba
+   un marco propio encima del marco que ya pinta `.clan-banner`: dos
+   encuadres anidados para una solapiece de información. Ahora la cinta no
+   pinta caja: hereda el marco de su contenedor y se separa con un pelo, que
+   es un divisor, no un marco. */
+.landing-view__regent {
+  padding-block: var(--space-ink-2);
+  border-block: var(--border-ink);
+  color: var(--color-text-primary);
+  text-align: center;
 }
 
 .landing-view__error {
@@ -290,13 +302,47 @@
 /* Hero del portal: apertura solemne con llamada a la consagración. */
 .landing-hero {
   display: grid;
-  gap: var(--space-ink-3);
+  gap: var(--space-ink-2);
   justify-items: center;
-  padding: var(--space-ink-6) var(--space-ink-4);
+  padding: var(--space-ink-4) var(--space-ink-4);
   border: var(--border-ink-strong);
   border-radius: var(--radius-seal);
   background-color: var(--color-bg-obsidian-elevated);
   text-align: center;
+}
+
+/* El título del héroe y el de la galería llevan el MISMO tratamiento que las
+   otras cinco vistas de título (SPEC-16, RF-18.2, remedio directo de D2). Antes
+   el héroe no tenía regla propia: heredaba el cuerpo del texto y competía en
+   la misma voz con el encabezado de la galería, que sí estaba vestido. Una
+   portada con dos voces de título no tiene título. */
+.landing-hero__title {
+  margin: 0;
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  line-height: 1.1;
+  text-align: center;
+}
+
+.landing-view__featured-title {
+  margin: 0 0 var(--space-ink-2);
+  color: var(--color-gold-arcane);
+  font-family: var(--font-arcane-title);
+  font-size: var(--font-size-title-page);
+  line-height: 1.1;
+}
+
+/* Una sola línea de presentación (RF-18.3). El texto largo anterior repetía
+   en prosa lo que la página ya muestra: los pergaminos están debajo y el CTA
+   dice «Consagrar Linaje». Una línea, y el aire hace el resto.
+   La frase mide 565 px medidos; un tope en `ch` la partía en dos por 12 px de
+   sobra, así que no hay tope: se la deja sola y en la franja estrecha
+   `text-wrap: balance` reparte el salto en líneas parejas en vez de dejar una
+   huérfana. Donde el navegador no lo sepa, el salto es el de siempre. */
+.landing-hero__intro {
+  margin: 0;
+  text-wrap: balance;
 }
 
 .landing-hero__cta {
@@ -350,4 +396,75 @@
   display: grid;
   justify-items: center;
   padding-block: var(--space-ink-3);
+}
+
+/* ---------------------------------------------------------------------
+   7. El Sello de Validación (SPEC-16, RF-18.4 y RF-18.5)
+   ---------------------------------------------------------------------
+   La firma del Gran Portal. Abre la portada y NO se repite en ninguna
+   otra superficie: el resto de la página se queda quieta (RF-18.4).
+
+   El marco es el MISMO lenguaje que emplean los sellos de los hechizos
+   validados (SPEC-02 RF-07): disco de tinta, anillo de oro y muescas
+   marfil. Reutilizarlo —en vez de inventar una segunda geometría— es lo
+   que hace que la firma signifique algo: este tomo pasa por el mismo
+   ordeal que los conjuros que contiene.
+
+   El component es landingSigilComponent.js; aquí solo se viste.
+   --------------------------------------------------------------------- */
+
+/* La firma se lee como un SELLO estampado, no como un membrete: heráldica y
+   leyenda en la misma línea, centradas en la caja. Antes ocupaba dos filas
+   (109 px de alto) y empujaba al héroe hacia el borde inferior del viewport;
+   la banda ancha de ahora deja que la tesis entre sin desplazamiento
+   (RF-18.3). */
+.landing-sigil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-ink-2);
+  justify-self: center;
+
+  padding: var(--space-ink-1) var(--space-ink-4);
+  border: 1px solid var(--sigil-ring-active);
+  border-radius: var(--radius-seal);
+  background-color: var(--color-bg-obsidian-surface);
+  text-align: center;
+}
+
+/* El disco forjado por runeSealComponent; si la heráldica degrada
+   (caso límite 6), el marco de texto sigue en pie. */
+.landing-sigil__heraldry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+}
+
+.landing-sigil__seal {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* La leyenda es el PLUS del sello: sin ella sería un adorno heráldico
+   más. En versalitas de sello, sobre la tinta, con las muescas marfil
+   que usa el resto de la heráldica. */
+.landing-sigil__legend {
+  color: var(--sigil-ring-active);
+  font-family: var(--font-arcane-seal);
+  font-size: var(--font-size-ink-small);
+  letter-spacing: var(--letter-spacing-seal);
+  white-space: nowrap;
+}
+
+/* Menos movimiento (RNF-16.6): la firma es estática por decisión de
+   diseño —es información, no espectáculo—, así que aquí no hay nada
+   que aquietar. Se declara de forma explícita para que quien añada un
+   gesto futuro no rompa el compromiso. */
+@media (prefers-reduced-motion: reduce) {
+  .landing-sigil {
+    transition: none;
+  }
 }

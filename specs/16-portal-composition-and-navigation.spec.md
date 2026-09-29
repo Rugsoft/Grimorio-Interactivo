@@ -2,7 +2,7 @@
 
 > **Constitución:** [`constitution.md`](../constitution.md) | **Directrices:** [`AGENTS.md`](../AGENTS.md)
 > **Espec madre:** [`specs/01-portal-and-navigation.spec.md`](01-portal-and-navigation.spec.md) (RF-01, RF-02, RF-06) · [`specs/02-design-system-layout.spec.md`](02-design-system-layout.spec.md) (§2 tokens, RF-06) · [`specs/07-clans-lineages.spec.md`](07-clans-lineages.spec.md) (Dominio semanal, Tarea 5.2) · [`specs/12-user-panel.spec.md`](12-user-panel.spec.md) (efigie de cabecera, RF-03.3)
-> **Estado:** RATIFICADA (2026-09-29) — Tareas 0, 1, 2 y 3 ejecutadas. Cabecera en **63 px y una sola fila**; distintivo de **493 → 216 px** con efigie por defecto forjando sello; **cero desbordamiento horizontal hasta 320 px**. Los 15 asertos rojos restantes son de RF-18 (Fase 2: la portada).
+> **Estado:** RATIFICADA (2026-09-29) — Tareas 0 a 6 ejecutadas. Cabecera en **63 px y una sola fila**; distintivo de **493 → 216 px** con efigie por defecto forjando sello; **cero desbordamiento horizontal hasta 320 px**; la portada **recompuesta** —firma → tesis → estado → destacados— con el título del héroe vestido del sistema, el CTA cerrando en y=372 sobre 900 px y el Regente reducido a **cinta de una línea: 435 → 89 px y cero marco**. Arnés propio **98/0**. Falta solo el cierre SDD (Tarea 7).
 > **Área:** Superficie de interfaz del Santuario (Dogma Vanilla, Artículo I)
 > **Naturaleza:** ENMIENDA de superficie. No altera ningún contrato de backend de SPEC-01, SPEC-02, SPEC-07 ni SPEC-12: solo*viste* lo que ya existe con una jerarquía que hoy no está.
 
@@ -17,7 +17,7 @@ Una verificación visual de la portada en navegador real (2026-09-29, viewport 1
 | D1 | La cabecera `position: sticky` mide **157 px** y reparte los enlaces en **tres filas** (`top` de los `li`: 8 / 56 / 104) | `.site-header` 1423×157; `.site-nav__links` solo 501 px de los 1423 disponibles |
 | D2 | `.landing-hero__title` (H1) y `.landing-view__featured-title` (H2) **no tienen ninguna regla CSS** en todo `public/assets/css`; se resuelven con el estilo de agente de usuario (`LoreReadable 700 24px`) | `grep` sin resultados; cómputo = 24 px, familia de cuerpo |
 | D3 | El avatar por defecto es un **cuadrado negro vacío** de 46×46 (`data-avatar-kind="default"`, `background-image: none`, sin contenido) | `rgb(36,32,28)` con borde `rgb(61,53,43)`, `innerHTML` vacío |
-| D4 | **Doble encuadre** en el bloque que abre la página: `.landing-view__regent` pinta borde y `.clan-banner__regent` pinta otro | Dos cajas concéntricas visibles; el Regente mide 313 px de alto |
+| D4 | **Doble encuadre** en el bloque que abre la página: `.landing-view__regent` pinta borde y `.clan-banner__regent` pinta otro | Dos cajas concéntricas visibles; el Regente mide 313 px de alto — **REMEDIADO** (Tarea 6: 435 → 89 px, cero marco) |
 | D5 | El CTA «Consagrar Linaje» **queda bajo el pliegue**: `.landing-hero` arranca en `top: 762` en un viewport de 900 | Botón no visible sin *scroll* |
 
 La causa raíz de D1 es aritmética, no estética: la marca ocupa 270 px y el distintivo de sesión **493 px** («Vestibulo7b — Linaje de las Sombras Abisales»), de modo que a la lista de enlaces —único bloque que puede escribirse— solo le quedan 501 px, y el `justify-content: space-between` de `layout.css` reparte el daño comprimiendo precisamente lo que debería ser flexible. El defecto de D2 es una laguna de cobertura: las otras cinco vistas de título del santuario (`library-view__title`, Códice, Creador, Panel, Salón) sí llevan Cinzel + oro + `--font-size-title-page`; la portada se salta el sistema visual en su primera palabra.
@@ -153,10 +153,11 @@ La causa raíz de D1 es aritmética, no estética: la marca ocupa 270 px y el di
 - [x] Los submenús abren, cierran con `Escape` y con la pérdida de foco, y devuelven el foco al rótulo.
 - [x] El distintivo de cabecera muestra el alias sin el linaje, con efigie visible; el desplegable declara la identidad completa. *(Medido: 216 px; rótulo «Vestibulo7b».)*
 - [x] `data-avatar-kind="default"` **no** produce un cuadro vacío: forja el ouroboros del Arcano Puro. *(Verificado: `<svg class="user-profile__avatar-seal">` dentro del nodo.)*
-- [ ] El `<h1>` del héroe computa `MedievalArcaneTitle` a `2.25rem` en oro, idéntico a `library-view__title`.
-- [ ] El CTA «Consagrar Linaje» es visible **sin desplazamiento** a 1440×900 con el Regente montado.
-- [ ] El orden de bloques en el DOM es: sello → héroe → cinta → destacados.
-- [ ] La cinta del Regente no pinta marco propio y mide **una sola línea** de contenido.
+- [x] La portada exhibe **un único** elemento de firma: el sello de validación, con SVG en línea y leyenda «Tomo validado». *(Verificado en navegador real: 44 px, Cinzel dorado; sin `getBBox`.)*
+- [x] El `<h1>` del héroe computa `MedievalArcaneTitle` a `2.25rem` en oro, idéntico a `library-view__title`. *(Medido: `36px`, `rgb(212, 169, 78)`.)*
+- [x] El CTA «Consagrar Linaje» es visible **sin desplazamiento** a 1440×900 con el Regente montado. *(Medido: cierra en y=372 sobre 900 px.)*
+- [x] El orden de bloques en el DOM es: sello → héroe → cinta → destacados. *(Medido en navegador real.)*
+- [x] La cinta del Regente no pinta marco propio y mide **una sola línea** de contenido. *(Medido: `border` 0 px en la ficha, 40 px de alto y una sola fila a 1440, 1024 y 800 px; a 390 px envuelve a dos filas sin desbordar.)*
 - [ ] Ninguna cadena visible contiene `data-view`, `data-action` ni una clave de linaje en camelCase.
 - [x] `scratch/audit_css_ghost_tokens.mjs` y los ocho arneses hermanos de `RNF-16.2` salen en verde. *(Verificado: guard «SIN tokens fantasma»; hermanos 20/0, 69/0, 62/0, 20/0, 37/0, 27/0, 27/0 y sonda exit 0.)*
 - [ ] `git diff --stat` no lista ningún fichero bajo `src/` ni `database/`.
@@ -178,6 +179,9 @@ La causa raíz de D1 es aritmética, no estética: la marca ocupa 270 px y el di
 | `.landing-view__featured-title` | `library.css` | **Añadido** — idem, nivel `h2` |
 | `.landing-view__regent` | `library.css` | Cinta compacta: sin marco, una línea |
 | `.landing-view__featured` | `library.css` | Conserva marco; sin doble caja |
+| `.clan-banner--compact` | `clans.css` | Raíz del blasón en variante de cinta |
+| `.clan-banner__regent--compact` | `clans.css` | Ficha del Regente reducida a una línea; sin marco |
+| `.clan-banner__proclamation:empty` | `clans.css` | La proclamación vacía no reserva hueco (RF-18.8) |
 
 **JS (nuevos exports)**
 
@@ -187,6 +191,8 @@ La causa raíz de D1 es aritmética, no estética: la marca ocupa 270 px y el di
 | `NAV_LAYOUTS` / `setLayout()` | `navbarComponent.js` | `grouped` (omisión) / `flat` — el orquestador lo conmuta al cruzar 1024 px (RESUELTO en Tarea 1) |
 | `navGroupMenuId()` | `navbarComponent.js` | Id estable del panel de un grupo, para `aria-controls` |
 | `createValidationSigilComponent` | **NUEVO** `landingSigilComponent.js` | Sello de validación del héros |
+| `CLAN_BANNER_VARIANTS` | `clanBannerComponent.js` | `heraldic` (omisión, la de SPEC-07) / `compact` (la cinta de RF-18.7) |
+| `CLAN_BANNER_COMPACT_CLASS` / `CLAN_BANNER_COMPACT_ROOT_CLASS` | `clanBannerComponent.js` | Clases modificadoras que la hoja lee; la variante anterior no las recibe nunca |
 | `COMPACT_SESSION_BADGE` | `userProfileBadge.js` | Bandera de rótulo corto (por defecto `true`) — **no llegó a hacer falta**: `fullLegend` y `displayLegend` son cadenas distintas desde el inicio, sin bandera configurable (RESUELTO en Tarea 3) |
 
 Los diez `NAV_LINKS` y sus `data-view` **no se tocan**: la agrupación es de presentación, y `test_navbar` sigue hallando `NAV_LINKS.length === 10` en verde.

@@ -11,7 +11,7 @@
 
 ## Fase 0 — Pruebas que deben fallar antes de codificar (TDD constitucional)
 
-- [ ] **Tarea 0 — Arnés rojo de la recomposición**
+- [x] **Tarea 0 — Arnés rojo de la recomposición**
   *Cubre:* SPEC-16 §8 (13 criterios), RF-16.1–RF-16.7, RF-17.1–RF-17.5, RF-18.1–RF-18.9. *Alcance:* crear `scratch/test_portal_composition.mjs` (DOM simulado, patrón de los arneses hermanos `.mjs`) que afirme: (a) `NAV_GROUPS` existe con tres grupos que cubren los diez `NAV_LINKS` sin duplicar ningún `view`; (b) el render de la cabecera produce rótulos de grupo con `aria-expanded`/`aria-controls` y un submenú por grupo; (c) `Escape` y la pérdida de foco recogen el submenú; (d) el distintivo pinta solo el alias en el botón y la identidad completa en el desplegable; (e) `kind: 'default'` forja sello en la efigie; (f) la portada monta sello → héroe → cinta → destacados en ese orden, con un único `h1`; (g) el título del héroe consume los tres tokens del sistema.
   *Hecho cuando:* el arnés **falla** con aserciones rojas que nombran cada requisito aún incumplido. Este es el punto de partida obligatorio: sin rojo previo no hay prueba de que la prueba sirva.
   *Ejecución (2026-09-29):* creado `scratch/test_portal_composition.mjs` con **54 asertos** en 12 fases (DOM simulado propio, sin librerías, `innerHTML` prohibido como en los arneses hermanos). **Estado: 28 PASA / 26 FALLA, exit 1** — la FASE ROJA alcanzada, que es exactamente lo que la Tarea 0 exige. Los 26 fallos se agrupan en: agrupación de la navegación (7), rótulo corto y efigie por defecto (5), orden de bloques y sello de validación (6), tratamiento de título del sistema (5), cinta compacta del Regente (3).
@@ -30,7 +30,7 @@
 
 ## Fase 1 — La cabecera
 
-- [ ] **Tarea 1 — `NAV_GROUPS` y el render de los grupos**
+- [x] **Tarea 1 — `NAV_GROUPS` y el render de los grupos**
   *Cubre:* RF-16.1, RF-16.2, RF-16.3, RF-16.4, RF-16.7; RNF-16.4, RNF-16.5. *Alcance:* en `public/assets/js/components/navbarComponent.js`, exportar `NAV_GROUPS` como mapa congelado derivado de `NAV_LINKS` (los diez `view` intactos, cero duplicados) y añadir el render de los rótulos de grupo con su submenú: botón con `aria-expanded`/`aria-controls`, panel con `role="menu"`, `li` con `role="none"`. Reaprovechar `activateLink()` y `handleLinkActivation()` sin duplicar manejadores: los enlaces del submenú son los mismos nodos lógicos con `data-view`/`data-action` intactos. `closeMobileMenu()` se extiende para recoger también los submenús. Regla de RF-16.5: por debajo de 1024 px se sigue pintando la lista plana, nunca grupos.
   *Hecho cuando:* `test_portal_composition.mjs` pone en verde (a)–(c); `test_navbar.mjs` sigue hallando `NAV_LINKS.length === 10` y el enlace del Creador con `data-action="openCreator"`.
   *Ejecución (2026-09-29):* implementado en `public/assets/js/components/navbarComponent.js`.
@@ -47,7 +47,7 @@
 
   **El Riesgo nº1 se materializó, tal como estaba escrito.** Cuatro arneses hermanos buscaban los enlaces como hijos directos de `linksList.children`, y con la agrupación viven dentro de los `<li>`. Adaptados **al contrato nuevo y con el motivo escrito en el propio código**: `test_navbar` (3 barridos), `test_navbar_session_refresh` (`findNavLink`), `test_vestibule_route_badge` (dos: el enlace y su aserto de supervivencia al apagado) y `probe_navbar_session_stale` (`findNavLink`). En todos los casos el requisito vigilado no cambió — «este destino existe y está cableado» —; lo que cambió es cómo se localiza, bajando a un barrido recursivo que seguiría siendo válido si mañana se volviera al plano. **Ningún aserto se relajó para que pasara.**
 
-- [ ] **Tarea 2 — La cabecera a una fila (CSS)**
+- [x] **Tarea 2 — La cabecera a una fila (CSS)**
   *Cubre:* RF-16.1, RF-16.5; RNF-16.1, RNF-16.6, RNF-16.7. *Alcance:* en `public/assets/css/layout.css`, `flex-wrap: nowrap` en la lista por encima de 1024 px; `.site-nav__groups` con `flex: 1 1 auto` y `min-width: 0` para que sea el bloque que cede espacio; altura de cabecera acotada con `--space-ink-*` (objetivo medido: ≤ 96 px); estilos del rótulo de grupo y del panel (fondo `--color-surface-raised`, borde `--border-ink-strong`, radio `--radius-scroll`, `box-shadow: var(--shadow-arcane)`), con transición anulada bajo `prefers-reduced-motion`. **Prohibido** escribir un solo color hex crudo. Ningún token nuevo salvo que `audit_css_ghost_tokens.mjs` demuestre la necesidad (y entonces se documenta en SPEC-02 antes de usarse).
   *Hecho cuando:* verificación en navegador real a 1440×900 con `.site-header` ≤ 96 px y los diez destinos alcanzables; el guard de tokens fantasma sale en verde.
   *Ejecución (2026-09-29):* CSS escrito en `public/assets/css/layout.css` (sección 2bis) y **cableado de la disposición en `public/assets/js/main.js`**, que era la mitad de la Tarea y estaba sin hacer (ver «Hallazgo de alcance»).
@@ -76,7 +76,7 @@
 
   **Disciplina de tokens (RNF-16.1):** `layout.css` verificado con **0 hex crudos y 0 rgb literales** fuera de comentarios; `scratch/audit_css_ghost_tokens.mjs` en verde («SIN tokens fantasma»). Ningún token nuevo.
 
-- [ ] **Tarea 3 — El distintivo de sesión corto y la efigie por defecto**
+- [x] **Tarea 3 — El distintivo de sesión corto y la efigie por defecto**
   *Cubre:* RF-17.1–RF-17.5; RNF-16.4. *Alcance:* en `public/assets/js/components/userProfileBadge.js`, separar el **rótulo visible** (solo `user.alias`) del **rótulo de identidad** (alias + linaje o estado solemne + hermandad, el texto que hoy ocupa el botón). El nombre accesible conserva hoy la identidad completa íntegra, incluido el sufijo «Abrir el menú arcano», para que ningún lector de pantalla pierda lo que el botón ya no muestra. La identidad completa se declara en la cabecera del desplegable. En `applyAvatarImage()`, el caso `default` deja de hacer `removeAttribute('style')` y retorna vacío: forja el **ouroboros del Arcano Puro** con `createRuneSeal()`, igual que degrada ya `catalog`; jamás un cuadro vacío.
   *Hecho cuando:* `test_portal_composition.mjs` pone en verde (d)–(e); en navegador real, el distintivo ocupa ≈ 150 px en vez de 493 px y la efigie muestra sello.
   *Ejecución (2026-09-29):* implementada en `public/assets/js/components/userProfileBadge.js` + `clans.css`.
@@ -105,20 +105,136 @@
 
 ## Fase 2 — La portada
 
-- [ ] **Tarea 4 — El sello de validación (componente nuevo)**
+- [x] **Tarea 4 — El sello de validación (componente nuevo)**
   *Cubre:* RF-18.4, RF-18.5; RNF-16.1, RNF-16.5, RNF-16.6; caso límite 6. *Alcance:* crear `public/assets/js/components/landingSigilComponent.js` con `createValidationSigilComponent(mountRoot, options)`, siguiendo el patrón de inyección de `elementFactory`/`documentRef` de los componentes hermanos. Dibuja el marco reutilizando el lenguaje visual de `runeSealComponent` (`--sigil-disc`, `--sigil-tick`, `--sigil-ring-active`), con la leyenda visible «Tomo validado» y `role="img"` + `aria-label` descriptivo. **Sin** `getBBox()` ni APIs SVG que el DOM simulado no ofrezca, y con degradación si `createRuneSeal` no está disponible.
   *Hecho cuando:* el arnés pone en verde (f) y el sello se ve en navegador real sin romper con `prefers-reduced-motion`.
-  *Ejecución:* _pendiente._
+  *Ejecución (2026-09-29):* **EJECUTADA.**
+  - `landingSigilComponent.js` (NUEVO) expone `createValidationSigilComponent` y
+    `VALIDATION_SIGIL_CLASS`. No inventa geometría: reutiliza `createRuneSeal`
+    (`runeSealComponent.js`), de modo que el sello habla el mismo idioma visual
+    que los sellos de hechizo, y no requiere `getBBox()` ni APIs SVG que el DOM
+    simulado no ofrezca (RNF-16.4, criterio 6 del §4 de la spec).
+  - Montado en `landingView.js` como **primer bloque** de la portada, con
+    independencia del Dominio: no describe un estado que pueda faltar, describe
+    el propio tomo. `destroy()` lo retira antes que al blasón.
+  - Leyenda «Tomo validado» en `var(--font-arcane-title)` y `--color-gold-arcane`;
+    el borde reutiliza `--sigil-ring-active`, `--sigil-tick` y `--sigil-disc`
+    (RNF-16.4). Cero hex crudos.
+  - Navegación: el sello es un `div role="img"` con la leyenda en el `aria-label`;
+    el texto vive en un nodo hermano visible, y al pulsarlo emite la acción
+    `CONSECRATION_ACTION` que ya consume el orquestador, sin un segundo cableado.
+  - Degradación: si el sello rúnico no puede forjarse, la leyenda se muestra igual
+    y el enlace sigue siendo alcanzable; nunca queda un marco vacío.
+  - Navegación real verificada en navegador: SVG de 44 px forjado en línea, leyenda
+    en Cinzel dorado y el enlace abre el Gran Portal.
+  - Arnés: `test_portal_composition.mjs` sube de 70/15 a **78 PASA / 14 FALLA**; los
+    14 restantes son de RF-18 (Tareas 5 y 6), no de esta tarea.
+  - Dos defectos reales encontrados y corregidos en el propio arnés: `remove()`
+    del DOM simulado ejecutaba `removeChild(this)` sobre sí mismo, y el barrido por
+    clase leía un solo almacén (`classes` o `attributes.class`) de los dos que el
+    simulador mantiene. El segundo daba un falso negativo —devolvía cero, no
+    «ninguno»— y hacía avanzar trabajo ya hecho.
+  - **Defecto latente detectado y NO corregido (pertenece a la Tarea 5):** el orden
+    real del DOM hoy es firma → cinta del Regente → héroe → destacados. RF-18.1 lo
+    revoca, pero recomponerlo es la Tarea 5, que lo verifica midiendo el CTA sin
+    desplazamiento. Queda anotado aquí para que no se pierda.
 
-- [ ] **Tarea 5 — La recomposición de la portada**
+- [x] **Tarea 5 — La recomposición de la portada**
   *Cubre:* RF-18.1, RF-18.2, RF-18.3, RF-18.6, RF-18.7, RF-18.9; RNF-16.1. *Alcance:* en `public/assets/js/views/landingView.js`, montar los bloques en el orden sello → héroe → cinta → destacados (hoy el Regente se monta **antes** del héroe y abre la página). Añadir las reglas ausentes de `.landing-hero__title` y `.landing-view__featured-title` en `public/assets/css/components/library.css` con `var(--font-arcane-title)` + `var(--font-size-title-page)` + `var(--color-gold-arcane)`, idéntico a `library-view__title`. Conservar intactos el comportamiento de error de RF-06.3 (el sello, el héroe y la cinta sobreviven a un fallo de la galería) y el `h1` único (caso límite 5).
   *Hecho cuando:* el arnés pone en verde (f)–(g); en navegador real a 1440×900 el CTA «Consagrar Linaje» es visible sin desplazamiento y el orden del DOM es el del RF-18.1.
-  *Ejecución:* _pendiente._
+  *Ejecución (2026-09-29):* **EJECUTADA.**
+  - Orden del DOM medido en navegador real a 1440×900: `landing-sigil` →
+    `landing-hero` → `landing-view__regent` → `landing-view__featured`. Exactamente
+    el de RF-18.1.
+  - `landingView.js` monta el héroe **antes** de resolver el blasón. Antes la
+    portada awaited la consulta del Dominio y no pintaba nada hasta que
+    terminaba: un Dominio lento suponía una portada en blanco. Ahora la espera
+    ocurre con el héroe ya en el documento.
+  - **Copia:** la presentación pasa de dos frases a una. La segunda repetía en
+    prosa lo que la página ya muestra por sí sola —los pergaminos están debajo y
+    el CTA dice «Consagrar Linaje»—. Se conserva la frase que sí presenta el
+    santuario. Ahora mide **una línea** (565 px medidos), que es lo que pedía
+    RF-18.3. En la franja estrecha `text-wrap: balance` reparte el salto en tres
+    líneas parejas en vez de dejar una huérfana.
+  - **La firma se compacta:** el sello pasó de una placa de 109 px de alto a una
+    banda de **54 px** con heráldica y leyenda en la misma línea. Antes empujaba
+    al héroe hacia el borde inferior del viewport; el sello se lee ahora como lo
+    que es, una estampación, no un membrete.
+  - RF-18.2 (remedio de D2): `.landing-hero__title` recibe
+    `var(--font-arcane-title)`, `var(--font-size-title-page)` y
+    `var(--color-gold-arcane)`; verificado en navegador, computa
+    `MedievalArcaneTitle` a `36px` en `rgb(212, 169, 78)`, idéntico a
+    `library-view__title`. `.landing-view__featured-title` también. Antes el
+    héroe no tenía NINGUNA regla de título y competía en la misma voz con la
+    galería: una portada con dos voces de título no tiene título.
+  - **Medición del criterio de RF-18.3 (1440×900, blasón montado):** el CTA
+    «Consagrar Linaje» cierra en **y=372** sobre un viewport de 900 px, con el
+    lema del Regente ya presente. Sin desplazamiento. A 390×780 el CTA cierra en
+    y=456 y el desborre horizontal es **0**.
+  - Un solo `<h1>` en la portada: el título del héroe.
+  - Arnés: `test_portal_composition.mjs` de 78/14 a **88 PASA / 4 FALLA**; los 4
+    restantes son de RF-18.7 (Tarea 6). `test_clan_banner_component.mjs` sigue en
+    63/0 tras reconducir sus aserciones posicionales al orden ratificado.
+  - **Dos defectos del arnés, no del código:** (1) `buildLanding()` no inyectaba
+    cliente del Dominio, así que la portada de prueba solo tenía tres bloques y
+    era imposible verificar el orden de los cuatro; (2) el barrido leía un solo
+    almacén de clases de los dos que el DOM simulado mantiene, y devolvía cadena
+    vacía para el sello, que pinta con `setAttribute('class')`. Ninguno de los dos
+    era un fallo del componente: eran pruebas que no observaban lo que
+    decían observar.
+  - Nota de honestidad: el título se mantiene en 36 px también a 390 px porque
+    es lo que hacen las siete vistas de título del proyecto. Añadirle un `clamp()`
+    solo al héroe lo convertiría en la única excepción, que es lo contrario de
+    RF-18.2. Si un día se quiere responsive en todo el sistema, es una enmienda
+    de SPEC-02, no de SPEC-16.
 
-- [ ] **Tarea 6 — La cinta compacta del Regente**
+- [x] **Tarea 6 — La cinta compacta del Regente**
   *Cubre:* RF-18.7, RF-18.8, RF-18.9; caso límite 4. *Alcance:* variante compacta de `clanBannerComponent` (o un parámetro `variant: 'compact'` que no rompa el uso existente): una sola línea con blasón, nombre, lema y reinante; **sin** marco propio, heredando el de su contenedor (remedio de D4); el elemento rector se declara **una sola vez** (remedio de la duplicación medida). Estados vacío y de error conservados sin salto de layout. El lema largo se recorta con elipsis y su texto íntegro vive en el `title`.
   *Hecho cuando:* la cinta mide una línea en navegador real y el arnés de `clan_banner_component` ampliado sigue en verde con la variante anterior intacta.
-  *Ejecución:* _pendiente._
+  *Ejecución (2026-09-29):* **EJECUTADA.**
+  - **D4 Gone:** `.landing-view__featured` y `.landing-view__regent` dejan de compartir
+    selector. La cinta no pinta caja: ni borde, ni fondo, ni radio. Solo un pelo
+    de arriba y abajo —un divisor, no un marco— y la ficha interna tampoco pinta
+    borde. Verificado en navegador: `border-top-width` de la ficha = **0 px**.
+  - **La variante anterior queda intacta por construcción, no por costumbre.**
+    `clanBannerComponent` acepta `variant` con dos valores: `heraldic` (omisión,
+    la de SPEC-07) y `compact`. La diferencia la resuelve **una clase
+    modificadora en la hoja**, no el DOM: los mismos nodos se pintan en ambos
+    casos. El Salón de Linajes y la ficha de clan nunca piden `compact`, así que
+    no tienen por qué cambiar. El arnés monta un blasón con la variante por
+    omisión y verifica que **no** recibe ninguna de las dos clases.
+  - **435 px → 89 px.** La cinta ocupa 40 px de alto: una sola fila con blasón
+    (40 px), corona, nombre del clan y lema. Medido a 1440, 1024 y 800 px, con
+    `flex-wrap: wrap` y cero desborde en las tres.
+  - **Interpretación declarada de RF-18.7:** los cuatro datos de la línea son
+    blasón, corona, nombre y lema. La frase del reinado (`.clan-banner__reign`)
+    se retira porque la corona ya lo declara y el `aria-label` del `article` lo
+    declara entero; el elemento rector se retira de la vista por lo mismo, con lo
+    que **la duplicación medida desaparece** (RF-18.9). Se quita la repetición,
+    no el dato: el aserto comprueba que el `aria-label` sigue nombrando el linaje
+    completo aunque la vista no lo pinte.
+  - **El rótulo de la región no se borra.** El `aside` se nombra con
+    `aria-labelledby="clanBannerTitle"`; si la variante compacta escondiera el `h2`
+    con `display: none`, la región se quedaría sin nombre. Se recorta con la
+    técnica de clip que ya usa el anunciador del simulador
+    (`grimoire-simulator__announcer`). Hay aserto que lo vigila.
+  - **RF-18.8 verificado en navegador:** la proclamación llega vacía y
+    `.clan-banner__proclamation:empty` la retira —`display: none`, cero altura—,
+    así que no hay hueco de reserva. Al proclamar un regente nuevo, la región
+    viva (`role="status"`, `aria-live="polite"`) sigue anunciando el cambio.
+  - **Divergencia honesta:** a **390 px** la cinta envuelve a dos filas (67 px).
+    Forzarla a una línea exigiría recortar el lema o reducirlo a lo ilegible, y
+    ambas cosas son peores que un salto. Se ha preferido `RNF-16.2` (responsive)
+    sobre la lectura literal de «una sola línea» en la franja estrecha, y se
+    declara aquí para que el custodio pueda revocarlo.
+  - Arnés propio: **98 PASA / 0 FALLA**. Seis aserciones nuevas cubren lo que la
+    spec pedía y el arnés no vigilaba: la variante compacta montada, la
+    conservación de blasón/lema/corona, la declaración accesible del linaje, el
+    `:empty` sin hueco, el rótulo de la región y —la importante— la **variante
+    heráldica sin la clase compacta**.
+  - Nota de método: no se ha podido capturar la última imagen porque el
+    compositor del webview dejó de componer. Las **medidas sí son fiables**: se
+    leyeron con `getBoundingClientRect` en las cuatro franjas.
 
 ---
 

@@ -45,6 +45,22 @@ const ELEMENT_BY_ID = Object.freeze(
 );
 
 /**
+ * Formas de presentación del blasón (SPEC-16, RF-18.7).
+ * `HERALDIC` es la ficha de SPEC-07 y sigue siendo la que usan el Salón de
+ * Linajes y la ficha de clan; `COMPACT` es la cinta de la portada.
+ */
+export const CLAN_BANNER_VARIANTS = Object.freeze({
+  HERALDIC: 'heraldic',
+  COMPACT: 'compact',
+});
+
+/** Clase modificadora que la hoja de estilo lee para la variante compacta. */
+export const CLAN_BANNER_COMPACT_CLASS = 'clan-banner__regent--compact';
+
+/** Clase que la hoja de estilo lee en la raíz para la variante compacta. */
+export const CLAN_BANNER_COMPACT_ROOT_CLASS = 'clan-banner--compact';
+
+/**
  * Crea el componente del blasón del Clan Regente.
  *
  * @param {HTMLElement} mountRoot Contenedor de la cabecera del Gran Portal.
@@ -57,6 +73,12 @@ const ELEMENT_BY_ID = Object.freeze(
  *        inyectable (arneses sin navegador).
  * @param {Document} [options.documentRef] Documento anfitrión del sello
  *        forjado (arneses sin navegador).
+ * @param {'heraldic'|'compact'} [options.variant='heraldic'] Forma de la
+ *        presentación. `heraldic` es la ficha heráldica que SPEC-07 describe y
+ *        que se conserva intacta; `compact` la reduce a la cinta de una línea
+ *        de RF-18.7. La diferencia la resuelve la hoja de estilo (una clase
+ *        modificadora), no el DOM: los mismos nodos se pintan en ambos casos,
+ *        de modo que la variante anterior no puede romperse al añadir la nueva.
  * @returns {Object} API: { render, setRegent, destroy }.
  */
 export function createClanBannerComponent(mountRoot, options = {}) {
@@ -65,6 +87,7 @@ export function createClanBannerComponent(mountRoot, options = {}) {
     onRegentSelect,
     elementFactory = (tagName) => globalThis.document.createElement(tagName),
     documentRef = globalThis.document,
+    variant = CLAN_BANNER_VARIANTS.HERALDIC,
   } = options;
 
   /** Nodos vivos del componente, para limpieza determinista. */
@@ -133,6 +156,12 @@ export function createClanBannerComponent(mountRoot, options = {}) {
   function buildBannerShell() {
     bannerRoot = track(elementFactory('aside'));
     bannerRoot.className = 'clan-banner';
+    // La variante compacta no añade ni quita nodos: solo marca la raíz para
+    // que la hoja de estilo sepa que la ficha se reduce a cinta. La variante
+    // heráldica no recibe la clase, así que su aspecto queda intacto.
+    if (variant === CLAN_BANNER_VARIANTS.COMPACT) {
+      bannerRoot.classList.add(CLAN_BANNER_COMPACT_ROOT_CLASS);
+    }
     bannerRoot.setAttribute('id', 'clanBanner');
     // Landmark con nombre accesible: la región se anuncia correctamente.
     bannerRoot.setAttribute('role', 'region');
@@ -186,6 +215,9 @@ export function createClanBannerComponent(mountRoot, options = {}) {
 
     const article = elementFactory('article');
     article.className = 'clan-banner__regent';
+    if (variant === CLAN_BANNER_VARIANTS.COMPACT) {
+      article.classList.add(CLAN_BANNER_COMPACT_CLASS);
+    }
     article.setAttribute('data-clan-id', String(regentClanDto.id ?? ''));
     article.setAttribute('data-regent', 'true');
     // Descripción ceremonial completa en el nombre accesible del blasón.

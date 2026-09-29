@@ -81,8 +81,15 @@ function createFakeElement(tagName) {
       child.parentElement = null;
     },
     remove() {
+      // Corrección del simulador: buscar `this` entre los hijos de `this`
+      // no lo encuentra nunca (un nodo no es su propio hijo), así que el
+      // remove() anterior era un no-op silencioso —el peor tipo de defecto
+      // de arnés: parecía funcionar y no retiraba nada. Se busca en el
+      // padre, que es donde el nodo vive.
       if (!this.parentElement) return;
-      this.removeChild(this);
+      const index = this.parentElement.children.indexOf(this);
+      if (index >= 0) this.parentElement.children.splice(index, 1);
+      this.parentElement = null;
     },
     replaceChildren(...nodes) {
       for (const child of this.children.splice(0)) child.parentElement = null;
@@ -683,6 +690,27 @@ try {
   console.log(`  (no se pudo importar landingView.js: ${importError.message})`);
 }
 
+// Stub del Dominio para la prueba de ORDEN: la cinta del Regente solo se monta
+// si el orquestador inyecta el cliente, así que sin él la portada tiene tres
+// bloques y es imposible verificar el orden de los cuatro que fija RF-18.1.
+const DOMINION_STUB = {
+  fetchLineages: async () => ({
+    success: true,
+    count: 1,
+    data: [
+      {
+        id: 'primordialFlame',
+        name: 'Linaje de la Llama Primordial',
+        rulingElement: 'fire',
+        glyph: 'rune-ignis',
+        bannerColor: '#ff4500',
+        heraldicFrame: 'phoenixShield',
+      },
+    ],
+  }),
+  fetchLeaderboard: async () => ({ success: true, count: 0, data: [] }),
+};
+
 const buildLanding = (options = {}) => {
   const mountRoot = createFakeElement('main');
   const featuredSpells = [];
@@ -703,7 +731,7 @@ const buildLanding = (options = {}) => {
     spellClient: {
       fetchFeatured: () => Promise.resolve({ success: true, data: featuredSpells }),
     },
-    dominionClient: options.dominionClient ?? null,
+    dominionClient: 'dominionClient' in options ? options.dominionClient : DOMINION_STUB,
     onReservedAction: () => {},
     onSpellSelect: () => {},
     onRegentSelect: () => {},
@@ -713,12 +741,28 @@ const buildLanding = (options = {}) => {
   return { mountRoot, landing };
 };
 
+/**
+ * Lee las clases de un nodo leyendo los DOS almacenes que el DOM simulado
+ * mantiene separados: `classes` (pintado con `className`) y `attributes.class`
+ * (pintado con `setAttribute('class', …)`). En el navegador son la misma cosa;
+ * en el simulador no. Leer solo uno devuelve cadena vacía para un componente
+ * que sí está bien pintado, y eso es un falso negativo que hace avanzar trabajo
+ * inexistente. `landingView.js` usa `className` y `landingSigilComponent.js`
+ * usa `setAttribute`, así que el arnés tiene que ser indiferente a la API.
+ */
+const classListOf = (node) => {
+  if (!node) return '';
+  const viaAttribute = node.getAttribute?.('class') ?? '';
+  const viaProperty = node.classes ? [...node.classes].join(' ') : '';
+  return `${viaAttribute} ${viaProperty}`.trim();
+};
+
 if (landingModule?.createLandingView !== undefined) {
   const { mountRoot, landing } = buildLanding();
   await landing.render();
 
   const viewRoot = mountRoot.children[0] ?? null;
-  const topLevelClasses = (viewRoot?.children ?? []).map((child) => child.className);
+  const topLevelClasses = (viewRoot?.children ?? []).map((child) => classListOf(child));
 
   const sigilIndex = topLevelClasses.findIndex((name) => name.includes('landing-sigil'));
   const heroIndex = topLevelClasses.findIndex((name) => name.includes('landing-hero'));
@@ -745,13 +789,13 @@ if (landingModule?.createLandingView !== undefined) {
   const h1s = allByTag(viewRoot, 'H1');
   assertCondition(h1s.length === 1, 'La portada conserva un único H1 (caso límite 5, RNF-03)');
   assertCondition(
-    h1s[0] !== undefined && h1s[0].className.includes('landing-hero__title'),
+    h1s[0] !== undefined && classListOf(h1s[0]).includes('landing-hero__title'),
     'El H1 es el título del héroe (caso límite 5)',
   );
 
   const h2s = allByTag(viewRoot, 'H2');
   assertCondition(
-    h2s.every((heading) => !heading.className.includes('landing-hero__title')),
+    h2s.every((heading) => !classListOf(heading).includes('landing-hero__title')),
     'Ningún otro encabezado usurpa el título del héroe (caso límite 5)',
   );
 } else {
@@ -792,6 +836,55 @@ if (sigilModule?.createValidationSigilComponent !== undefined) {
   assertCondition(
     sigilRoot === null || sigilRoot.getAttribute('role') === 'img' || sigilRoot.getAttribute('aria-label') !== null,
     'El sello declara nombre accesible (role="img" o aria-label) (RF-18.5, RNF-16.4)',
+  );
+
+  // La leyenda canónica es exacta, no una aproximación: es el texto que
+  // afirma el estado editorial del tomo (RF-18.5).
+  assertCondition(
+    sigilText.includes(sigilModule.VALIDATION_SIGIL_LEGEND ?? 'Tomo validado'),
+    'La leyenda del sello es la cadena canónica exportada por el módulo (RF-18.5)',
+  );
+
+  // CASO LÍMITE 6 — la degradación que la spec exige: si el documento
+  // anfitrión NO puede forjar SVG, el marco de texto debe sobrevivir.
+  // Perder la firma es aceptable; perder la tesis, no.
+  const degradedMount = createFakeElement('div');
+  const degradedSigil = sigilModule.createValidationSigilComponent(degradedMount, {
+    elementFactory: fakeElementFactory,
+    documentRef: {
+      createElement: (tagName) => createFakeElement(tagName),
+      // Sin createElementNS a propósito: es el fallo que se degrada.
+    },
+  });
+  degradedSigil.render();
+  const degradedText = visibleTextOf(degradedMount);
+  assertCondition(
+    degradedMount.children.length > 0,
+    'Sin createElementNS el sello conserva su marco de texto (caso límite 6)',
+  );
+  assertCondition(
+    /validado/i.test(degradedText),
+    'La degradación no se lleva por delante la leyenda del estado editorial (caso límite 6)',
+  );
+  const heraldry = allByClass(degradedMount, 'landing-sigil__heraldry')[0] ?? null;
+  assertCondition(
+    heraldry !== null && heraldry.getAttribute('data-heraldry') === 'degraded',
+    'La heráldica degradada se declara, no se disimula (data-heraldry="degraded")',
+  );
+
+  // destroy() es idempotente y retira el sello del árbol.
+  degradedSigil.destroy();
+  degradedSigil.destroy();
+  assertCondition(
+    degradedMount.children.length === 0,
+    'destroy() retira el sello y es idempotente (ciclo de vida limpio)',
+  );
+
+  // La firma NO se repite (RF-18.4): una sola instancia en la portada.
+  assertCondition(
+    typeof sigilModule.VALIDATION_SIGIL_CLASS === 'string'
+      && sigilModule.VALIDATION_SIGIL_CLASS.trim() !== '',
+    'El módulo exporta el nombre de clase raíz del sello (contrato CSS estable)',
   );
 } else {
   // FASE ROJA ESPERADA: el módulo aún no existe.
@@ -882,13 +975,105 @@ if (landingModule?.createLandingView !== undefined) {
     'Existe una variante compacta explícita del blasón en clans.css (RF-18.7)',
   );
 
+  // La cinta no puede perder el dato al ganar la línea (RF-18.9): lo que se
+  // retira de la vista sigue declarado en el nombre accesible.
+  const regentClan = {
+    id: 'cln_llama',
+    slug: 'custodios-de-la-llama',
+    name: 'Custodios de la Llama',
+    motto: 'En la ceniza renace la llama inmortal',
+    coatOfArms: 'rune-ignis',
+    lineageType: 'primordialFlame',
+    patriarchId: 'usr_fundador',
+    memberCount: 7,
+  };
+  const dominionWithRegent = {
+    fetchLineages: DOMINION_STUB.fetchLineages,
+    fetchLeaderboard: async () => ({
+      success: true,
+      data: {
+        weeklyRanking: [{ rank: 1, clan: regentClan }],
+        historicalRanking: [],
+        currentRegentClan: regentClan,
+        hallOfFameWeeks: [],
+      },
+    }),
+  };
+  const withRegent = buildLanding({ dominionClient: dominionWithRegent });
+  await withRegent.landing.render();
+  const compactArticle = byClass(withRegent.mountRoot, 'clan-banner__regent--compact');
+  const compactRoot = byClass(withRegent.mountRoot, 'clan-banner--compact');
+
+  assertCondition(
+    compactArticle !== null && compactRoot !== null,
+    'La portada monta el blasón en su variante compacta (RF-18.7)',
+  );
+  assertCondition(
+    compactArticle !== null
+      && (compactArticle.getAttribute('aria-label') ?? '').includes('Linaje de la Llama Primordial'),
+    'La cinta declara el linaje en su nombre accesible aunque no lo pinte (RF-18.9: se quita la repetición, no el dato)',
+  );
+  assertCondition(
+    compactArticle !== null
+      && byClass(withRegent.mountRoot, 'clan-banner__shield') !== null
+      && byClass(withRegent.mountRoot, 'clan-banner__motto') !== null
+      && byClass(withRegent.mountRoot, 'clan-banner__crown') !== null,
+    'La cinta conserva blasón, lema y corona: los tres datos de RF-18.7 siguen en el DOM (RF-18.8)',
+  );
+  assertCondition(
+    /:empty\s*\{[^}]*display:\s*none/.test(bannerCss),
+    'La proclamación vacía no reserva hueco: sin regente no hay salto de layout (RF-18.8)',
+  );
+  // El nombre accesible de la REGIÓN depende del h2 (aria-labelledby). Si la
+  // variante compacta lo escondiera con display:none, el `aside` se quedaría
+  // sin nombre: por eso la hoja lo recorta, no lo suprime.
+  const region = byClass(withRegent.mountRoot, 'clan-banner');
+  assertCondition(
+    region !== null && region.getAttribute('aria-labelledby') === 'clanBannerTitle'
+      && byClass(withRegent.mountRoot, 'clan-banner__title') !== null,
+    'La cinta no suprime el rótulo que nombra a la región: lo recorta, no lo borra',
+  );
+
+  // La variante anterior debe quedar INTACTA: la clase modificadora solo
+  // aparece cuando se pide. Si el salón de Linajes apareciera alterado, este
+  // aserto se pondría rojo.
+  let bannerModule = null;
+  try {
+    bannerModule = await import('../public/assets/js/components/clanBannerComponent.js');
+  } catch (bannerImportError) {
+    console.log(`  (no se pudo importar clanBannerComponent.js: ${bannerImportError.message})`);
+  }
+  if (bannerModule?.createClanBannerComponent !== undefined) {
+    const heritageMount = createFakeElement('div');
+    const heritageBanner = bannerModule.createClanBannerComponent(heritageMount, {
+      dominionClient: dominionWithRegent,
+      elementFactory: fakeElementFactory,
+      documentRef: fakeDocument,
+    });
+    await heritageBanner.render();
+    assertCondition(
+      byClass(heritageMount, 'clan-banner--compact') === null
+        && byClass(heritageMount, 'clan-banner__regent--compact') === null,
+      'La variante heráldica de SPEC-07 sigue sin la clase compacta: la anterior queda intacta',
+    );
+    heritageBanner.destroy();
+  } else {
+    assertCondition(false, 'clanBannerComponent es importable para vigilar la variante anterior (Fase 9)');
+  }
+
   // El Regente no debe abrir la página por delante de la tesis (RF-18.1).
+  // Sin Dominio la portada pierde la cinta: lo que se vigila es que NO quede
+  // un hueco vacío al principio. La propia etiqueta de la aserción admitía dos
+  // aperturas válidas (el sello o el héroe), pero el aserto solo aceptaba la
+  // segunda: la que ya no puede darse, porque el sello encabeza siempre la
+  // composición. Se exige lo que la aserción dice, no un índice concreto.
   const regentFirst = buildLanding({ dominionClient: null });
   await regentFirst.landing.render();
   const classesNoDominion = (regentFirst.mountRoot.children[0]?.children ?? [])
-    .map((child) => child.className);
+    .map((child) => classListOf(child));
   assertCondition(
-    classesNoDominion.length > 0 && classesNoDominion.findIndex((name) => name.includes('landing-hero')) === 0,
+    classesNoDominion.length > 0
+      && /(^|\s)landing-sigil(\s|$)/.test(classesNoDominion[0] ?? ''),
     'Sin cliente del Dominio, la portada abre con el sello o el héroe, no con un hueco vacío (RF-18.1)',
   );
 }

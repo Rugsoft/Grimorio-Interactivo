@@ -451,13 +451,39 @@ const portal = createLandingView(portalRoot, {
 await portal.render();
 const portalView = byClass(portalRoot, 'landing-view');
 assertCondition(byClass(portalRoot, 'clan-banner') !== null, 'La portada del Gran Portal exhibe el blasón del Clan Regente (criterio)');
+// Orden de bloques de la portada: SPEC-16 RF-18.1 (enmienda de RF-01.1)
+// REVOCA el orden de SPEC-01, que ponía el blasón por delante del héroe.
+// Estas aserciones se reconducen, no se relajan: el requisito que vigilaban
+// («el blasón preside la cabecera») es justamente el que RF-18.1 deroga —
+// «el Regente no abrirá la página por delante de la tesis»—, de modo que
+// dejarlo en verde exige cambiar el contrato, y lo hace la ratificación de
+// SPEC-16. Ahora se vigila posicionalmente contra el orden RATIFICADO:
+// firma → héroe → cinta → destacados. Anclar aquí el orden provisional que
+// hubo antes de la Tarea 5 habría sido asentar un estado caducado como si
+// fuera el bueno, que es justo lo que un arnés debe impedir.
+// El DOM simulado guarda `className` y `attributes.class` en DOS almacenes
+// separados, y los componentes de la portada los usan indistintamente (el
+// héroe pinta con `className`, la firma con `setAttribute('class')`). Por eso
+// el lector de clases debe mirar ambos: leer solo uno da un falso negativo que
+// devuelve cadena vacía y hace fallar una composición que sí es correcta.
+const childClass = (index) => {
+  const node = portalView?.children?.[index];
+  if (!node) return '';
+  const viaAttribute = node.getAttribute?.('class') ?? '';
+  const viaProperty = node.classes ? [...node.classes].join(' ') : '';
+  return `${viaAttribute} ${viaProperty}`;
+};
 assertCondition(
-  portalView?.children?.[0]?.classes?.has('landing-view__regent') === true,
-  'El blasón preside la CABECERA del portal, por delante del héroe'
+  /(^|\s)landing-sigil(\s|$)/.test(childClass(0)),
+  'La firma de la portada encabeza la composición (SPEC-16 RF-18.4)'
 );
 assertCondition(
-  portalView?.children?.[1]?.classes?.has('landing-hero') === true,
-  'La narrativa del héroe sigue a continuación sin desplazarse'
+  /(^|\s)landing-hero(\s|$)/.test(childClass(1)),
+  'La tesis abre la página: el héroe va tras la firma y antes del estado (RF-18.1)'
+);
+assertCondition(
+  /(^|\s)landing-view__regent(\s|$)/.test(childClass(2)),
+  'El blasón se sitúa tras el héroe y antes de los destacados (RF-18.1)'
 );
 assertCondition(
   byClass(portalRoot, 'clan-banner__shield')?.getAttribute('data-heraldic-state') === 'regent'

@@ -21,7 +21,9 @@
  */
 
 import { createSpellCardComponent } from '../components/spellCardComponent.js';
-import { createClanBannerComponent } from '../components/clanBannerComponent.js';
+import { createClanBannerComponent, CLAN_BANNER_VARIANTS } from '../components/clanBannerComponent.js';
+// La firma de la portada (SPEC-16, Tarea 4): el sello de validación.
+import { createValidationSigilComponent } from '../components/landingSigilComponent.js';
 
 /** Acción reservada que emite el CTA de consagración (contrato del orquestador). */
 export const CONSECRATION_ACTION = 'joinClan';
@@ -57,6 +59,9 @@ export function createLandingView(mountRoot, options) {
 
   /** Blasón del Clan Regente montado en la cabecera, si procede (Tarea 5.2). */
   let regentBanner = null;
+
+  /** Sello de validación de la portada (SPEC-16, Tarea 4). */
+  let sigil = null;
 
   /** Nodos vivos de la vista, para limpieza determinista en destroy(). */
   const mountedNodes = [];
@@ -104,6 +109,10 @@ export function createLandingView(mountRoot, options) {
       onRegentSelect,
       elementFactory,
       documentRef,
+      // La portada pide la cinta de una línea (SPEC-16, RF-18.7). El Salón de
+      // Linajes y la ficha de clan siguen pidiendo la ficha heráldica de
+      // SPEC-07, que queda intacta.
+      variant: CLAN_BANNER_VARIANTS.COMPACT,
     });
     await regentBanner.render();
   }
@@ -116,11 +125,15 @@ export function createLandingView(mountRoot, options) {
     hero.className = 'landing-hero';
 
     appendTextElement(hero, 'h1', 'landing-hero__title', 'Grimorio Interactivo');
+    // Una sola línea de presentación (SPEC-16, RF-18.3). El texto anterior
+    // tenía dos frases y la segunda repetía en prosa lo que la página ya
+    // muestra por sí sola: los pergaminos están justo debajo y el CTA dice
+    // «Consagrar Linaje». Se conserva la frase que sí presenta el santuario.
     appendTextElement(
       hero,
       'p',
       'landing-hero__intro',
-      'Un santuario de saber arcano, forjado por los linajes que aún recuerdan los conjuros antiguos. Consulta los pergaminos validados por los Maestros, o conságrate y deja tu huella en el grimorio eterno.',
+      'Un santuario de saber arcano, forjado por los linajes que aún recuerdan los conjuros antiguos.',
     );
 
     const consacrationButton = track(elementFactory('button'));
@@ -192,14 +205,28 @@ export function createLandingView(mountRoot, options) {
     view.className = 'landing-view grimoire-tomo-container';
     mountRoot.appendChild(view);
 
-    // Cabecera del portal: el blasón del Clan Regente abre la portada
-    // (Tarea 5.2). Sin cliente del Dominio NO se cede el turno: la portada
-    // de SPEC-01 conserva su sincronía original (lo verifica su arnés).
+    // La FIRMA de la portada (SPEC-16, RF-18.1 y RF-18.4): el sello de
+    // validación abre el Gran Portal. Va el primero, antes que el héroe y
+    // con independencia del Dominio, porque no describe un estado que
+    // pueda faltar: describe el propio tomo.
+    sigil = createValidationSigilComponent(view, { elementFactory, documentRef });
+    sigil.render();
+
+    // La tesis va antes del estado (SPEC-16, RF-18.1, remedio de D5): el
+    // héroe se monta y se pinta ANTES de que el Dominio responda. Antes el
+    // blasón se resolvía primero y la portada no mostraba nada hasta que
+    // terminaba su consulta, de modo que un Dominio lento suponía una
+    // portada en blanco. Ahora la espera del blasón ocurre con el héroe ya
+    // en el documento.
+    view.appendChild(buildHero());
+
+    // Cinta del Regente: TERCER bloque, nunca por delante de la tesis
+    // (Tarea 5.2 + SPEC-16 RF-18.1). Sin cliente del Dominio NO se cede el
+    // turno y la portada conserva la sincronía de SPEC-01 (lo verifica su
+    // arnés hermano).
     if (dominionClient !== null) {
       await mountRegentBanner(view);
     }
-
-    view.appendChild(buildHero());
 
     const featuredSection = buildFeaturedSection();
     view.appendChild(featuredSection);
@@ -253,6 +280,8 @@ export function createLandingView(mountRoot, options) {
    */
   function destroy(removeFromRoot = true) {
     // El blasón primero: cancela cualquier consulta suya en vuelo (Tarea 5.2).
+    sigil?.destroy?.();
+    sigil = null;
     regentBanner?.destroy?.();
     regentBanner = null;
     for (const node of mountedNodes.splice(0)) {

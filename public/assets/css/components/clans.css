@@ -409,3 +409,92 @@
   /* La carga y el anillo ya viven en tokens.css: aquí solo presencia. */
   pointer-events: none;
 }
+
+/* ---------------------------------------------------------------------
+   Cinta compacta del Regente (SPEC-16, RF-18.7–RF-18.9, remedio de D4)
+   ---------------------------------------------------------------------
+   La ficha heráldica de SPEC-07 se conserva intacta: estas reglas solo
+   hablan cuando la raíz trae `.clan-banner--compact`, que es lo que
+   landingView.js pide para la portada. El Salón de Linajes y la ficha de
+   clan no la piden nunca, así que no tienen por qué cambarse.
+
+   La cinta es UNA línea: blasón, corona, nombre y lema. La frase del
+   reinado y el linaje rector se retiran de la vista porque la corona ya
+   declara el reinado y el nombre accesible del article lo declara entero
+   para un lector de pantalla: lo que se quita es la repetición, no el
+   dato (RF-18.9). */
+.clan-banner--compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-ink-2);
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  text-align: center;
+}
+
+/* La proclamación solo ocupa fila cuando hay algo que proclamar: sin
+   regente en curso llega vacía y un hueco de reserva es exactamente el
+   «salto de layout» que RF-18.8 prohíbe. */
+.clan-banner__proclamation:empty {
+  display: none;
+}
+
+/* El rótulo de la región sigue nombrando el `aside` (aria-labelledby), así
+   que no puede desaparecer: se retira de la vista con la técnica de clip,
+   la misma que usa el anunciador del simulador. */
+.clan-banner--compact .clan-banner__title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.clan-banner__regent--compact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-ink-2);
+  padding: 0;
+  border: 0;
+}
+
+/* A escala de insignia: la cinta informa, no preside. */
+.clan-banner__regent--compact .clan-banner__shield {
+  width: 40px;
+}
+
+.clan-banner__regent--compact .clan-banner__clan-name {
+  font-size: var(--font-size-ink-base);
+}
+
+/* El lema es la segunda voz de la línea y no debe competir con el nombre. */
+.clan-banner__regent--compact .clan-banner__motto {
+  font-size: var(--font-size-ink-small);
+}
+
+/* La frase del reinado la dice ya la corona; el elemento rector lo dice ya
+   el nombre accesible del article. Pintarlos también sería decirlos dos
+   veces (RF-18.9). */
+.clan-banner__regent--compact .clan-banner__reign,
+.clan-banner__regent--compact .clan-banner__lineage,
+.clan-banner__regent--compact .clan-banner__element-glyph {
+  display: none;
+}
+
+/* La cinta es una sola línea arriba y también en la franja estrecha: si no
+   cabe, envuelve, pero sin crecer a la ficha. */
+@media (max-width: 1023.9px) {
+  .clan-banner__regent--compact {
+    gap: var(--space-ink-1);
+  }
+}
