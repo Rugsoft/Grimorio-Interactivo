@@ -76,7 +76,7 @@
 .vestibule-card__name {
   margin: 0;
   font-family: var(--font-arcane-title);
-  font-size: var(--font-size-title-section, 1.25rem);
+  font-size: var(--font-size-ink-large);
   letter-spacing: var(--letter-spacing-seal);
   color: var(--color-gold-arcane);
 }
@@ -214,7 +214,7 @@
   border: 1px solid var(--color-gold-arcane);
   border-radius: var(--radius-scroll);
   background: var(--color-surface);
-  color: var(--color-text-body);
+  color: var(--color-text-light);
   padding: var(--space-ink-3);
 }
 
@@ -261,7 +261,7 @@
   border-radius: var(--radius-scroll);
 
   font-family: var(--font-arcane-body);
-  font-size: var(--font-size-ink-body, 1rem);
+  font-size: var(--font-size-ink-base);
   color: var(--color-text-secondary);
 }
 
@@ -442,7 +442,7 @@
 
 .petition-inventory__house {
   font-family: var(--font-arcane-seal);
-  color: var(--color-text-body);
+  color: var(--color-text-light);
 }
 
 .petition-inventory__status {
@@ -476,7 +476,7 @@
   padding: var(--space-ink-1) var(--space-ink-2);
   font-family: var(--font-arcane-body);
   font-size: var(--font-size-ink-small);
-  color: var(--color-text-body);
+  color: var(--color-text-light);
   background: transparent;
   border: 1px solid var(--color-gold-arcane-dim);
   border-radius: var(--radius-scroll);
@@ -532,14 +532,14 @@
 .vestibule-view__catalog-error p {
   margin: 0 0 var(--space-ink-2);
   font-family: var(--font-arcane-body);
-  color: var(--color-text-body);
+  color: var(--color-text-light);
 }
 
 .vestibule-view__retry {
   padding: var(--space-ink-1) var(--space-ink-2);
   font-family: var(--font-arcane-body);
   font-size: var(--font-size-ink-small);
-  color: var(--color-text-body);
+  color: var(--color-text-light);
   background: transparent;
   border: 1px solid var(--color-gold-arcane);
   border-radius: var(--radius-scroll);

@@ -173,7 +173,7 @@
 
 .library-filter__school:checked::after,
 .library-filter__experimental-checkbox:checked::after {
-  content: var(--seal-verified-glyph, '✓');
+  content: '✓'; /* Glifo de sello verificado (canon literal; antes token fantasma) */
   position: absolute;
   inset: 0;
   display: grid;

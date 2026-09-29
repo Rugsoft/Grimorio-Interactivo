@@ -219,7 +219,7 @@
 
 .elemental-wheel__glyph-disc {
   fill: var(--color-parchment-base);
-  stroke: var(--element-color, var(--color-text-muted));
+  stroke: var(--color-text-muted); /* Tinta neutra del disco (el aura la viste --aura-color) */
   stroke-width: 2;
   transition: transform 0.2s ease;
   transform-box: fill-box;
@@ -354,7 +354,7 @@
 
   .elemental-wheel__accordion-header[aria-expanded='true'] {
     color: var(--color-gold-arcane);
-    background: var(--color-parchment-elevated, var(--color-parchment-surface));
+    background: var(--color-parchment-surface);
   }
 
   .elemental-wheel__accordion-panel {

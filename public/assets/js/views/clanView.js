@@ -518,6 +518,14 @@ export function createClanView(mountRoot, options = {}) {
       'aria-valuetext',
       `${memberCount} / ${memberLimit} adeptos`,
     );
+    // El relleno dorado es la cara visible de la barra (hallazgo de la
+    // auditoría de tokens fantasma: el CSS lo esperaba y nadie lo forjaba,
+    // así que la barra jamás se llenaba).
+    const occupancyFill = track(elementFactory('span'));
+    occupancyFill.className = 'clan-view__occupancy-fill';
+    occupancyFill.setAttribute('aria-hidden', 'true');
+    occupancyFill.setAttribute('style', `--occupancy-fill: ${Math.round((memberCount / memberLimit) * 100)}%`);
+    occupancy.appendChild(occupancyFill);
     facts.appendChild(occupancy);
     appendTextElement(occupancy, 'span', 'clan-view__occupancy-figure', `${memberCount} / ${memberLimit} adeptos`);
 

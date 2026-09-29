@@ -28,9 +28,9 @@
 .spell-creator {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
-  gap: var(--spacing-section, 2rem);
+  gap: var(--space-ink-4);
   align-items: start;
-  padding: var(--spacing-section, 2rem);
+  padding: var(--space-ink-4);
   color: var(--color-text-light);
   font-family: var(--font-arcane-body);
   font-size: var(--font-size-ink-base);
@@ -40,7 +40,7 @@
 /* Título solemne del taller a todo lo ancho de la rejilla. */
 .spell-creator__title {
   grid-column: 1 / -1;
-  margin: 0 0 var(--spacing-ink, 0.75rem);
+  margin: 0 0 var(--space-ink-2);
   font-family: var(--font-arcane-title);
   font-size: var(--font-size-title-page);
   font-weight: 400;
@@ -54,8 +54,8 @@
 .spell-creator__forge {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-ink, 0.75rem);
-  padding: var(--spacing-section, 1.5rem);
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
   background: var(--color-parchment-surface);
   border: var(--border-ink);
   border-radius: var(--radius-seal);
@@ -71,7 +71,7 @@
 .spell-creator__name,
 .spell-creator__description {
   width: 100%;
-  padding: var(--spacing-ink, 0.5rem) var(--spacing-ink, 0.75rem);
+  padding: var(--space-ink-2) var(--space-ink-2);
   color: var(--color-text-light);
   background: var(--color-parchment-base);
   border: var(--border-ink);
@@ -96,13 +96,13 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-ink, 0.75rem);
-  margin-top: var(--spacing-ink, 0.5rem);
+  gap: var(--space-ink-2);
+  margin-top: var(--space-ink-2);
 }
 
 .spell-creator__save,
 .spell-creator__publish {
-  padding: var(--spacing-ink, 0.5rem) var(--spacing-section, 1.25rem);
+  padding: var(--space-ink-2) var(--space-ink-3);
   font-family: var(--font-arcane-seal);
   font-size: var(--font-size-ink-base);
   letter-spacing: var(--letter-spacing-seal);
@@ -139,7 +139,7 @@
 .spell-form-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: var(--spacing-ink, 0.75rem);
+  gap: var(--space-ink-2);
 }
 
 .spell-form-controls__field {
@@ -160,15 +160,15 @@
 .spell-form-controls__group {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-ink, 0.5rem);
+  gap: var(--space-ink-2);
   margin: 0;
-  padding: var(--spacing-ink, 0.5rem);
+  padding: var(--space-ink-2);
   border: var(--border-ink);
   border-radius: var(--radius-scroll);
 }
 
 .spell-form-controls__legend {
-  padding: 0 var(--spacing-ink, 0.25rem);
+  padding: 0 var(--space-ink-1);
   font-family: var(--font-arcane-seal);
   letter-spacing: var(--letter-spacing-seal);
   font-size: var(--font-size-ink-small);
@@ -183,7 +183,7 @@
   appearance: none;
   -webkit-appearance: none;
   min-height: var(--touch-target-min);
-  padding: 0.35rem var(--space-ink-5) 0.35rem var(--spacing-ink, 0.5rem);
+  padding: 0.35rem var(--space-ink-5) 0.35rem var(--space-ink-2);
   box-sizing: border-box;
   color: var(--color-text-light);
   background-color: var(--color-bg-grimoire);
@@ -204,7 +204,7 @@
 /* El input numérico jamás porta la flecha del select (materia propia). */
 .spell-form-controls__number {
   cursor: text;
-  padding-right: var(--spacing-ink, 0.5rem);
+  padding-right: var(--space-ink-2);
   background-image: none;
   appearance: auto;
   -webkit-appearance: auto;
@@ -261,7 +261,7 @@
 }
 
 .spell-form-controls__checkbox:checked::after {
-  content: var(--seal-verified-glyph, '✓');
+  content: '✓'; /* Glifo de sello verificado (canon literal; antes token fantasma) */
   position: absolute;
   inset: 0;
   display: grid;
@@ -289,18 +289,18 @@
    ===================================================================== */
 .mana-breakdown {
   position: sticky;
-  top: var(--spacing-section, 2rem);
+  top: var(--space-ink-4);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-ink, 0.5rem);
-  padding: var(--spacing-section, 1.5rem);
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-3);
   background: var(--color-parchment-surface);
   border: var(--border-ink-strong);
   border-radius: var(--radius-seal);
 }
 
 .mana-breakdown__title {
-  margin: 0 0 var(--spacing-ink, 0.25rem);
+  margin: 0 0 var(--space-ink-1);
   font-family: var(--font-arcane-title);
   font-size: var(--font-size-title-spell);
   font-weight: 400;
@@ -310,7 +310,7 @@
 .mana-breakdown__row {
   display: flex;
   justify-content: space-between;
-  gap: var(--spacing-ink, 0.5rem);
+  gap: var(--space-ink-2);
 }
 
 .mana-breakdown__label {
@@ -325,8 +325,8 @@
 /* El coste final protagoniza el panel: oro arcano con tinta de sello
    (par verificado >= 4.5:1 en la auditoría del arnés). */
 .mana-breakdown__row--final {
-  margin-top: var(--spacing-ink, 0.5rem);
-  padding-top: var(--spacing-ink, 0.5rem);
+  margin-top: var(--space-ink-2);
+  padding-top: var(--space-ink-2);
   border-top: var(--border-ink-strong);
 }
 
@@ -341,7 +341,7 @@
    para mantener el contraste AA sobre fondos luminosos. */
 .mana-breakdown__circle {
   align-self: flex-start;
-  padding: 0.25rem var(--spacing-ink, 0.75rem);
+  padding: 0.25rem var(--space-ink-2);
   font-family: var(--font-arcane-seal);
   letter-spacing: var(--letter-spacing-seal);
   font-size: var(--font-size-ink-small);
@@ -382,8 +382,8 @@
    (texto pergamino sobre él: 6.98:1 >= 4.5:1 WCAG 2.1 AA). */
 .mana-breakdown__overload {
   display: none;
-  margin-top: var(--spacing-ink, 0.5rem);
-  padding: var(--spacing-ink, 0.75rem);
+  margin-top: var(--space-ink-2);
+  padding: var(--space-ink-2);
   border: 1px solid var(--color-ember-red);
   border-radius: var(--radius-scroll);
 }
@@ -423,14 +423,14 @@
    ===================================================================== */
 .spell-creator__drafts {
   grid-column: 1 / -1;
-  padding: var(--spacing-section, 1.5rem);
+  padding: var(--space-ink-3);
   background: var(--color-parchment-surface);
   border: var(--border-ink);
   border-radius: var(--radius-seal);
 }
 
 .spell-creator__drafts-title {
-  margin: 0 0 var(--spacing-ink, 0.5rem);
+  margin: 0 0 var(--space-ink-2);
   font-family: var(--font-arcane-title);
   font-size: var(--font-size-ink-large);
   font-weight: 400;
@@ -440,7 +440,7 @@
 .spell-creator__drafts-list {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-ink, 0.5rem);
+  gap: var(--space-ink-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -451,8 +451,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-ink, 0.5rem);
-  padding: var(--spacing-ink, 0.5rem) var(--spacing-ink, 0.75rem);
+  gap: var(--space-ink-2);
+  padding: var(--space-ink-2) var(--space-ink-2);
   background: var(--color-parchment-base);
   border: var(--border-ink);
   border-radius: var(--radius-scroll);
@@ -464,7 +464,7 @@
 
 .spell-creator__draft-load,
 .spell-creator__draft-delete {
-  padding: 0.25rem var(--spacing-ink, 0.5rem);
+  padding: 0.25rem var(--space-ink-2);
   font-family: var(--font-arcane-seal);
   font-size: var(--font-size-ink-small);
   letter-spacing: var(--letter-spacing-seal);
@@ -498,7 +498,7 @@
   .spell-creator {
     display: flex;
     flex-direction: column;
-    padding: var(--spacing-ink, 1rem);
+    padding: var(--space-ink-3);
   }
 
   .spell-creator__forge,

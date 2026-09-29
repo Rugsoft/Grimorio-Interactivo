@@ -92,7 +92,7 @@
 
 /* Runa sellada: glifo de bloqueo grabado sobre la piedra (RF-06.2). */
 .spell-card--disabled::after {
-  content: var(--seal-locked-glyph, '⊘');
+  content: '⊘'; /* Glifo de sello bloqueado (canon literal; antes token fantasma) */
   position: absolute;
   top: var(--space-ink-3);
   right: var(--space-ink-3);
@@ -298,7 +298,7 @@
   border: var(--border-ink-strong);
 }
 .spell-card__badge-school .spell-card__element-glyph::before {
-  content: var(--current-school-glyph, '');
+  content: ''; /* Sin glifo de escuela (canon literal; antes token fantasma) */
 }
 
 /* Badge de maná: tinte arcano de maná. La cifra viste variantes
@@ -343,7 +343,7 @@
    antes del rótulo, sin color literal (legible en monocromo). */
 .spell-card__badge--experimental::before,
 .spell-card__badge--unstable::before {
-  content: var(--seal-warning-glyph, '⚠');
+  content: '⚠'; /* Glifo de advertencia (canon literal; antes token fantasma) */
   margin-inline-end: var(--space-ink-2);
 }
 
