@@ -385,6 +385,164 @@ Mientras quede algún PENDIENTE, SPEC-07b queda en producción como
 «desplegada, no verificada» (misma doctrina de honestidad de §9b).
 Registra aquí fecha, veredictos y limitaciones tras la ejecución.
 
+## 9d. Despliegue de la cabecera agrupada y la portada recompuesta (SPEC-16)
+
+> Enmienda de composición de SPEC-01 (`RF-02.1` y `RF-01.1`). **Superficie
+> pura de frontend**: los dos commits de SPEC-16 tocan **0** ficheros en
+> `src/` y **0** en `database/` (verificado por diff dirigido en el cierre,
+> `3535356..HEAD`: 20 ficheros, +3153/−130). No hay migración de esquema ni
+> cambio de contrato de API. Basta subir los ficheros públicos.
+
+### 0. Antes de nada: el orden NO es opcional
+
+SPEC-16 se despliega sobre un árbol que ya tiene una corrección pendiente. El
+orden obligatorio es:
+
+| # | Commit | Por qué va antes |
+|---|---|---|
+| 1 | `195d708` | **Bloqueante.** Corrige el Umbral de la Fundación: sin él, el modal se sirve con texto invisible y los ocho linajes en clave técnica inglesa. |
+| 2 | `6be98d3` | Fase 1 de SPEC-16: cabecera agrupada, distintivo corto, `matchMedia` en `main.js`. |
+| 3 | `d872efa` | Fase 2 de SPEC-16: sello de validación, portada recompuesta, cinta del Regente. |
+
+> **Si subes SPEC-16 sin `195d708`, montas una cabecera nueva y una portada
+> nueva sobre un Umbral roto.** No es un defecto cosmético: es texto que no se
+> ve. Los 2 ficheros de `195d708` son `clan-foundation.css` y
+> `clanFoundationModalComponent.js`.
+
+> `3535356` (auditoría de tokens fantasma) es **independiente** y recomendable:
+> arregla 13 variables CSS inexistentes en otras hojas. No es un requisito de
+> SPEC-16 —los 9 ficheros de este apartado ya llevan sus propias correcciones
+> acumuladas—, pero sin él el Vestíbulo, el Creador y el Códice siguen con
+> texto ilegible.
+
+### 1. Ficheros a subir a `htdocs/` (9, todos bajo `public/`)
+
+Los dos commits de SPEC-16 tocan 5 ficheros públicos cada uno, con `clans.css`
+compartido: **9 ficheros únicos, no 7**.
+
+| # | Fichero en el repo | Destino en el hosting | Estado | Qué trae |
+|---|---|---|---|---|
+| 1 | `public/assets/css/layout.css` | `htdocs/public/assets/css/layout.css` | Sobrescribir | Una fila de cabecera (157 → 63 px), grupos, submenús, modo plano `<1024 px` |
+| 2 | `public/assets/css/components/clans.css` | `htdocs/public/assets/css/components/clans.css` | Sobrescribir | Distintivo corto, efigie con respaldo, **cinta compacta del Regente** |
+| 3 | `public/assets/css/components/library.css` | `htdocs/public/assets/css/components/library.css` | Sobrescribir | Sello de validación, título del héroe, portada recompuesta |
+| 4 | `public/assets/js/main.js` | `htdocs/public/assets/js/main.js` | Sobrescribir | `setLayout()` cableado con `matchMedia` — **sin este, el móvil queda roto** |
+| 5 | `public/assets/js/components/navbarComponent.js` | `htdocs/public/assets/js/components/navbarComponent.js` | Sobrescribir | `NAV_GROUPS` y el render de los grupos |
+| 6 | `public/assets/js/components/userProfileBadge.js` | `htdocs/public/assets/js/components/userProfileBadge.js` | Sobrescribir | Alias sin linaje, identidad en el desplegable, ouroboros por defecto |
+| 7 | `public/assets/js/components/landingSigilComponent.js` | `htdocs/public/assets/js/components/landingSigilComponent.js` | **NUEVO** (crear) | El sello de validación de la portada |
+| 8 | `public/assets/js/components/clanBannerComponent.js` | `htdocs/public/assets/js/components/clanBannerComponent.js` | Sobrescribir | Variante `compact` del blasón |
+| 9 | `public/assets/js/views/landingView.js` | `htdocs/public/assets/js/views/landingView.js` | Sobrescribir | Orden de bloques y montaje del sello |
+
+**Ningún fichero de este apartado es opcional.** En particular, `main.js`
+(fichero 4) lo es menos de lo que parece: sin él la cabecera sale **agrupada
+también en el móvil**, donde los enlaces cuelgan de submenús y solo «Inicio»
+resulta alcanzable. Se comprobó medido: los otros nueve destinos con tamaño
+0×0.
+
+> **Orden de subida dentro de la lista:** sube primero los CSS, después los
+> JS y `landingView.js` al final. Ningún shell referencia un asset nuevo por
+> URL (el sello va montado por `landingView.js`, no por `index.html`), así que
+> el orden es de comodidad, no de seguridad. Aun así, recarga con **Ctrl+F5**
+> al terminar: los assets no llevan versión en la URL, así que el navegador
+> los sirve desde caché con facilidad.
+
+### 2. Verificación en navegador (sin cuenta de ensayo)
+
+Es superficie pura de presentación: **no crea ni muta datos**, así que puede
+verificarse con cualquier cuenta, incluida una de lector. Requiere
+autorización del custodio. La lógica ya está verificada localmente (arnés
+`scratch/test_portal_composition.mjs` 98/98 y **regresión completa de los
+111 arneses `.mjs` en verde**); esto valida el despliegue real.
+
+Los valores esperados están **medidos**, no estimados. Compáralos con lo que
+ves; una diferencia relevante es un despliegue incompleto.
+
+**A. Escritorio, 1440×900**
+
+1. **Cabecera de una sola fila.** Alto ≤ 96 px (medido: **63 px**). Debe
+   leerse `Inicio · BIBLIOTECA ▾ · LINAJES ▾ · SALA DE TRABAJO ▾`.
+2. **Los diez destinos son alcanzables.** Pasa el ratón por cada rótulo: el
+   submenú abre bajo el grupo y lista sus destinos. `Escape` lo recoge y
+   **devuelve el foco al rótulo**.
+3. **Distintivo corto.** La cabecera muestra **solo el alias**, sin el linaje
+   (medido: 216 px, antes 493). Al abrirlo, el desplegable declara el linaje
+   arriba, en oro, y la efigie muestra un sello rúnico — **nunca un cuadro
+   vacío**.
+4. **Portada recompuesta.** De arriba abajo: sello «Tomo validado», héroe con
+   el título en `MedievalArcaneTitle` a 36 px en oro, cinta del Regente,
+   Pergaminos Destacados. **El blasón NO abre la página por delante del
+   título.**
+5. **El CTA entra sin desplazamiento.** «Consagrar Linaje» debe verse
+   completo en el pliegue (medido: cierra en y=372 sobre 900 px, con el
+   blasón ya montado).
+6. **La cinta es una línea.** El Regente se lee en una sola fila con blasón,
+   corona, nombre y lema (medido: 40 px de alto, sin marco). Antes eran 435 px
+   con dos cajas concéntricas.
+
+**B. Móvil, 375×812 y 320 px**
+
+7. **Modo plano.** Por debajo de 1024 px la cabecera vuelve a la lista
+   simple tras el botón `☰`: **sin grupos, sin submenús**, con los diez
+   destinos y zona táctil de 44 px.
+8. **Cero desbordamiento horizontal.** La barra no desborda ni el botón `☰`
+   se sale de la pantalla. Este defecto estaba presente antes de SPEC-16 y es
+   el que se cierra aquí.
+
+**C. Regresión rápida (30 segundos)**
+
+9. Recorre las cinco vistas desde la barra. Un enlace roto en cualquiera de
+   ellas significa que se subió un fichero sin el resto.
+10. Abre el Umbral de la Fundación desde el Salón o el Vestíbulo: el texto
+    debe ser **legible** y los ocho linajes deben verse en castellano
+    (`Linaje de la Llama Primordial`, `de las Mareas Celestiales`, …). Si
+    ves `primordialFlame` o texto invisible, falta `195d708`.
+
+> **Divergencia conocida, no es un defecto:** a 390 px o menos la cinta del
+> Regente envuelve a **dos** filas (67 px) en lugar de una. Se prefirió
+> `RNF-16.2` (responsive) sobre la lectura literal de «una sola línea» de
+> `RF-18.7`: forzarla exigía recortar el lema o hacerlo ilegible. Está
+> declarado en TASKS-16 y el custodio puede revocarlo.
+
+**Plantilla de veredicto (a registrar tras ejecutar):**
+
+```
+SPEC-16 — Verificación en producción
+Fecha:              PENDIENTE
+Ejecutado por:      PENDIENTE
+Rama/commit:        PENDIENTE (6be98d3 + d872efa)
+
+A. Escritorio 1440×900
+- [ ] Cabecera de una sola fila, alto ≤ 96 px (medido en producción: ___ px)
+- [ ] Los diez destinos alcanzables; Escape cierra y devuelve el foco
+- [ ] Distintivo solo con el alias; desplegable con el linaje en oro
+- [ ] Efigie con sello rúnico, sin cuadro vacío
+- [ ] Orden de portada: sello → héroe → cinta → destacados
+- [ ] Título del héroe en MedievalArcaneTitle 36 px oro
+- [ ] CTA «Consagrar Linaje» visible sin desplazamiento (cierra en y=___)
+- [ ] Cinta del Regente en una sola línea, sin marco (alto: ___ px)
+
+B. Móvil 375×812 y 320 px
+- [ ] Modo plano: 0 grupos, 10 destinos, zona táctil de 44 px
+- [ ] Cero desbordamiento horizontal; botón ☰ en pantalla
+
+C. Regresión
+- [ ] Las cinco vistas se recorren sin enlaces rotos
+- [ ] Umbral de la Fundación legible y en castellano (requiere 195d708)
+
+Limitaciones o incidencias encontradas:
+PENDIENTE
+```
+
+Mientras quede alguna casilla sin marcar, SPEC-16 queda en producción como
+**«desplegada, no verificada»** (misma doctrina de honestidad de §9b y §9c).
+Registra aquí fecha, veredictos y limitaciones tras la ejecución.
+
+### 3. Reversión
+
+Todo SPEC-16 es frontend, así que la reversión es sustituir por los ficheros
+del commit `3535356` (el estado previo a SPEC-16). No hay estado de base de
+datos que deshacer ni migración que revertir. Si solo falla la Fase 2,
+revierte los ficheros 2, 3, 7, 8 y 9; si falla la Fase 1, revierte los 9.
+
 ## Solución de problemas
 
 | Síntoma | Causa probable | Remedio |
