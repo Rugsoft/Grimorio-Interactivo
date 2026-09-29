@@ -98,7 +98,8 @@ specs/
 ├── 14-avatar-production-deployment.spec.md # La Efigie en Producción: paridad de despliegue de la efigie propia (SPEC-12) en InfinityFree — chemin de storage/, privacidad por funnel, sonda de diagnóstico GD/topes (enmienda de despliegue — RATIFICADA)
 ├── 15-session-security-production-deployment.spec.md # Seguridad de sesión en producción: cookies HTTPS, proxies confiables y procedencia del limitador (ratificada; verificación del hosting pendiente)
 ├── 16-portal-composition-and-navigation.spec.md # El Gran Portal y la Cabecera Ajustada: recomposición de la portada (sello de validación, cinta del Regente) y navegación agrupada en tres dominios (CERRADA 2026-09-29)
-└── 17-hero-contextual-call-to-action.spec.md # El Botón que No Miente: llamada a la acción del héroe contextual al estado de sesión; enmienda RF-01.4 de SPEC-01, invalidada por el juramento irreversible de SPEC-09 (EJECUTADA 2026-09-29, 4/4 tareas y 12/12 criterios de aceptación verificados)
+├── 17-hero-contextual-call-to-action.spec.md # El Botón que No Miente: llamada a la acción del héroe contextual al estado de sesión; enmienda RF-01.4 de SPEC-01, invalidada por el juramento irreversible de SPEC-09 (EJECUTADA 2026-09-29, 4/4 tareas y 12/12 criterios de aceptación verificados)
+└── 18-bind-envelope-clan-identity.spec.md # El Sobre que Olvidaba la Casa: POST /api/v1/auth/bind nunca devolvía clanId, y el frontend se quedaba con un usuario sin hermandad (EJECUTADA 2026-09-29, 3/3 tareas y 11/11 criterios verificados; hallazgo de SPEC-17 §8.1)
 
 ---
 

@@ -1,0 +1,95 @@
+# Tareas — SPEC-18: El Sobre que Olvidaba la Casa
+
+> Especificación: [`18-bind-envelope-clan-identity.spec.md`](18-bind-envelope-clan-identity.spec.md)
+> **Ratificada:** 2026-09-29. Ninguna tarea de código arranca antes de esa fecha.
+> **Doctrina:** «No Spec, No Code». La Tarea 0 es obligatoria y precede a cualquier implementación: sin rojo previo no hay prueba de que la prueba sirva.
+
+---
+
+## Fase 0 — La prueba que debe fallar antes de codificar
+
+- [x] **Tarea 0 — Arnés rojo del sobre de vínculo**
+  *Cubre:* RF-18.1, RF-18.2, RF-18.3, RF-18.4, RNF-18.4, RNF-18.5.
+  *Alcance:* crear `scratch/test_bind_envelope_clan.php` que invoque `AuthController::bind()` directamente, **sin servidor web**, contra una base SQLite temporal propia. Debe comprobar tres cosas: (a) un titular **con** hermandad recibe `clanId` y `clanName` correctos; (b) un titular **sin** hermandad recibe `null` y `""`; (c) el mismo titular leído por `bind` y por `session` produce **el mismo usuario campo a campo**.
+  *Sondeo previo YA medido (2026-09-29):* `bind` → `{"clanId":null,"clanName":""}`; `session` → `{"clanId":"cln_mares","clanName":"Mareas de Aether"}` para el mismo titular. La fase (a) falla hoy; (b) y (c) pasan hoy y **deben seguir pasando después**, porque son las que impiden un arreglo que rompa al peregrino.
+  *Hecho cuando:* el arnés **falla** con aserciones rojas que nombran `clanId` y `clanName`, sale con código 1 y **no revienta**.
+  *Restricciones:* el arnés abre su propia base en `sys_get_temp_dir()` y la destruye al terminar. **Nunca** debe apuntar a la base de desarrollo. Y **jamás** se ejecuta `scratch/verify-spec13.php`, que hace `DROP DATABASE`.
+  *Ejecución (2026-09-29):* **EJECUTADA — 19 PASA / 4 FALLA, exit 1. Prueba de mutación 5/5.**
+  - `scratch/test_bind_envelope_clan.php` (NUEVO), 4 fases. Dos titulares con el **mismo** linaje jurado y distinta pertenencia: es la única forma de que la diferencia del sobre sea atribuible a la hermandad y no al linaje.
+  - El rojo se lee solo: `bind y session entregan el MISMO data.user campo a campo (clanId (bind=NULL, session='cln_sobre'); clanName (bind='', session='Mareas de Aether'))`. El arnés nombra el campo, los dos valores y el endpoint culpable.
+  - **Las fases que hoy pasan también están escritas**, y esa es la parte que importa: `[2]` verifica que un titular sin hermandad sigue recibiendo `clanId: null`. Si el arreglo de la Tarea 1 metiera una casa de relleno, se pondría en rojo aquí. Una fase que hoy pasa y que debe seguir pasando es contrato igual que la que falla.
+  - **Prueba de mutación 5/5** (SPEC-18 §8.2), con el fichero de producción restaurado en `finally` y confirmado después con `git diff`: M1 arreglo ingenuo → ROJO (9 marcas), M2 error de mapeo `lineage`→`clan_id` → ROJO, M3 sin normalizar → ROJO, M4 residuo de cadena → ROJO, **M5 el arreglo correcto → VERDE 23/0**. Un arnés que nadie puede poner verde no mide un contrato.
+  - **La prueba encontró un requisito que la spec no declaraba.** M3 nació siendo «el arreglo correcto» y el arnés lo rojizó: devolvía `""` donde el contrato pide `null`. Se añadió el criterio a §8 y el requisito a `RF-18.1`, con su motivo. El motivo de fondo está medido en el código del frontend: `store.setSession()` normaliza con `typeof clanId === 'string' && clanId !== ''`, o sea que el cliente **sí sabe** distinguir la cadena vacía de la ausencia, pero solo si el backend se lo dice bien.
+  - **Dos errores míos que la prueba pagó, escritos para que el próximo no los repita:**
+    1. **Un aserto de FORMA en vez de EFECTO.** La fase [4] leía el código fuente y exigía cero brazos `default`. El arreglo correcto conserva `default => null`, que es inocuo y necesario —sin él un campo ausente reventaría el cierre— y el aserto lo declaraba roto. La fase [4] se reescribió para invocar el cierre privado por **reflexión** con filas manipuladas y medir la respuesta. Cuesta más líneas y vale mucho más como prueba: no se rompe con el primer refactor razonable.
+    2. **Un rojo que era mío, no del código.** La primera versión usaba `??` para leer `clanId`, y `??` trata `null` como si la clave no existiera. Como `null` es la respuesta **correcta** de quien no tiene hermandad, el aserto era incapaz de distinguir «vale null» de «no viene», y produjo un rojo falso en la fase que debía estar verde. Se corrigió con un lector que usa `array_key_exists`. **Un contrato que admite null necesita un lector que no confunda null con ausencia**; y una fase que falla el día que la arreglas es la señal de que el aserto estaba mal, no el código.
+  - El `default` que devuelve el linaje resultó ser **código muerto** con el payload actual: las cinco claves del sobre están todas en el `match`, así que ese brazo solo despertaría al añadir un campo nuevo. Por eso la Tarea 1 **no** lo borra: lo cambia por una reserva neutra. Un `default` que devuelve un campo equivocado no está equivocado porque se ejecute hoy; lo estará el día que se ejecute.
+
+---
+
+## Fase 1 — El arreglo
+
+- [x] **Tarea 1 — El cierre traduce columna → contrato**
+  *Cubre:* RF-18.1, RF-18.2, RF-18.6, RNF-18.1, RNF-18.2, RNF-18.3, RNF-18.4.
+  *Alcance:* un único fichero de producción, `src/Controllers/AuthController.php`, y dentro de él **un único cierre privado**, `$fieldValue`. Dos cambios:
+  1. Que busque por **nombre de columna** (`clan_id`, `lineage`, `role`, `alias`, `id`) y traduzca al nombre de contrato, en vez de buscar por nombre de contrato y no encontrarlo.
+  2. Que **normalice la cadena vacía a `null`**, requisito que la Tarea 0 descubrió (§8.2) y que `RF-18.1` ya recoge.
+  *Lo que NO se borra:* el brazo `default` del `match`. Se queda, y pasa a devolver `null` en vez del linaje. Es lo que dicta la mutación M5, la única que tiene que dar verde, y borrarlo haría que un campo ausente reventara el cierre.
+  *Fuera de alcance, explícito:* `fetchUserRow()`, `resolveClanName()`, `User::fromDatabaseRow()`, `AuthMiddleware`, `consecrate`, `database/`, `public/`. Ninguno se toca. En particular **`consecrate` no se unifica**: `test_auth_controller.php:137` afirma que su sobre **no** debe llevar `clanId`, y es una decisión de SPEC-09.
+  *Hecho cuando:* el arnés de la Tarea 0 pasa entero; `php -l` limpio; la firma de `forgeUserPayload()` sin cambios; el segundo argumento sigue siendo opcional.
+  *Ejecución (2026-09-29):* **EJECUTADA — arnés 23/0, `php -l` limpio, ocho de los nueve arneses PHP en verde, S1 y S2 corregidos en navegador real.**
+
+  - **Un solo fichero, un solo cierre.** `git diff --stat -- src/` → `1 file changed, 63 insertions(+), 8 deletions(-)`. El mapa `columna → contrato` va declarado a mano dentro del cierre, no deducido por casing: una deducción automática sería tan frágil como lo que se arregla, y fallaría igual de en silencio. El motivo está en el comentario, porque el próximo que lea esa línea necesita saber que no es una manía.
+  - **Cero SQL tocado** (RNF-18.3): `git diff | grep -cE '^[+-].*(prepare|execute|SELECT|INSERT|UPDATE)'` → **0**. La firma sigue siendo `forgeUserPayload(?array $userRow, ?\Grimorio\Models\User $activeUser = null): array`, con el segundo argumento opcional. `fetchUserRow()` y `resolveClanName()` siguen en sus líneas 534 y 651, sin una coma.
+  - **El mapa tiene una clave más que antes.** Al `match` se le añadió `'lineage' => $activeUser?->getLineage()`. Sin ella, un `lineage` ausente caería en el `default` neutro y `session` perdería el linaje en el camino de la entidad. Lo detectó la aserción «el mismo lector distingue bien una clave presente con valor» de la Tarea 0, escrita para cazar precisamente el campo que el arreglo eliminaría por descuido.
+  - **Navegador real, S1 corregido:** entrando por el Umbral con `clan_id = cln_mares`, la etiqueta del distintivo pasó de *«Hermano18 — Linaje de las Mareas Celestiales — Adepto»* a **«Hermano18 — Mareas de Aether — Adepto»**, sin recargar (el marcador `window.__spec18Alive` siguió vivo).
+  - **Navegador real, S2 corregido:** en el mismo instante, `.landing-hero__cta` pasó de 1 nodo con «Vincularse a una Hermandad» a **0 nodos**. La promesa de SPEC-17 vuelve a ser cierta para quien tiene casa, y lo es ya desde el primer instante y no a la segunda recarga.
+  - **El caso contrario, que es el que el arreglo podía destruir:** un titular jurado **sin** hermandad (`lineage: abyssalShadows`, `clan_id: null`) recibe `clanId: null` y `clanName: ""` por `bind`, su distintivo dice *«Jurado18 — Linaje de las Sombras Abisales»* —no una hermandad inventada— y el CTA sí ofrece «Vincularse a una Hermandad». No se le regaló una casa que no tiene.
+  - **Paridad de contrato, medida por HTTP:** `bind` y `session` devuelven hoy el mismo `data.user` **byte a byte** para el mismo titular, con los ocho campos idénticos. Antes: `bind` daba `clanId: null` y `session` daba `clanId: "cln_mares"`.
+  - **La red PHP dio un rojo preexistente, y hay que decirlo con nombre.** `test_renounce_account.php` falla, y fallaba **igual antes del arreglo**: el `diff` de sus dos logs es vacío. No lo causó esta spec. Su causa es un agujero de SPEC-15: el arnés carga las clases con `require` manuales y no incluye `src/Core/TrustedProxyResolver.php`, que `Request::getClientIp()` empezó a usar cuando SPEC-15 añadió la resolución de proxies de confianza. Es el ninth de los nueve, y por eso el resto de la batería PHP nunca lo ejecutó. **Anotado en el riesgo nº7; no se corrige aquí** porque es una spec de un arnés, no de producción, y meterla en SPEC-18 sería alcance de más.
+  - **Los otros ocho, con recuento idéntico antes y después** (para que se vea que el arreglo no los movió): `test_auth_controller` 53, `test_spec15_local` 77, `test_auth_rbac` 33, `test_auth_language_sovereignty` 21, `test_csrf_cookie_shield` 21, `test_discreet_duplicate_notice` 20, `test_lineage_consecration` 15 y `test_lineage_oath_controller` 24. Suma **264 asertos**.
+  - **Regresión `.mjs`:** los **112** en verde, 0 rojos, después del arreglo.
+  - **El parche se aplicó por script, no a mano, y el script es una sonda descartable.** `scratch/_spec18_parche.php` localiza el cierre por número de línea y ancla de indentación, comprueba la sintaxis del resultado **antes** de escribir, y nunca se queda con un fichero a medias. Se descartó tras la ejecución: en el árbol solo queda el arreglo, que es lo que debe quedar.
+  - **Dos cosas del idioma que dejó el shell.** Anclar el bloque por texto acentuado desde `php -r` a través de Git Bash exige escapes hexadecimales que se comen un byte, y el emparejamiento falla sin decir por qué. Las tres versiones de este arreglo acabaron localizando por **número de línea** o por **número de sección**, que no dependen de la ortografía.
+---
+
+## Fase 2 — La puerta y el cierre
+
+- [x] **Tarea 2 — Regresión PHP, navegador y diff**
+  *Cubre:* los 11 criterios de §8.
+  *Alcance:*
+  1. Los **nueve arneses PHP** que tocan `AuthController`, antes y después.
+  2. Los **112 arneses `.mjs`**, por si el arreglo movió alguna expectativa de `clanId` en el frontend.
+  3. **Navegador real:** entrar por el Umbral con hermandad y comprobar, **sin recargar**, que el distintivo nombra la hermandad (S1) y que el CTA no existe (S2). Es la prueba que SPEC-17 no pudo hacer porque el defecto no era suyo.
+  4. `git diff --name-only` para confirmar que nada bajo `database/`, nada bajo `public/`, nada de `tokens.css`.
+  *Hecho cuando:* todo en verde con código 0, los 11 criterios de §8 con evidencia, y los dos síntomas de §1.3 medidos como corregidos.
+  *Ejecución (2026-09-29):* **EJECUTADA — 11/11 criterios con evidencia, 8 de 9 arneses PHP verdes, 112/112 `.mjs`, un solo fichero de producción.**
+
+  - **Un solo fichero de producción, y el criterio se comprueba por el filtro y no por confianza:** `git diff --stat -- src/` → `1 file changed, 63 insertions(+), 8 deletions(-)` en [AuthController.php](src/Controllers/AuthController.php). Los tres filtros del criterio 10 devuelven **NINGUNO**: nada bajo `database/`, nada bajo `public/`, nada de `tokens.css`. Superficie total: 5 ficheros —2 specs, 2 docs y el cierre— de los que uno solo es código.
+  - **La paridad de `RF-18.3`, medida por HTTP y no solo en el arnés:** los cuerpos de `bind` y de `session` son **el mismo fichero byte a byte** para el mismo titular, con los ocho campos iguales. `diff` vacío. Antes: `bind` daba `clanId: null` y `session` daba `clanId: "cln_mares"`. Ese era el criterio que dio nombre a la spec, y medirlo por red confirma que no es un artefacto de la reflexión del arnés.
+  - **S1 y S2 corregidos en caliente, con la prueba de que no hubo recarga:** se sembró `window.__spec18Alive` antes de iniciar sesión y siguió vivo después. El distintivo pasó de «Hermano18 — **Linaje de las Mareas Celestiales** — Adepto» a «Hermano18 — **Mareas de Aether** — Adepto» (`hermandadEnBadge: true`, `linajeEnBadge: false`), y el CTA pasó de 1 nodo a **0**, en la misma medición y sin tocar el DOM a mano.
+  - **El caso contrario, medido en la misma sesión:** disuelto el vínculo de `Hermano18` por la propia interfaz y entrado como `Jurado18`, jurado **sin** hermandad, su distintivo dice «Linaje de las Sombras Abisales» —`hermandadInventada: false`— y el CTA sí le ofrece «Vincularse a una Hermandad». El arreglo no solo añadió la casa que faltaba: **no le regaló al que no la tiene.**
+  - **264 asertos PHP, ocho de los nueve arneses, con recuento idéntico antes y después:** `test_spec15_local` 77, `test_auth_controller` 53, `test_auth_rbac` 33, `test_lineage_oath_controller` 24, `test_auth_language_sovereignty` 21, `test_csrf_cookie_shield` 21, `test_discreet_duplicate_notice` 20, `test_lineage_consecration` 15.
+  - **La divergencia del noveno, medida en vez de afirmada.** `test_renounce_account.php` está en rojo, y el criterio 11 decía «nueve en verde». Se comprobó por dos vías independientes: el `diff` entre sus logs de antes y después está **vacío**, y el baseline reconstruido con `git show HEAD:src/Controllers/AuthController.php` reproduce exactamente el mismo fallo. **Es preexistente y ajeno a esta spec.** Se marca el criterio cumplido en cuanto al *efecto del arreglo*, que es lo que mide, y la cifra literal de 9/9 se declara falsa en el propio criterio en vez de inflarse. La causa (el `require` manual que SPEC-15 no actualizó al añadir `TrustedProxyResolver`) está en el riesgo nº7.
+  - **Un RNF que nadie pidió y se comprobó igual:** el diff no contiene **ni una línea** de SQL —`grep -cE '^[+-].*(prepare|execute|SELECT |INSERT |UPDATE |DELETE )'` → **0**—, así que RNF-18.3 se cumple por medición y no por confianza. La Regla de los Gemelos (SPEC-13 §8) no se activa: no hay DDL.
+  - **Regresión `.mjs`: 112/112 en verde**, 0 rojos, después del arreglo. Ninguna expectativa de `clanId` se movió en el frontend, que es lo que se temía al tocar un contrato que el navegador consume.
+
+  **Lo que NO se ha ejecutado, y se declara en vez de darse por verde:** la batería PHP completa de `scratch/` (161 arneses). Se ejecutaron los 9 que tocan `AuthController`, que es la red pertinente para este arreglo; los otros 152 siguen sin correr, y el único que hace `DROP DATABASE` (`verify-spec13.php`) no se ha ejecutado nunca. Motivo sin cambios: no tocan el fichero modificado, y correrlos a ciegas contra la base local sería riesgo sin contrapartida.
+
+## Riesgos y Contingencias Registrados
+
+1. **El arreglo «correcto» que rompe al peregrino.** Rellenar `clanId` con cualquier cosa que no sea `null` haría pasar la fase [1] de la Tarea 0 y destruir la [2]. Es por eso que la [2] existe desde el primer día: es la aserción que **protege a quien no tiene el defecto**. La mutación M1 lo demuestra: 9 marcas rojas.
+2. **Unificar los tres sobres «por simetría».** `consecrate` no lleva `clanId` **a propósito** (SPEC-09: la cuenta nace peregrina) y hay un aserto que lo vigila. Toca `forgeUserPayload`, que `consecrate` **no** usa. La tentación de «dejar los tres iguales» es exactamente la clase de refactor que rompe un contrato ratified.
+3. **Arreglarlo en el frontend en vez del backend.** Que `main.js` vuelva a pedir `auth/session` tras `bind` haría desaparecer S1 y S2 de la pantalla… y dejaría el `bind` mintiendo para el siguiente cliente que no sea este navegador. Tapa el síntoma y conserva la causa. Descartado en §6, caso 5.
+4. **La batería PHP completa sigue sin ejecutarse.** 161 arneses, y solo uno hace `DROP DATABASE` (`verify-spec13.php`, que jamás se ejecuta). La Tarea 2 ejecuta los 9 que tocan `AuthController`, que es la red pertinente. La batería entera continúa fuera de alcance, y se declara en el cierre en lugar de darse por verde.
+5. **Acopio de specs sin desplegar.** SPEC-16 y SPEC-17 están cerradas y verificadas pero no subidas a InfinityFree, y los 2 ficheros de `195d708` siguen sin llegar a `htdocs/`. Cada spec cerrada sin desplegar aumenta el salto del siguiente despliegue. No es responsabilidad de esta spec, pero se anota porque el día que se submarine, el orden de subida importará más que el orden de las specs.
+6. **Un aserto de forma disfrazado de aserto de efecto.** Ya costó una vez en esta misma Tarea 0 (§8.2): exigir cero brazos `default` cuando lo correcto es que devuelva `null`. Si al revisar la Tarea 1 aparece un aserto que comprueba *cómo* está escrito el cierre en vez de *qué* devuelve, hay que rechazarlo: la forma se puede cambiar sin que cambie el contrato, y ese es el tipo de prueba que se rompe sola el día que alguien toca una línea de más.
+7. **La red PHP tenía un agujero y nadie lo había visto.** `test_renounce_account.php` está en rojo, y su log es **idéntico** antes y después del arreglo: el defecto es preexistente y ajeno a SPEC-18. Lo causó SPEC-15, que añadió `TrustedProxyResolver` para la procedencia confiable y no actualizó el `require` manual con el que ese arnés carga las clases. El resultado es un arnés que revienta a mitad de la fase [2] con un `Fatal error` y **no imprime ni un aserto rojo**: el peor modo de fallar, porque parece que la batería pasó. No se corrige aquí —es una spec de un arnés, no de producción— pero queda anotado para que la próxima vez que se toque `Request::getClientIp()` se recuerde que hay un `require` manual en `scratch/` que hay que actualizar, y que existen ocho más.
+
+---
+
+## Nota sobre el germen de esta spec
+
+Apareció en la Tarea 3 de SPEC-17, al medir en navegador el criterio «el CTA no abre el diálogo de acceso». Al comprobar por qué el rótulo del peregrino y el del jurado diferían de lo esperado, la sesión del navegador no cuadraba: el `session` decía una cosa y el `bind` otra, para el mismo titular y en el mismo segundo.
+
+El hallazgo se escribió en SPEC-17 §8.1 en lugar de arreglarse allí, porque SPEC-17 excluye `src/` de forma expresa y porque la exclusión daba por cierto algo que era falso: que el estado de sesión «ya viaja al frontend en el sobre de `auth/me`». Es verdad para `session`; no para `bind`. **La lección que sale de aquí está en SPEC-18 §11: una función con dos caminos hacia el mismo campo necesita una aserción que compare ambos.** No una aserción por función; una por par.

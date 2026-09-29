@@ -60,7 +60,8 @@ specs/
 ├── 14-avatar-production-deployment.spec.md # La Efigie en producción (InfinityFree)
 ├── 15-session-security-production-deployment.spec.md # Cookies HTTPS, procedencia y revocación
 ├── 16-portal-composition-and-navigation.spec.md # Recomposición de portada y navegación agrupada (cerrada)
-└── 17-hero-contextual-call-to-action.spec.md # CTA del héroe contextual al estado de sesión (ejecutada)
+├── 17-hero-contextual-call-to-action.spec.md # CTA del héroe contextual al estado de sesión (ejecutada)
+└── 18-bind-envelope-clan-identity.spec.md # El sobre de sesión de bind sin clanId (ejecutada)
 ```
 
 ### 🌌 1. Gran Portal y Navegación SPA Fluida (`#/`)
@@ -144,7 +145,8 @@ GrimorioInteractivo/
 │   ├── ...
 │   ├── 15-session-security-production-deployment.spec.md
 │   ├── 16-portal-composition-and-navigation.spec.md
-│   └── 17-hero-contextual-call-to-action.spec.md
+│   ├── 17-hero-contextual-call-to-action.spec.md
+│   └── 18-bind-envelope-clan-identity.spec.md
 ├── public/                              # Raíz pública del servidor web
 │   ├── index.php                        # Front Controller y enrutador REST
 │   ├── index.html                       # Shell principal de la Single Page Application (SPA)

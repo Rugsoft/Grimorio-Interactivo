@@ -548,23 +548,78 @@ final class AuthController
      * vigente (kind + url de servicio). La efigie viaja SIEMPRE — kind
      * `default` ante canónico — para que la cabecera nazca vestida.
      *
+     * Ambos endpoints de lectura de sesión lo comparten y deben producir
+     * el MISMO sobre. `session` llega con las dos fuentes (fila y entidad);
+     * `bind` solo con la fila, porque una petición que aún no está
+     * vinculada no tiene entidad. Por eso la FILA es la fuente primaria
+     * y la entidad es solo la red de seguridad del camino de `session`
+     * (SPEC-18, RF-18.1 y RF-18.3).
+     *
      * @param array<string, mixed>|null $userRow Fila materializada del titular.
-     * @param \Grimorio\Models\User|null $activeUser Entidad de sesión viva (fallback de campos).
+     * @param \Grimorio\Models\User|null $activeUser Entidad de sesión viva; red de seguridad para cuando la fila no trae la columna.
      * @return array<string, mixed>
      */
     private function forgeUserPayload(?array $userRow, ?\Grimorio\Models\User $activeUser = null): array
     {
+        /**
+         * Lee un campo del sobre desde la fila de `users` (SPEC-18, RF-18.1).
+         *
+         * El TRUCO que se ha roto dos veces y no debe volver a romperse:
+         * esta fila trae las columnas en `snake_case` y el contrato pide las
+         * claves en `camelCase`. Buscar 'clanId' en una fila que trae
+         * 'clan_id' devuelve `false` SIEMPRE, sin error y sin aviso, y el
+         * `match` de abajo respondía con la entidad... que en `bind` es
+         * `null`, porque una petición sin vincular no tiene entidad que la
+         * haya construido. Resultado: `clanId: null` para todo el mundo.
+         *
+         * Por eso se traduce POR COLUMNA. Y por eso la entidad no es la
+         * primera opción sino la última: la fila es la fuente primaria,
+         * y la entidad solo cubre el camino de `session`.
+         *
+         * @param string $key Clave de CONTRATO (la que viaja en el JSON).
+         * @return mixed El valor ya traducido, o null si no hay dato.
+         */
         $fieldValue = static function (string $key) use ($userRow, $activeUser): mixed {
-            if (is_array($userRow) && array_key_exists($key, $userRow)) {
-                return $userRow[$key];
+            // Columna de la que sale cada clave del contrato. Declarada a
+            // mano, no deducida: una deducción por casing sería tan frágil
+            // como lo que se arregla, y fallaría igual de en silencio.
+            $porColumna = [
+                'id'      => 'id',
+                'alias'   => 'alias',
+                'role'    => 'role',
+                'clanId'  => 'clan_id',
+                'lineage' => 'lineage',
+            ];
+
+            $columna = $porColumna[$key] ?? null;
+            if ($columna !== null && is_array($userRow) && array_key_exists($columna, $userRow)) {
+                $valor = $userRow[$columna];
+
+                // La cadena vacía y el NULL significan lo mismo para este
+                // contrato —no hay casa— y el frontend solo distingue uno:
+                // `store.setSession()` normaliza con `typeof clanId ===
+                // 'string' && clanId !== ''`. Sin esta normalización el
+                // mismo estado viajaría de dos maneras y alguien tendría
+                // que adivinar cuál es cuál.
+                return ($valor === '' || $valor === null) ? null : $valor;
             }
 
+            // Reserva NEUTRA (RF-18.2). Antes devolvía `$activeUser?-
+            // >getLineage()`, que ante una clave que no encontraba
+            // respondía con un LINAJE: un campo de repuesto que a su vez
+            // era de repuesto, y la razón de que este defecto pasara
+            // inadvertido tanto tiempo. Un `default` que devuelve un campo
+            // equivocado no está equivocado porque se ejecute hoy: lo
+            // estará el día que se ejecute. Este devuelve null, que sí
+            // significa «no hay dato». Se conserva el brazo porque sin él
+            // una columna ausente reventaría el cierre con un error 500.
             return match ($key) {
-                'id'     => $activeUser?->getId(),
-                'alias'  => $activeUser?->getAlias(),
-                'role'   => $activeUser?->getRole(),
-                'clanId' => $activeUser?->getClanId(),
-                default  => $activeUser?->getLineage(),
+                'id'      => $activeUser?->getId(),
+                'alias'   => $activeUser?->getAlias(),
+                'role'    => $activeUser?->getRole(),
+                'clanId'  => $activeUser?->getClanId(),
+                'lineage' => $activeUser?->getLineage(),
+                default   => null,
             };
         };
 
