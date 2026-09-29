@@ -266,9 +266,23 @@ console.log('== VERIFICACION TAREA 6.1: main.js (orquestador central) ==\n');
  * Enlaces del navbar: el componente los identifica por data-view
  * (sin clase CSS; contrato real del componente de la Tarea 4.1).
  */
+/**
+ * ADAPTACIÓN SPEC-16 (Tarea 1, riesgo nº1 de TASKS-16): con la cabecera agrupada
+ * los enlaces ya no son hijos directos de la lista, viven en los <li> de cada
+ * dominio. El requisito vigilado («este destino existe y está cableado») no
+ * cambia; baja a un barrido recursivo, que seguiría siendo válido si mañana la
+ * lista volviera a ser plana.
+ */
 function findNavLink(shell, viewName) {
-  const linksList = queryById(shell.navRoot, 'navLinks')[0];
-  return (linksList?.children ?? []).find((link) => link.getAttribute('data-view') === viewName) ?? null;
+  const search = (node) => {
+    for (const child of node?.children ?? []) {
+      if (child.getAttribute('data-view') === viewName) return child;
+      const found = search(child);
+      if (found !== null) return found;
+    }
+    return null;
+  };
+  return search(queryById(shell.navRoot, 'navLinks')[0]);
 }
 
 // --- FASE 1: CRITERIO — cargar la URL base muestra la portada ---

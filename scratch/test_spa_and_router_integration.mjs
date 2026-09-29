@@ -141,6 +141,22 @@ function byClass(node, className) {
   return queryByClass(node, className)[0] ?? null;
 }
 
+/**
+ * ADAPTACIÓN SPEC-16 (Tarea 1, riesgo nº1 de TASKS-16): con la cabecera agrupada
+ * los enlaces ya no son hijos directos de la lista, viven en los <li> de cada
+ * dominio. Contarlos como hijos directos daba CERO y el aserto leía «hallados
+ * 0»: un fallo que seaxia con la ausencia de enlaces, no con sumudanza de
+ * sitio. El requisito vigilado (hay 10 destinos) no cambia; baja a un barrido
+ * recursivo, que seguiría siendo válido si la lista volviera a ser plana.
+ */
+function collectNavAnchors(node, found = []) {
+  for (const child of node?.children ?? []) {
+    if (child.tagName === 'A') found.push(child);
+    collectNavAnchors(child, found);
+  }
+  return found;
+}
+
 function queryById(node, id, found = []) {
   if (node.getAttribute?.('id') === id) found.push(node);
   for (const child of node.children) {
@@ -303,7 +319,7 @@ const navVisitor = createNavbarComponent(shell2.navRoot, {
 });
 navVisitor.render();
 
-const renderedVisitorLinks = linksList2.children.filter((c) => c.tagName === 'A');
+const renderedVisitorLinks = collectNavAnchors(linksList2);
 // REALINEACIÓN (SPEC-11, Fase 7): «Mi Grimorio» (#/grimorio) entró en la
 // barra como rótulo soberano del Tomo Personal. El conteo pasa de 9 a 10.
 assertCondition(renderedVisitorLinks.length === 10, `El visitante ve exactamente 10 enlaces públicos, incluidas las Hermandades y Mi Grimorio (hallados ${renderedVisitorLinks.length})`);
@@ -316,18 +332,18 @@ assertCondition(!renderedVisitorLinks.some((l) => l.getAttribute('data-view') ==
 
 // 2.2 Enlace condicional para master
 navVisitor.setSession(true, 'master');
-const renderedMasterLinks = linksList2.children.filter((c) => c.tagName === 'A');
+const renderedMasterLinks = collectNavAnchors(linksList2);
 assertCondition(renderedMasterLinks.length === 11, `El Maestro ve 11 enlaces incluyendo la Torre de Deliberación (hallados ${renderedMasterLinks.length})`);
 assertCondition(renderedMasterLinks.some((l) => l.getAttribute('data-view') === 'tower'), 'Torre de Deliberación (#/torre) es visible para rol master');
 
 // 2.3 Enlace condicional para supremeAdmin
 navVisitor.setSession(true, 'supremeAdmin');
-const renderedAdminLinks = linksList2.children.filter((c) => c.tagName === 'A');
+const renderedAdminLinks = collectNavAnchors(linksList2);
 assertCondition(renderedAdminLinks.some((l) => l.getAttribute('data-view') === 'tower'), 'Torre de Deliberación (#/torre) es visible para supremeAdmin');
 
 // 2.4 Disolver sesión retira el enlace
 navVisitor.setSession(false, 'reader');
-const renderedClearedLinks = linksList2.children.filter((c) => c.tagName === 'A');
+const renderedClearedLinks = collectNavAnchors(linksList2);
 assertCondition(!renderedClearedLinks.some((l) => l.getAttribute('data-view') === 'tower'), 'Al disolver sesión la Torre se retira de la cabecera');
 navVisitor.destroy();
 

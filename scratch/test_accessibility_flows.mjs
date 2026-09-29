@@ -315,7 +315,20 @@ async function bootAtLibrary(shell) {
     documentRef: shell.fakeDocument,
   });
   await app.boot();
-  const libraryLink = queryById(shell.navRoot, 'navLinks')[0].children.find((l) => l.getAttribute('data-view') === 'library');
+  // ADAPTACIÓN SPEC-16 (Tarea 1, riesgo nº1 de TASKS-16): con la cabecera
+  // agrupada los enlaces ya no son hijos directos de la lista, viven en los
+  // <li> de cada dominio. El requisito vigilado no cambia; el barrido baja
+  // un nivel y así sigue siendo válido si la lista volviera a ser plana.
+  const linksList = queryById(shell.navRoot, 'navLinks')[0];
+  const searchView = (node) => {
+    for (const child of node?.children ?? []) {
+      if (child.getAttribute('data-view') === 'library') return child;
+      const found = searchView(child);
+      if (found !== null) return found;
+    }
+    return null;
+  };
+  const libraryLink = searchView(linksList);
   libraryLink.dispatch('click');
   await wait(320); // supera el debounce de la biblioteca
   return app;

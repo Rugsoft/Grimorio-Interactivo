@@ -2,7 +2,7 @@
 
 > **Constitución:** [`constitution.md`](../constitution.md) | **Directrices:** [`AGENTS.md`](../AGENTS.md)
 > **Espec madre:** [`specs/01-portal-and-navigation.spec.md`](01-portal-and-navigation.spec.md) (RF-01, RF-02, RF-06) · [`specs/02-design-system-layout.spec.md`](02-design-system-layout.spec.md) (§2 tokens, RF-06) · [`specs/07-clans-lineages.spec.md`](07-clans-lineages.spec.md) (Dominio semanal, Tarea 5.2) · [`specs/12-user-panel.spec.md`](12-user-panel.spec.md) (efigie de cabecera, RF-03.3)
-> **Estado:** RATIFICADA (2026-09-29) — Tareas 0 a 6 ejecutadas. Cabecera en **63 px y una sola fila**; distintivo de **493 → 216 px** con efigie por defecto forjando sello; **cero desbordamiento horizontal hasta 320 px**; la portada **recompuesta** —firma → tesis → estado → destacados— con el título del héroe vestido del sistema, el CTA cerrando en y=372 sobre 900 px y el Regente reducido a **cinta de una línea: 435 → 89 px y cero marco**. Arnés propio **98/0**. Falta solo el cierre SDD (Tarea 7).
+> **Estado:** CERRADA (2026-09-29) — Tareas 0 a 7 ejecutadas. Cabecera en **63 px y una sola fila**; distintivo de **493 → 216 px** con efigie por defecto forjando sello; **cero desbordamiento horizontal hasta 320 px**; la portada **recompuesta** —firma → tesis → estado → destacados— con el título del héroe vestido del sistema, el CTA cerrando en y=372 sobre 900 px y el Regente reducido a **cinta de una línea: 435 → 89 px y cero marco**. Regresión completa: **111/111 arneses `.mjs` en verde**, guard de tokens sin fantasmas, **13/13 criterios** de §8 comprobados en navegador real. Divergencia declarada en TASKS-16: a 390 px la cinta envuelve a dos filas.
 > **Área:** Superficie de interfaz del Santuario (Dogma Vanilla, Artículo I)
 > **Naturaleza:** ENMIENDA de superficie. No altera ningún contrato de backend de SPEC-01, SPEC-02, SPEC-07 ni SPEC-12: solo*viste* lo que ya existe con una jerarquía que hoy no está.
 
@@ -158,9 +158,9 @@ La causa raíz de D1 es aritmética, no estética: la marca ocupa 270 px y el di
 - [x] El CTA «Consagrar Linaje» es visible **sin desplazamiento** a 1440×900 con el Regente montado. *(Medido: cierra en y=372 sobre 900 px.)*
 - [x] El orden de bloques en el DOM es: sello → héroe → cinta → destacados. *(Medido en navegador real.)*
 - [x] La cinta del Regente no pinta marco propio y mide **una sola línea** de contenido. *(Medido: `border` 0 px en la ficha, 40 px de alto y una sola fila a 1440, 1024 y 800 px; a 390 px envuelve a dos filas sin desbordar.)*
-- [ ] Ninguna cadena visible contiene `data-view`, `data-action` ni una clave de linaje en camelCase.
+- [x] Ninguna cadena visible contiene `data-view`, `data-action` ni una clave de linaje en camelCase. *(Verificado con un barrido de texto visible del DOM real a 1440×900 y 375×812: `[]`.)*
 - [x] `scratch/audit_css_ghost_tokens.mjs` y los ocho arneses hermanos de `RNF-16.2` salen en verde. *(Verificado: guard «SIN tokens fantasma»; hermanos 20/0, 69/0, 62/0, 20/0, 37/0, 27/0, 27/0 y sonda exit 0.)*
-- [ ] `git diff --stat` no lista ningún fichero bajo `src/` ni `database/`.
+- [x] `git diff --stat` no lista ningún fichero bajo `src/` ni `database/`. *(Verificado sobre el diff completo de SPEC-16, `3535356..HEAD`: 20 ficheros, +3153/−130, **0** bajo `src/` o `database/`.)*
 
 ---
 

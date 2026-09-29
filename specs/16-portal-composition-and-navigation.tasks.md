@@ -240,15 +240,61 @@
 
 ## Fase 3 — Cierre SDD
 
-- [ ] **Tarea 7 — Regresiones, guard y criterios**
+- [x] **Tarea 7 — Regresiones, guard y criterios**
   *Cubre:* §8 (13 criterios), RNF-16.1, RNF-16.2, RNF-16.3. *Alcance:* ejecutar `scratch/audit_css_ghost_tokens.mjs` y los ocho arneses de RNF-16.2 más el nuevo `test_portal_composition.mjs`; verificar los 13 criterios en navegador real a 1440×900 y a 375×812; confirmar con `git diff --stat` que ningún fichero bajo `src/` ni `database/` ha cambiado; marcar los checkboxes con su evidencia real.
   *Hecho cuando:* todo en verde (exit 0), criterios en su estado verdadero, diff revisado y resumen entregado al custodio.
+  *Ejecución (2026-09-29):* **EJECUTADA — la especificación queda CERRADA.**
+  - **Regresión completa, no la de siempre:** los **111** arneses `.mjs` de
+    `scratch/`, uno por uno, no solo los nueve conocidos. Salieron **SEIS rojos**:
+    `test_accessibility_flows`, `test_intent_give_praise`, `test_main_auth_integration`,
+    `test_main_orchestrator`, `test_simulator_route` y `test_spa_and_router_integration`.
+  - **Eran regresiones mías, no de los arneses.** Se comprobó con un árbol de
+    trabajo en `195d708` (anterior a SPEC-16) usando los **mismos** arneses: los seis
+    salían en verde. El código nuevo los rompía. Los seis compartían una única causa:
+    buscaban los enlaces de la barra como **hijos directos** de `#navLinks`, y con la
+    agrupación de la Tarea 1 viven dentro de los `<li>` de cada dominio. Cuatro ya
+    se habían adaptado en la Tarea 1; estos seis se escaparon porque solo se
+    adaptaron los que fallaban en aquel momento. Un barrido de todo `scratch/`
+    encontró 8 barridos con el patrón; los 6 que rompían se corrigieron.
+  - **Dos de los seis fallaban en silencio, y eso es peor.** `test_intent_give_praise`
+    y `test_main_auth_integration` no imprimían ninguna aserción roja: reventaban con
+    `TypeError` al hacer `.dispatch()` sobre `null`. Un arnés que revienta no dice
+    qué se rompió; uno que se pone rojo sí. Y `test_spa_and_router_integration` decia
+    «hallados 0» por un barrido que devolvía cero, confundiendo *no hay enlaces* con
+    *no hay en este nivel*.
+  - **Ningún aserto se relajó.** El requisito vigilado —«este destino existe y está
+    cableado»— no cambió; bajó a un barrido recursivo que seguiría siendo válido si la
+    lista volviera a ser plana. El motivo está escrito dentro de cada función.
+  - Resultado tras la corrección: **111/111 verdes, 0 rojos.**
+  - **Guard de tokens:** `audit_css_ghost_tokens.mjs` → «SIN tokens fantasma».
+  - **Literales de color:** 0 hex crudos y 0 `rgb()` en las tres hojas que SPEC-16
+    tocó (`layout.css`, `clans.css`, `library.css`). Hay 130 literales preexistentes
+    en otras 7 hojas, y se comprobó por intersección que **ninguna** de esas hojas fue
+    tocada por SPEC-16: no son deuda de este trabajo.
+  - **Criterios de §8:** los **13** marcados en su estado verdadero, con evidencia.
+    Los dos últimos se comprobaron de verdad: soberanía lingüística con un barrido de
+    texto visible del DOM real a 1440×900 y 375×812 (resultado `[]`, ninguna clave
+    técnica), y el diff con `3535356..HEAD` (**0** ficheros bajo `src/` o `database/`;
+    20 ficheros, +3153/−130).
+  - **Navegador real, dos franjas.** A 1440×900: cabecera 63 px y una fila, 4 grupos,
+    10 destinos, 1 solo `h1` a `MedievalArcaneTitle` 36 px en `rgb(212, 169, 78)`,
+    orden `firma → tesis → cinta → destacados`, cinta de 40 px, CTA visible,
+    desborde 0. A 375×812: modo plano con 0 grupos, botón ☰ de 44 px, 10 destinos con
+    zona táctil de 44 px, cinta de 67 px, desborde 0.
+  - **Lo que NO se ha ejecutado, y por qué.** La batería PHP de `scratch/` (unos 170
+    arneses) no se ha corrido: varios escriben en la base SQLite y uno —`verify-spec13`—
+    hace `DROP DATABASE`. El commit no toca `src/` ni `database/`, de modo que no puede
+    afectarlos; correrlos a ciegas contra la base local habría sido un riesgo sin
+    contrapartida. Queda dicho en lugar de dado por verde.
+  - **Divergencia que se mantiene declarada:** a 390 px la cinta envuelve a dos filas
+    (67 px). Se prefirió RNF-16.2 sobre la lectura literal de RF-18.7.
 
 ---
 
 ## Riesgos y Contingencias Registrados
 
-1. **Los arneses hermanos rondean contratos de la cabecera.** `test_navbar.mjs` y `test_lineage_retention_nav.mjs` inspeccionan `navLinks.children` como enlaces directos. Si la agrupación envuelve los enlaces en submenús, esos arneses deben **adaptarse al contrato nuevo de forma deliberada y documentada**, nunca maquillarse: un aserto que se cambia para pasar sin que el comportamiento haya cambiado es una mentira. Este es el riesgo nº1 de toda la entrega.
+1. **Los arneses hermanos rotean contratos de la cabecera.** `test_navbar.mjs` y `test_lineage_retention_nav.mjs` inspeccionan `navLinks.children` como enlaces directos. Si la agrupación envuelve los enlaces en submenús, esos arneses deben **adaptarse al contrato nuevo de forma deliberada y documentada**, nunca maquillarse: un aserto que se cambia para pasar sin que el comportamiento haya cambiado es una mentira. Este es el riesgo nº1 de toda la entrega.
+   **→ SE MATERIALIZÓ DOS VECES, y la segunda es lalesson.** En la Tarea 1 se corrigieron los cuatro hermanos que fallaban *en ese momento* (`test_navbar`, `test_navbar_session_refresh`, `test_vestibule_route_badge`, `probe_navbar_session_stale`). La Tarea 7 destapó **seis más** que no fallaban entonces: la agrupación no los rompía de golpe, los rompía según qué arnés llegara a mirar. La contingencia era correcta; la ejecución fue incompleta, porque se corrigieron los que se veían en lugar de barrerse todos. *Regla que sale de aquí: cuando un cambio de estructura del DOM pueda afectar a un barrido, se busca el patrón en todo el repo, no solo en quien falla.* Dos de los seis reventaban con `TypeError` sin imprimir aserción alguna: un arnés que revienta no dice qué se rompió.
 2. **SPEC-08 RF-05.4 (Torre de Deliberación) depende de `CONDITIONAL_NAV_LINKS`.** Si el grupo asignado desaparece o se reordena, el enlace por rol se pierde en silencio. Tarea 1 debe asertarlo explícitamente con un rol `master` y otro `reader`.
 3. **El sello es un elemento nuevo en el aire de la portada.** Si compite visualmente con la cinta o con el título, la firma se habrá gastado dos veces. Verificación visual obligatoria: si el sello compite, se atenúa el marco; no se añade adorno nuevo.
 4. **Riesgo de scope creep.** La tinta del proyecto es tentadora. Esta spec **no** toca `tokens.css` salvo excepción documentada en Tarea 2. Si una mejora parece necesitar un color nuevo, se anota como deuda para una spec de tokens, no se ejecuta aquí.
@@ -259,4 +305,5 @@
 
 - **Ninguna tarea de este fichero empieza antes de que el custodio ratifique la SPEC-16.** → **CUMPLIDO: ratificada el 2026-09-29.** La Tarea 0 arranca autorizada.
 - La implementación NO toca `src/` ni `database/`: los contratos de SPEC-01, SPEC-07, SPEC-08 y SPEC-12 son ley cerrada.
-- La conformidad en producción exigirá subir los ficheros públicos a `htdocs/` (procedimiento de `deploy/infinityfree/README.md` §9c), y su veredicto se registrará allí.
+- La conformidad en producción exigirá subir los ficheros públicos a `htdocs/` (procedimiento de `deploy/infinityfree/README.md` §9c), y su veredicto se registrará allí. → **PENDIENTE: los 9 ficheros públicos de SPEC-16 no están subidos.** Siguen sin subir los **2 ficheros del commit `195d708`**, de modo que subir SPEC-16 ahora monta la cabecera nueva sobre el Umbral de la Fundación roto. Orden obligatorio: `195d708` → `6be98d3` → `d872efa`, con `3535356` recomendado por separado.
+- Procedimiento de despliegue, lista exacta de los 9 ficheros, orden obligatorio, plantilla de veredictos y reversión: **`deploy/infinityfree/README.md` §9d**.
